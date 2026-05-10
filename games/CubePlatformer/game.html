@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cube Platformer</title>
+<link rel="icon" type="image/png" href="../../favicon.png">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:'Nunito',sans-serif;
+  background:#07070f;
+  color:#f0f0ff;
+  overflow:hidden;
+  height:100vh
+}
+body::before{
+  content:'';
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  background:
+    radial-gradient(ellipse 50% 50% at 20% 55%,rgba(124,58,237,.08) 0%,transparent 60%),
+    radial-gradient(ellipse 40% 50% at 80% 30%,rgba(167,139,250,.05) 0%,transparent 60%)
+}
+#menu{
+  position:relative;
+  z-index:1;
+  height:100vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center
+}
+h1{
+  font-size:28px;
+  font-weight:900;
+  letter-spacing:5px;
+  color:#fff;
+  margin-bottom:6px;
+  text-shadow:0 0 24px rgba(255,255,255,.18)
+}
+.sub{
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:3px;
+  color:rgba(255,255,255,.28);
+  margin-bottom:26px;
+  text-transform:uppercase
+}
+.level-grid{
+  display:grid;
+  grid-template-columns:repeat(5,76px);
+  gap:12px;
+  margin-bottom:22px
+}
+.node{
+  width:76px;
+  height:76px;
+  border:2px solid rgba(255,255,255,.1);
+  border-radius:14px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  background:#111118;
+  transition:transform .18s,border-color .18s,background .18s;
+  user-select:none;
+  position:relative
+}
+.n-num{font-size:22px;font-weight:900;color:var(--ac,#fff);line-height:1}
+.n-time{font-size:8px;font-weight:800;color:var(--ac,#aaa);margin-top:4px;opacity:.9}
+.n-icon{font-size:11px;margin-top:3px;line-height:1}
+.node:hover:not(.locked){transform:translateY(-4px);border-color:var(--ac,#fff);background:#1a1a26}
+.node.sel{
+  border-color:var(--ac,#fff)!important;
+  background:rgba(255,255,255,.07);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--ac,#fff) 25%,transparent),0 8px 20px rgba(0,0,0,.4)
+}
+.node.sel::after{
+  content:'';
+  position:absolute;
+  inset:-5px;
+  border-radius:18px;
+  border:2px solid var(--ac,#fff);
+  opacity:.35;
+  animation:ring 2s ease infinite;
+  pointer-events:none
+}
+@keyframes ring{
+  0%,100%{opacity:.35;transform:scale(1)}
+  50%{opacity:.1;transform:scale(1.06)}
+}
+.node.locked{opacity:.15;cursor:not-allowed;pointer-events:none}
+.node.done .n-icon{color:#f59e0b}
+.btn-row{
+  display:flex;
+  gap:12px;
+  margin-bottom:14px
+}
+.play-btn{
+  padding:13px 64px;
+  background:linear-gradient(135deg,#7c3aed,#a78bfa);
+  color:#fff;
+  border:none;
+  font-family:'Nunito',sans-serif;
+  font-size:14px;
+  font-weight:900;
+  letter-spacing:3px;
+  border-radius:11px;
+  cursor:pointer;
+  transition:.2s;
+  box-shadow:0 0 24px rgba(124,58,237,.4)
+}
+.play-btn:hover{filter:brightness(1.1);transform:translateY(-2px)}
+.skin-btn,.index-btn{
+  padding:13px 18px;
+  background:rgba(124,58,237,.18);
+  color:#a78bfa;
+  border:2px solid rgba(167,139,250,.3);
+  font-family:'Nunito',sans-serif;
+  font-size:13px;
+  font-weight:800;
+  border-radius:11px;
+  cursor:pointer;
+  transition:.2s
+}
+.skin-btn:hover,.index-btn:hover{
+  background:rgba(124,58,237,.32);
+  border-color:#a78bfa;
+  transform:translateY(-2px)
+}
+.footer{display:flex;gap:20px}
+.lnk{
+  font-size:10px;
+  font-weight:700;
+  color:rgba(255,255,255,.25);
+  text-decoration:none;
+  letter-spacing:2px;
+  transition:.2s
+}
+.lnk:hover{color:rgba(255,255,255,.6)}
+#game-container{
+  display:none;
+  width:100%;
+  height:100vh;
+  position:relative;
+  background:#07070f;
+  align-items:center;
+  justify-content:center
+}
+#game-container.visible{display:flex}
+canvas{display:block}
+.back-btn{
+  position:absolute;
+  top:12px;
+  left:12px;
+  z-index:20;
+  background:#111118;
+  border:2px solid rgba(255,255,255,.12);
+  color:rgba(255,255,255,.6);
+  font-family:'Nunito',sans-serif;
+  font-size:11px;
+  font-weight:800;
+  padding:7px 16px;
+  border-radius:8px;
+  cursor:pointer;
+  transition:.2s
+}
+.back-btn:hover{border-color:rgba(255,255,255,.3);color:#fff}
+#obstacle-index{
+  position:absolute;
+  top:60px;
+  right:12px;
+  z-index:20;
+  width:220px;
+  padding:12px;
+  border-radius:12px;
+  background:rgba(10,10,20,.84);
+  border:1px solid rgba(255,255,255,.12);
+  color:#fff;
+  font-size:10px;
+  pointer-events:none;
+  backdrop-filter:blur(6px);
+  opacity:0;
+  transform:translateY(-8px);
+  transition:.2s
+}
+#obstacle-index.open{
+  opacity:1;
+  transform:translateY(0)
+}
+.idx-title{
+  font-weight:900;
+  letter-spacing:2px;
+  font-size:11px;
+  margin-bottom:8px;
+  color:#a78bfa
+}
+.idx-list{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  opacity:.92
+}
+#skin-modal{
+  display:none;
+  position:fixed;
+  inset:0;
+  z-index:500;
+  background:rgba(0,0,0,.82);
+  align-items:center;
+  justify-content:center
+}
+#skin-modal.open{display:flex}
+.sm-box{
+  background:#0f0f1c;
+  border:2px solid rgba(167,139,250,.25);
+  border-radius:20px;
+  padding:30px;
+  width:420px;
+  max-width:92vw
+}
+.sm-box h2{
+  font-size:17px;
+  font-weight:900;
+  letter-spacing:2px;
+  color:#a78bfa;
+  margin-bottom:18px
+}
+.skin-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:10px;
+  margin-bottom:18px
+}
+.skin-card{
+  border:2px solid rgba(255,255,255,.1);
+  border-radius:12px;
+  padding:14px 8px;
+  text-align:center;
+  cursor:pointer;
+  transition:.18s;
+  background:#111120;
+  position:relative
+}
+.skin-card:hover:not(.locked-skin){border-color:rgba(167,139,250,.5);background:#1a1a2e}
+.skin-card.equipped{border-color:#a78bfa;background:rgba(124,58,237,.2)}
+.skin-card.locked-skin{opacity:.35;cursor:not-allowed}
+.sk-preview{
+  width:36px;
+  height:36px;
+  border-radius:7px;
+  margin:0 auto 8px;
+  border:2px solid rgba(255,255,255,.15)
+}
+.sk-name{
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:1px;
+  color:rgba(255,255,255,.7);
+  text-transform:uppercase
+}
+.sk-lock{
+  font-size:9px;
+  color:rgba(255,255,255,.3);
+  margin-top:3px
+}
+.sm-close{
+  width:100%;
+  padding:11px;
+  background:rgba(255,255,255,.06);
+  border:2px solid rgba(255,255,255,.12);
+  color:rgba(255,255,255,.5);
+  font-family:'Nunito',sans-serif;
+  font-size:13px;
+  font-weight:800;
+  border-radius:10px;
+  cursor:pointer;
+  transition:.2s
+}
+.sm-close:hover{background:rgba(255,255,255,.12);color:#fff}
+.sm-note{
+  font-size:11px;
+  color:rgba(167,139,250,.5);
+  text-align:center;
+  margin-bottom:16px
+}
+.index-modal{
+  display:none;
+  position:fixed;
+  inset:0;
+  z-index:600;
+  background:rgba(0,0,0,.72);
+  align-items:center;
+  justify-content:center;
+  padding:20px
+}
+.index-modal.open{display:flex}
+.im-box{
+  width:340px;
+  max-width:92vw;
+  background:#0f0f1c;
+  border:2px solid rgba(167,139,250,.25);
+  border-radius:20px;
+  padding:24px
+}
+.im-box h2{
+  font-size:17px;
+  font-weight:900;
+  letter-spacing:2px;
+  color:#a78bfa;
+  margin-bottom:14px
+}
+.im-list{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  margin-bottom:16px
+}
+.im-item{
+  padding:10px 12px;
+  border-radius:10px;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.08);
+  font-size:12px;
+  color:rgba(255,255,255,.82)
+}
+.im-close{
+  width:100%;
+  padding:11px;
+  background:rgba(255,255,255,.06);
+  border:2px solid rgba(255,255,255,.12);
+  color:rgba(255,255,255,.5);
+  font-family:'Nunito',sans-serif;
+  font-size:13px;
+  font-weight:800;
+  border-radius:10px;
+  cursor:pointer;
+  transition:.2s
+}
+.im-close:hover{background:rgba(255,255,255,.12);color:#fff}
+</style>
+</head>
+<body>
+
+<div id="menu">
+  <h1>CUBE PLATFORMER</h1>
+  <div class="sub">Select a Level</div>
+  <div class="level-grid" id="grid"></div>
+  <div class="btn-row">
+    <button class="play-btn" onclick="startGame()">▶ PLAY</button>
+    <button class="index-btn" onclick="openIndex()">INDEX</button>
+    <button class="skin-btn" onclick="openSkins()">🎨 SKINS</button>
+  </div>
+  <div class="footer">
+    <a class="lnk" href="../../index.html">← HOME</a>
+    <a class="lnk" href="../../leaderboard.html">🏆 LEADERBOARD</a>
+  </div>
+</div>
+
+<div id="game-container">
+  <button class="back-btn" onclick="location.reload()">← BACK</button>
+  <div id="obstacle-index">
+    <div class="idx-title">OBSTACLES</div>
+    <div class="idx-list">
+      <div>◼ Moving Platforms</div>
+      <div>↟ Bounce Pads</div>
+      <div>⇢ Wind Fans</div>
+      <div>═ Lasers</div>
+      <div>▲ Spikes</div>
+      <div>◉ Saws</div>
+      <div>▭ Trap Doors</div>
+      <div>▱ Falling Platforms</div>
+    </div>
+  </div>
+  <canvas id="gameCanvas"></canvas>
+</div>
+
+<div id="skin-modal">
+  <div class="sm-box">
+    <h2>🎨 SKINS</h2>
+    <div class="sm-note" id="sm-note">Sign in to save your skin choice.</div>
+    <div class="skin-grid" id="skin-grid"></div>
+    <button class="sm-close" onclick="closeSkins()">Close</button>
+  </div>
+</div>
+
+<div id="index-modal" class="index-modal">
+  <div class="im-box">
+    <h2>📚 INDEX</h2>
+    <div class="im-list">
+      <div class="im-item">◼ Moving Platforms</div>
+      <div class="im-item">↟ Bounce Pads</div>
+      <div class="im-item">⇢ Wind Fans</div>
+      <div class="im-item">═ Lasers</div>
+      <div class="im-item">▲ Spikes</div>
+      <div class="im-item">◉ Saws</div>
+      <div class="im-item">▭ Trap Doors</div>
+      <div class="im-item">▱ Falling Platforms</div>
+    </div>
+    <button class="im-close" onclick="closeIndex()">Close</button>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="../../firebase.js"></script>
+<script src="levels.js"></script>
+<script src="game.js"></script>
+
+<script>
+let current = 1;
+let progressCache = 1;
+let progressLoaded = false;
+
+const ACCENTS = {
+  1:'#f97316',2:'#22c55e',3:'#f43f5e',4:'#06b6d4',5:'#a855f7',
+  6:'#eab308',7:'#38bdf8',8:'#f97316',9:'#84cc16',10:'#818cf8'
+};
+
+function fmt(s){ return s==null ? '' : s < 60 ? s.toFixed(2) + 's' : `${Math.floor(s/60)}m ${(s%60).toFixed(0)}s`; }
+
+function getLocalProgress() {
+  const v = parseInt(sessionStorage.getItem('cube_prog') || '1', 10);
+  return Number.isFinite(v) ? Math.max(1, Math.min(MAX_LEVELS, v)) : 1;
+}
+
+function setProgress(n) {
+  progressCache = Math.max(1, Math.min(MAX_LEVELS, n));
+  sessionStorage.setItem('cube_prog', String(progressCache));
+  progressLoaded = true;
+}
+
+function inferProgressFromTimes(times) {
+  const ids = Object.keys(times || {});
+  let highestCompleted = 0;
+  for (const k of ids) {
+    const m = String(k).match(/L(\d+)/i);
+    if (m) highestCompleted = Math.max(highestCompleted, parseInt(m[1], 10));
+  }
+  return Math.max(1, Math.min(MAX_LEVELS, highestCompleted + 1));
+}
+
+async function loadProgress() {
+  const local = getLocalProgress();
+  const u = window.FB?.currentUser?.();
+
+  if (!u) {
+    setProgress(local);
+    await buildGrid();
+    return;
+  }
+
+  try {
+    const times = await window.FB.getMyTimes(u.uid);
+    const inferred = inferProgressFromTimes(times);
+    setProgress(Math.max(local, inferred));
+  } catch (e) {
+    try {
+      const prof = await window.FB.getProfile(u.uid);
+      const fbProg = parseInt(prof?.progress || prof?.highest || prof?.level || 1, 10);
+      setProgress(Math.max(local, Number.isFinite(fbProg) ? fbProg : 1));
+    } catch (err) {
+      setProgress(local);
+    }
+  }
+
+  await buildGrid();
+}
+
+async function buildGrid() {
+  const prog = progressLoaded ? progressCache : getLocalProgress();
+  let times = {};
+  const u = window.FB?.currentUser?.();
+  if (u) {
+    try { times = await window.FB.getMyTimes(u.uid); } catch(e) {}
+  }
+
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  for (let i = 1; i <= MAX_LEVELS; i++) {
+    const unlocked = i <= prog;
+    const sel = i === current;
+    const ac = ACCENTS[i];
+    const entry = times['L' + i];
+    const el = document.createElement('div');
+    el.className = 'node' + (!unlocked ? ' locked' : '') + (sel ? ' sel' : '') + (unlocked ? ' done' : '');
+    el.style.setProperty('--ac', ac);
+    el.id = 'n' + i;
+    el.innerHTML = `
+      <div class="n-num">${i}</div>
+      ${entry ? `<div class="n-time">⏱${fmt(entry.t)}</div>` : ''}
+      <div class="n-icon">${unlocked ? '★' : '🔒'}</div>`;
+    if (unlocked) el.onclick = () => select(i);
+    grid.appendChild(el);
+  }
+}
+
+function select(n) {
+  if (n > (progressLoaded ? progressCache : getLocalProgress())) return;
+  current = n;
+  document.querySelectorAll('.node').forEach(e => e.classList.remove('sel'));
+  const el = document.getElementById('n' + n);
+  if (el) el.classList.add('sel');
+}
+
+function startGame() {
+  document.getElementById('menu').style.display = 'none';
+  document.getElementById('game-container').classList.add('visible');
+  initGame(current);
+}
+
+function openIndex() {
+  document.getElementById('index-modal').classList.add('open');
+}
+
+function closeIndex() {
+  document.getElementById('index-modal').classList.remove('open');
+}
+
+const SKIN_UNLOCK_LEVEL = { default:0, ghost:2, neon:4, fire:6, void:8, rainbow:10 };
+let _skinOwned = { default:true };
+let _skinEquipped = 'default';
+
+async function openSkins() {
+  const u = window.FB?.currentUser();
+  document.getElementById('sm-note').textContent = u ? `Signed in as ${u.displayName || u.email}` : 'Sign in to save your skin.';
+  if (u) {
+    try {
+      const sd = await window.FB.getSkinData(u.uid);
+      _skinOwned = sd.own || { default:true };
+      _skinEquipped = sd.eq || 'default';
+    } catch(e) {}
+  }
+  renderSkinGrid();
+  document.getElementById('skin-modal').classList.add('open');
+}
+
+function closeSkins() {
+  document.getElementById('skin-modal').classList.remove('open');
+}
+
+function renderSkinGrid() {
+  const grid = document.getElementById('skin-grid');
+  grid.innerHTML = '';
+  Object.keys(SKINS).forEach(id => {
+    const owned = !!_skinOwned[id];
+    const equipped = _skinEquipped === id;
+    const unlockAt = SKIN_UNLOCK_LEVEL[id];
+    const card = document.createElement('div');
+    card.className = 'skin-card' + (equipped ? ' equipped' : '') + (!owned ? ' locked-skin' : '');
+    const prev = document.createElement('div');
+    prev.className = 'sk-preview';
+    prev.style.background = SKINS[id].rainbow ? 'linear-gradient(135deg,#f00,#ff0,#0f0,#00f,#f0f)' : (SKINS[id].body || ACCENTS[1]);
+    prev.style.boxShadow = `0 0 8px ${(SKINS[id].body || ACCENTS[1])}66`;
+    card.appendChild(prev);
+    card.innerHTML += `<div class="sk-name">${SKINS[id].label}</div>`;
+    if (!owned) card.innerHTML += `<div class="sk-lock">Unlock @ Lvl ${unlockAt}</div>`;
+    else if (equipped) card.innerHTML += `<div class="sk-lock" style="color:#a78bfa">Equipped ✓</div>`;
+    if (owned && !equipped) card.onclick = () => equipSkinLocal(id);
+    grid.appendChild(card);
+  });
+}
+
+async function equipSkinLocal(id) {
+  _skinEquipped = id;
+  const u = window.FB?.currentUser();
+  if (u) {
+    try { await window.FB.equipSkin(u.uid, id); } catch(e) {}
+  }
+  renderSkinGrid();
+}
+
+async function refreshAll() {
+  progressLoaded = false;
+  await loadProgress();
+}
+
+buildGrid();
+refreshAll();
+window.FB?.onAuthChange(() => refreshAll());
+</script>
+</body>
+</html>

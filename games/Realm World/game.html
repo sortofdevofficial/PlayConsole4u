@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Voxel Survival</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      overflow: hidden; background: #000;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      user-select: none; -webkit-user-select: none; touch-action: none;
+    }
+    canvas { display: block; }
+
+    /* ── Crosshair ─────────────────────────────────────────────────────── */
+    #crosshair-wrap {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      display: flex; flex-direction: column;
+      align-items: center; gap: 7px;
+      pointer-events: none; z-index: 10;
+    }
+    #crosshair { width: 18px; height: 18px; position: relative; }
+    #crosshair::before, #crosshair::after {
+      content: ''; position: absolute; background: rgba(255,255,255,0.9);
+    }
+    #crosshair::before { width: 2px; height: 100%; left:50%; transform:translateX(-50%); }
+    #crosshair::after  { height:2px; width: 100%; top: 50%; transform:translateY(-50%); }
+    #cooldown-bar  { width:44px; height:3px; background:rgba(255,255,255,0.12); border-radius:2px; overflow:hidden; }
+    #cooldown-fill { height:100%; width:0%; background:#fff; border-radius:2px; transition:background 0.1s; }
+
+    /* ── Hearts HUD ─────────────────────────────────────────────────────── */
+    #hud {
+      position:absolute; top:12px; left:12px;
+      background:rgba(0,0,0,0.55); padding:8px 12px;
+      border-radius:8px; z-index:10;
+    }
+    #hud .label { font-size:9px; letter-spacing:2px; color:#999; text-transform:uppercase; margin-bottom:5px; }
+    #hearts { display:flex; gap:1px; flex-wrap:wrap; max-width:140px; }
+    .heart { font-size:18px; line-height:1; display:inline-block; }
+    .heart.full  { filter:drop-shadow(0 0 4px #ff2222); }
+    .heart.empty { opacity:0.18; }
+    @keyframes heartLost {
+      0%   { transform:scale(1.5); opacity:1; }
+      60%  { transform:scale(0.75); }
+      100% { transform:scale(1); opacity:0.18; }
+    }
+    .heart.lost { animation:heartLost 0.38s ease-out forwards; }
+
+    /* ── Time indicator ─────────────────────────────────────────────────── */
+    #time-indicator {
+      position:absolute; top:12px; left:50%; transform:translateX(-50%);
+      background:rgba(0,0,0,0.45); padding:4px 14px; border-radius:20px;
+      color:#fff; font-size:11px; letter-spacing:1px;
+      z-index:10; pointer-events:none; white-space:nowrap;
+    }
+
+    /* ── Info panel ─────────────────────────────────────────────────────── */
+    #info {
+      position:absolute; top:12px; right:12px;
+      color:#ccc; background:rgba(0,0,0,0.5);
+      padding:9px 13px; border-radius:6px;
+      font-size:11px; line-height:2.1; z-index:10;
+    }
+    @media(max-width:600px){ #info{display:none;} }
+
+    /* ── Hotbar — always 9 slots ────────────────────────────────────────── */
+    #hotbar {
+      position:absolute; bottom:16px; left:50%;
+      transform:translateX(-50%);
+      display:flex; gap:2px; align-items:center;
+      background:rgba(0,0,0,0.80); padding:4px;
+      border:2px solid #4a4a4a; border-radius:6px;
+      z-index:10;
+    }
+    .slot {
+      width:52px; height:58px; flex-shrink:0;
+      display:flex; flex-direction:column;
+      align-items:center; justify-content:center;
+      color:#fff; position:relative;
+      border:2px solid #3a3a3a; border-radius:3px;
+      background:rgba(140,140,140,0.10);
+      transition:border-color 0.08s; cursor:pointer;
+    }
+    .slot.selected  { border-color:#ffffff; background:rgba(255,255,255,0.14); }
+    .slot.empty-slot{ opacity:0.20; cursor:default; pointer-events:none; }
+    .slot .slot-num { position:absolute; top:2px; left:4px; font-size:9px; color:#777; }
+    .block-icon     { width:24px; height:24px; border-radius:2px; border:1px solid rgba(255,255,255,0.18); margin-bottom:2px; }
+    .slot-name      { font-size:7px; color:#bbb; text-align:center; line-height:1.15; }
+    .slot-count     { font-size:13px; font-weight:bold; color:#fff; line-height:1.1; }
+
+    /* ══════════════════════════════════════════════════════════════════════
+       INVENTORY SCREEN — Minecraft-style grey
+    ══════════════════════════════════════════════════════════════════════ */
+    #inventory-screen {
+      display:none; position:fixed; inset:0;
+      background:rgba(0,0,0,0.65); z-index:200;
+      align-items:center; justify-content:center;
+      flex-direction:row; gap:14px; flex-wrap:wrap; padding:12px;
+    }
+
+    /* Left panel: inventory grid */
+    .inv-panel {
+      background:#c6c6c6;
+      border:3px solid #fff;
+      border-right-color:#555; border-bottom-color:#555;
+      border-radius:2px; padding:12px 14px; flex-shrink:0;
+    }
+    .inv-panel h3 {
+      font-size:11px; font-weight:700; color:#333;
+      margin-bottom:9px; text-transform:uppercase; letter-spacing:0.5px;
+    }
+
+    /* 20-slot inventory: 5 columns × 4 rows */
+    #inv-grid {
+      display:grid;
+      grid-template-columns:repeat(5, 48px);
+      gap:3px;
+    }
+    .inv-cell {
+      width:48px; height:54px;
+      background:#8b8b8b;
+      border:2px solid #555; border-right-color:#fff; border-bottom-color:#fff;
+      border-radius:1px;
+      display:flex; flex-direction:column;
+      align-items:center; justify-content:center;
+      cursor:pointer; position:relative;
+      transition:filter 0.08s;
+    }
+    .inv-cell:hover        { filter:brightness(1.18); }
+    .inv-cell.inv-empty    { cursor:default; }
+    .inv-cell.inv-empty:hover { filter:none; }
+    .inv-icon-wrap {
+      width:26px; height:26px; border-radius:2px;
+      border:1px solid rgba(0,0,0,0.25); margin-bottom:2px;
+    }
+    .inv-label { font-size:7px; color:#222; text-align:center; line-height:1.1; }
+    .inv-count {
+      position:absolute; bottom:2px; right:3px;
+      font-size:11px; font-weight:bold;
+      color:#fff; text-shadow:1px 1px 0 #000;
+    }
+
+    /* Right panel: crafting */
+    #inv-title {
+      font-size:11px; font-weight:700; color:#333;
+      margin-bottom:9px; text-transform:uppercase; letter-spacing:0.5px;
+    }
+    .craft-wrap { display:flex; align-items:center; gap:10px; margin-top:2px; }
+
+    /* 2×2 craft grid */
+    #craft-grid-inner {
+      display:grid;
+      grid-template-columns:repeat(2, 48px);
+      grid-template-rows:   repeat(2, 48px);
+      gap:3px;
+    }
+    .craft-cell {
+      width:48px; height:48px;
+      background:#8b8b8b;
+      border:2px solid #555; border-right-color:#fff; border-bottom-color:#fff;
+      border-radius:1px;
+      display:flex; align-items:center; justify-content:center;
+      cursor:pointer; position:relative;
+    }
+    .craft-cell:hover { filter:brightness(1.15); }
+    .craft-cell .inv-count { bottom:1px; right:2px; font-size:10px; }
+
+    .craft-arrow { font-size:20px; color:#444; pointer-events:none; }
+
+    #craft-result {
+      width:56px; height:56px;
+      background:#8b8b8b;
+      border:2px solid #fff; border-right-color:#555; border-bottom-color:#555;
+      border-radius:1px;
+      display:flex; flex-direction:column;
+      align-items:center; justify-content:center;
+      opacity:0.32; cursor:default;
+      transition:filter 0.08s, opacity 0.15s; position:relative;
+    }
+    #craft-result.active { opacity:1; cursor:pointer; }
+    #craft-result.active:hover { filter:brightness(1.15); }
+
+    .recipe-hint {
+      font-size:9px; color:#444; margin-top:9px;
+      border-top:1px solid #aaa; padding-top:6px; line-height:1.9;
+    }
+    .recipe-hint b { color:#111; }
+
+    .inv-close-btn {
+      display:block; text-align:center; margin-top:8px;
+      background:#c6c6c6;
+      border:2px solid #fff; border-right-color:#555; border-bottom-color:#555;
+      padding:5px 18px; border-radius:2px;
+      font-size:11px; color:#333; cursor:pointer; letter-spacing:0.5px; width:100%;
+    }
+    .inv-close-btn:hover { background:#d5d5d5; }
+
+    /* ── Mobile controls ────────────────────────────────────────────────── */
+    #mobile-controls {
+      display:none; position:fixed; inset:0; z-index:50; pointer-events:none;
+    }
+    #joystick-area {
+      position:absolute; left:20px; bottom:100px;
+      width:110px; height:110px; border-radius:50%;
+      background:rgba(255,255,255,0.10); border:2px solid rgba(255,255,255,0.25);
+      pointer-events:all; touch-action:none;
+    }
+    #joystick-knob {
+      position:absolute; top:50%; left:50%;
+      width:44px; height:44px; border-radius:50%;
+      background:rgba(255,255,255,0.35); border:2px solid rgba(255,255,255,0.6);
+      transform:translate(-50%,-50%); pointer-events:none;
+    }
+    #look-area {
+      position:absolute; right:0; top:0; width:55%; height:100%;
+      pointer-events:all; touch-action:none;
+    }
+    .mobile-btn {
+      position:absolute; pointer-events:all; touch-action:none;
+      border-radius:8px; background:rgba(0,0,0,0.45);
+      border:2px solid rgba(255,255,255,0.3);
+      color:#fff; font-size:11px; font-weight:bold;
+      display:flex; align-items:center; justify-content:center; text-align:center; line-height:1.2;
+    }
+    .mobile-btn:active { background:rgba(255,255,255,0.20); }
+    #btn-break { right:160px; bottom:36px; width:60px; height:60px; }
+    #btn-place { right:90px;  bottom:36px; width:60px; height:60px; }
+    #btn-jump  { right:20px;  bottom:36px; width:60px; height:60px; }
+    #btn-inv   { right:20px;  top:12px;    width:52px; height:36px; font-size:10px; }
+  </style>
+</head>
+<body oncontextmenu="return false;">
+
+  <div id="crosshair-wrap">
+    <div id="crosshair"></div>
+    <div id="cooldown-bar"><div id="cooldown-fill"></div></div>
+  </div>
+
+  <div id="hud">
+    <div class="label">Health</div>
+    <div id="hearts"></div>
+  </div>
+
+  <div id="time-indicator">☀️ Day</div>
+
+  <div id="info">
+    LMB — Break / Attack<br>
+    RMB — Place / Open table<br>
+    1–9 — Select slot<br>
+    Space — Jump<br>
+    E — Inventory
+  </div>
+
+  <div id="hotbar"></div>
+
+  <!-- ════════════════════════════════════════════════════════════════
+       INVENTORY + CRAFTING SCREEN
+  ═════════════════════════════════════════════════════════════════ -->
+  <div id="inventory-screen">
+
+    <!-- Left: 20-slot inventory -->
+    <div class="inv-panel">
+      <h3>Inventory (20 slots)</h3>
+      <div id="inv-grid"></div>
+    </div>
+
+    <!-- Right: 2×2 crafting -->
+    <div class="inv-panel">
+      <div id="inv-title">Crafting (2×2)</div>
+      <div class="craft-wrap">
+        <div id="craft-grid-inner"></div>
+        <div class="craft-arrow">▶</div>
+        <div id="craft-result"></div>
+      </div>
+      <div class="recipe-hint">
+        <b>Oak Log ×1</b> → Oak Plank ×4<br>
+        <b>Oak Plank ×4</b> (2×2) → Crafting Table<br>
+        <b>Oak Plank ×2</b> (stacked) → Stick ×4<br>
+        RMB Crafting Table → 3×3 grid
+      </div>
+      <button class="inv-close-btn" id="inv-close-btn">Close  (E / ESC)</button>
+    </div>
+
+  </div>
+
+  <!-- Mobile Controls -->
+  <div id="mobile-controls">
+    <div id="joystick-area"><div id="joystick-knob"></div></div>
+    <div id="look-area"></div>
+    <div class="mobile-btn" id="btn-break">⛏<br>Break</div>
+    <div class="mobile-btn" id="btn-place">🧱<br>Place</div>
+    <div class="mobile-btn" id="btn-jump">⬆<br>Jump</div>
+    <div class="mobile-btn" id="btn-inv">🎒 Inv</div>
+  </div>
+
+  <script>
+    document.getElementById('inv-close-btn')?.addEventListener('click', () => {
+      document.dispatchEvent(new KeyboardEvent('keydown',{code:'KeyE',bubbles:true}));
+    });
+
+    if ('ontouchstart' in window) {
+      document.getElementById('mobile-controls').style.display = 'flex';
+      const ja=document.getElementById('joystick-area');
+      const jk=document.getElementById('joystick-knob');
+      const la=document.getElementById('look-area');
+      let jc={x:0,y:0},jid=null,lid=null,llx=0,lly=0;
+      window._mMove={x:0,y:0}; window._mLook={dx:0,dy:0};
+
+      ja.addEventListener('touchstart',e=>{
+        e.preventDefault();
+        const t=e.changedTouches[0];
+        const r=ja.getBoundingClientRect();
+        jc={x:r.left+r.width/2,y:r.top+r.height/2}; jid=t.identifier;
+        _joy(t.clientX,t.clientY);
+      },{passive:false});
+      ja.addEventListener('touchmove',e=>{
+        e.preventDefault();
+        for(const t of e.changedTouches) if(t.identifier===jid) _joy(t.clientX,t.clientY);
+      },{passive:false});
+      ja.addEventListener('touchend',e=>{
+        e.preventDefault(); window._mMove={x:0,y:0};
+        jk.style.transform='translate(-50%,-50%)'; jid=null;
+      },{passive:false});
+
+      function _joy(cx,cy){
+        const dx=cx-jc.x,dy=cy-jc.y,d=Math.min(Math.sqrt(dx*dx+dy*dy),40),a=Math.atan2(dy,dx);
+        jk.style.transform=`translate(calc(-50% + ${Math.cos(a)*d}px),calc(-50% + ${Math.sin(a)*d}px))`;
+        window._mMove={x:Math.cos(a)*d/40,y:Math.sin(a)*d/40};
+      }
+
+      la.addEventListener('touchstart',e=>{
+        e.preventDefault();
+        const t=e.changedTouches[0]; llx=t.clientX; lly=t.clientY; lid=t.identifier;
+      },{passive:false});
+      la.addEventListener('touchmove',e=>{
+        e.preventDefault();
+        for(const t of e.changedTouches){
+          if(t.identifier!==lid) continue;
+          window._mLook={dx:(t.clientX-llx)*0.004,dy:(t.clientY-lly)*0.004};
+          llx=t.clientX; lly=t.clientY;
+        }
+      },{passive:false});
+      la.addEventListener('touchend',e=>{
+        e.preventDefault(); window._mLook={dx:0,dy:0}; lid=null;
+      },{passive:false});
+    }
+  </script>
+
+  <script type="importmap">{
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }</script>
+  <script type="module" src="game.js"></script>
+</body>
+</html>

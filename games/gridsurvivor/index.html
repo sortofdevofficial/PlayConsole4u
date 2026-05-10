@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GRID_SURVIVOR: かわいいクラッシュ! // P1_DEV</title>
+    <style>
+        /* KAWAII CONSOLE THEME */
+        :root {
+            --bg-color: #fce4ec;       /* Soft Pink Background */
+            --grid-color: #ffe082;     /* Yellow Platform */
+            --grid-border: #8d6e63;     /* Dark Brown Outlines */
+            --player-color: #4fc3f7;    /* Sky Blue Character */
+            --hazard-color: #e57373;    /* Soft Red Threat */
+            --shadow-color: rgba(0,0,0,0.1);
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+            color: #5d4037; /* Brown Text */
+            font-family: 'Hiragino Maru Gothic Pro', 'ArialRoundedMTBold', sans-serif; /* Rounded Fonts */
+        }
+
+        #console-ui {
+            text-align: center;
+            margin-bottom: 20px;
+            width: 500px;
+            border-bottom: 4px solid var(--grid-border);
+            padding-bottom: 10px;
+        }
+
+        h1 { margin: 0; font-size: 24px; text-transform: uppercase; }
+        p { margin: 5px 0 0; font-size: 14px; }
+
+        #game-container {
+            position: relative;
+            background: var(--grid-color);
+            border: 6px solid var(--grid-border);
+            border-radius: 20px;
+            box-shadow: 0 10px 0 var(--grid-border); /* "Heavy" Console Look */
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            grid-template-rows: repeat(5, 1fr);
+            width: 500px;
+            height: 500px;
+        }
+
+        /* The Grid Squares */
+        .grid-cell {
+            border: 3px solid var(--grid-border);
+            position: relative;
+        }
+
+        /* THE PLAYER (CUTE BLUE CUBE) */
+        #player {
+            width: 80%;
+            height: 80%;
+            background-color: var(--player-color);
+            border: 4px solid #000;
+            border-radius: 12px;
+            position: absolute;
+            top: 10%;
+            left: 10%;
+            transition: all 0.08s ease-out; /* Smooth Movement */
+            box-shadow: inset 0 -5px 0 rgba(0,0,0,0.2);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        /* Kawaii Eyes for Player */
+        #player::before, #player::after {
+            content: '';
+            position: absolute;
+            background: #000;
+            border-radius: 50%;
+            width: 10px;
+            height: 10px;
+            top: 20px;
+        }
+        #player::before { left: 15px; }
+        #player::after { right: 15px; }
+
+        /* THE HAZARD SHADOW (Japan-Style Hazard Warning) */
+        .warning::after {
+            content: '!';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: rgba(229, 115, 115, 0.5); /* Semi-transparent Red */
+            top: 0;
+            left: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 50px;
+            font-weight: bold;
+            color: #fff;
+            animation: pulse 0.5s infinite;
+        }
+
+        /* Item Crashing Down */
+        .impact {
+            background-color: var(--hazard-color) !important;
+            animation: impactShake 0.1s 2;
+        }
+
+        @keyframes pulse { 50% { opacity: 0.3; } }
+        @keyframes impactShake { 0% { transform: scale(1.1); } 100% { transform: scale(1); } }
+
+    </style>
+</head>
+<body>
+
+    <div id="console-ui">
+        <h1>GRID_SURVIVOR // カワイイ クラッシュ!</h1>
+        <p>USE [WASD] TO MOVE! &bull; SURVIVE THE DROPS! &bull; P1 ACTIVE</p>
+    </div>
+
+    <div id="game-container" id="grid">
+        </div>
+
+    <script>
+        const GRID_SIZE = 5;
+        const CELL_SIZE = 100; // Size in pixels
+
+        const gameContainer = document.getElementById('game-container');
+        const cells = [];
+        let pPos = { x: 2, y: 2 }; // Player starting position (center)
+        let isGameOver = false;
+
+        // --- 1. BUILD THE GRID ---
+        function createGrid() {
+            for (let y = 0; y < GRID_SIZE; y++) {
+                cells[y] = [];
+                for (let x = 0; x < GRID_SIZE; x++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'grid-cell';
+                    cell.dataset.x = x;
+                    cell.dataset.y = y;
+                    gameContainer.appendChild(cell);
+                    cells[y][x] = cell;
+                }
+            }
+        }
+
+        // --- 2. CREATE PLAYER (KAWAII CUBE) ---
+        function createPlayer() {
+            const player = document.createElement('div');
+            player.id = 'player';
+            gameContainer.appendChild(player);
+            movePlayerVisual(); // Set initial position
+        }
+
+        // Update player's position on the grid
+        function movePlayerVisual() {
+            const player = document.getElementById('player');
+            // Calculate pixel position based on grid coordinates
+            const targetCell = cells[pPos.y][pPos.x];
+            targetCell.appendChild(player); // Simple attachment for this demo
+        }
+
+        // --- 3. PLAYER MOVEMENT LOGIC (WASD) ---
+        document.addEventListener('keydown', (e) => {
+            if (isGameOver) return;
+            
+            const key = e.key.toLowerCase();
+            let moved = false;
+
+            if (key === 'w' && pPos.y > 0) { pPos.y--; moved = true; }
+            if (key === 's' && pPos.y < GRID_SIZE - 1) { pPos.y++; moved = true; }
+            if (key === 'a' && pPos.x > 0) { pPos.x--; moved = true; }
+            if (key === 'd' && pPos.x < GRID_SIZE - 1) { pPos.x++; moved = true; }
+
+            if (moved) movePlayerVisual();
+        });
+
+        // --- 4. HAZARD LOGIC (DROPPING ITEMS) ---
+        function dropRandomItem() {
+            if (isGameOver) return;
+
+            // Pick a random grid tile
+            const rX = Math.floor(Math.random() * GRID_SIZE);
+            const rY = Math.floor(Math.random() * GRID_SIZE);
+            const targetCell = cells[rY][rX];
+
+            // Start the warning phase (Japan Style "!")
+            targetCell.classList.add('warning');
+
+            // Set the delay before impact (1.5 seconds)
+            setTimeout(() => {
+                targetCell.classList.remove('warning');
+                triggerImpact(rX, rY);
+            }, 1500);
+        }
+
+        // Impact Phase: Did the player get hit?
+        function triggerImpact(x, y) {
+            const impactCell = cells[y][x];
+            impactCell.classList.add('impact');
+
+            // "Cartoon Realistic" Shake Effect
+            gameContainer.classList.add('impact-shake'); // You need to define this shake animation if you want the whole grid to move
+
+            // The Hit Detection!
+            if (pPos.x === x && pPos.y === y) {
+                gameOver();
+            }
+
+            // Remove the impact visual after a moment
+            setTimeout(() => {
+                impactCell.classList.remove('impact');
+                gameContainer.classList.remove('impact-shake');
+            }, 300);
+        }
+
+        function gameOver() {
+            isGameOver = true;
+            document.getElementById('status').innerText = "SYSTEM FAILURE: PLAYER CRUSHED.";
+            document.getElementById('status').style.color = '#fff';
+            document.body.style.background = '#e57373'; // Change background to danger color
+            
+            // Add a fun "splat" emoji over the player
+            const player = document.getElementById('player');
+            player.style.transform = 'scale(1.5) rotate(45deg)';
+            player.style.backgroundColor = '#666'; // Player "dies"
+        }
+
+        // --- 5. THE GAME LOOP ---
+        createGrid();
+        createPlayer();
+
+        // Start dropping items automatically
+        // Drop faster and faster as time goes on!
+        let dropInterval = setInterval(dropRandomItem, 2000); // 1 drop every 2 seconds initially
+
+        // After 10 seconds, drop items faster
+        setTimeout(() => {
+            clearInterval(dropInterval);
+            dropInterval = setInterval(dropRandomItem, 1000); // 1 drop every second
+        }, 10000);
+
+    </script>
+</body>
+</html>
