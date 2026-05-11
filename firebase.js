@@ -16,24 +16,9 @@ const _user = uid => `users/${uid}`;
 const _lvl  = (uid, n) => `users/${uid}/G/CP/L/L${n}`;
 const _skin = uid => `users/${uid}/G/CP/C/S`;
 
-const signInGoogle = () => auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider());
+const signInGoogle = () => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
 const logOut       = () => auth.signOut();
 const currentUser  = () => auth.currentUser;
-
-function onAuthChange(cb) {
-  auth.getRedirectResult().then(result => {
-    if (result && result.user) {
-      console.log('[FB] Signed in:', result.user.displayName);
-    }
-  }).catch(e => {
-    console.warn('[FB] getRedirectResult:', e.message);
-  }).finally(() => {
-    auth.onAuthStateChanged(async (user) => {
-      if (user) await _ensureDefaults(user);
-      cb(user);
-    });
-  });
-}
 
 async function _ensureDefaults(user) {
   try {
