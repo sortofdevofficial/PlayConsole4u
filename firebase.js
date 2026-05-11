@@ -21,7 +21,6 @@ const logOut       = () => auth.signOut();
 const currentUser  = () => auth.currentUser;
 
 function onAuthChange(cb) {
-  // First handle any pending redirect result, THEN listen for auth state
   auth.getRedirectResult().then(result => {
     if (result && result.user) {
       console.log('[FB] Redirect sign-in success:', result.user.displayName);
