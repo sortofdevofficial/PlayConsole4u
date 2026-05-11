@@ -1,6 +1,6 @@
 firebase.initializeApp({
   apiKey: "AIzaSyCZPK5A0UQSFB2D_zNj3wjZ5-Tbyb1VYn8",
-  authDomain: "sortofdevofficial.github.io",
+  authDomain: "playconsole4u-53a6a.firebaseapp.com",
   databaseURL: "https://playconsole4u-53a6a-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "playconsole4u-53a6a",
   storageBucket: "playconsole4u-53a6a.firebasestorage.app",
