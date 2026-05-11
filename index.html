@@ -305,7 +305,11 @@ header{
     </div>
   </div>
 </div>
-<script type="module" src="firebase.js"></script>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="firebase.js"></script>
 <script>
 const vid = document.getElementById('bg-video');
 const bgImg = document.getElementById('bg-img');
@@ -359,21 +363,7 @@ function closeSB(){
   vid.style.opacity = '.28';
 }
 
-async function doSignIn() { 
-  // 1. Safety check to prevent the 'undefined' crash
-  if (!window.FB) {
-    console.warn("Firebase not yet loaded.");
-    alert("The app is still warming up! Please try again in 2 seconds.");
-    return;
-  }
-  
-  try { 
-    // 2. Proceed with sign in
-    await window.FB.signInGoogle(); 
-  } catch(e) { 
-    console.error("Sign-in failed:", e); 
-  } 
-}
+async function doSignIn(){ try { await window.FB.signInGoogle(); } catch(e){ console.error(e); } }
 async function doSignOut(){ await window.FB.signOut(); closeModal(); }
 
 function fmt(s){ return s == null ? '—' : s < 60 ? s.toFixed(2)+'s' : `${Math.floor(s/60)}m ${(s%60).toFixed(0)}s`; }
@@ -424,13 +414,7 @@ async function refreshUI(user){
   tg.innerHTML = html;
 }
 
-// Wait for the FB object to be attached to window
-const checkFB = setInterval(() => {
-  if (window.FB) {
-    clearInterval(checkFB);
-    window.FB.onAuthChange(user => refreshUI(user));
-  }
-}, 100);
+window.FB.onAuthChange(user => refreshUI(user));
 
 function openModal(){ document.getElementById('modal-bg').classList.add('open'); }
 function closeModal(){ document.getElementById('modal-bg').classList.remove('open'); }

@@ -1,12 +1,4 @@
-// 1. IMPORT
-import * as firebaseModule from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js";
-import "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js";
-import "https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js";
-
-// 2. THE FIX: Extract the core firebase object
-const firebase = firebaseModule.default || firebaseModule;
-
-const firebaseConfig = {
+firebase.initializeApp({
   apiKey: "AIzaSyCZPK5A0UQSFB2D_zNj3wjZ5-Tbyb1VYn8",
   authDomain: "playconsole4u-53a6a.firebaseapp.com",
   databaseURL: "https://playconsole4u-53a6a-default-rtdb.asia-southeast1.firebasedatabase.app",
@@ -15,22 +7,34 @@ const firebaseConfig = {
   messagingSenderId: "306379034842",
   appId: "1:306379034842:web:1b891d0ef20cdacb0a55e3",
   measurementId: "G-NZ50CHHLFX"
-};
-
-// 3. INITIALIZE
-if (!firebase.apps.length) {
-  firebase.initializeApp(firebaseConfig);
-}
+});
 
 const auth = firebase.auth();
 const db = firebase.database();
 
-// 4. PATH HELPERS
 const _user = uid => `users/${uid}`;
 const _lvl  = (uid, n) => `users/${uid}/G/CP/L/L${n}`;
 const _skin = uid => `users/${uid}/G/CP/C/S`;
 
-// 5. DATA LOGIC (Your full original functions)
+const signInGoogle = () => auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider());
+const logOut       = () => auth.signOut();
+const currentUser  = () => auth.currentUser;
+
+function onAuthChange(cb) {
+  auth.getRedirectResult().then(result => {
+    if (result && result.user) {
+      console.log('[FB] Redirect sign-in success:', result.user.displayName);
+    }
+  }).catch(e => {
+    console.warn('[FB] getRedirectResult error:', e.message);
+  }).finally(() => {
+    auth.onAuthStateChanged(async (user) => {
+      if (user) await _ensureDefaults(user);
+      cb(user);
+    });
+  });
+}
+
 async function _ensureDefaults(user) {
   try {
     const userRef = db.ref(_user(user.uid));
@@ -38,9 +42,9 @@ async function _ensureDefaults(user) {
     const val  = snap.exists() ? snap.val() : {};
     const up   = {};
 
-    if (!val.name)                  up.name = user.displayName || 'Anonymous';
-    if (!val.photo && user.photoURL) up.photo = user.photoURL;
-    if (!val.G?.CP?.C?.S?.eq)       up['G/CP/C/S/eq'] = 'default';
+    if (!val.name)                       up.name = user.displayName || 'Anonymous';
+    if (!val.photo && user.photoURL)     up.photo = user.photoURL;
+    if (!val.G?.CP?.C?.S?.eq)           up['G/CP/C/S/eq'] = 'default';
     if (!val.G?.CP?.C?.S?.own?.default) up['G/CP/C/S/own/default'] = true;
 
     if (Object.keys(up).length) await userRef.update(up);
@@ -98,6 +102,7 @@ async function saveLevelTime(uid, levelNum, seconds) {
       const UNLOCKS = { 2:'ghost', 4:'neon', 6:'fire', 8:'void', 10:'rainbow' };
       if (UNLOCKS[levelNum]) await unlockSkin(uid, UNLOCKS[levelNum]);
     }
+
     return { saved: isRecord, isRecord, prev };
   } catch (e) {
     console.error('[FB] saveLevelTime FAILED:', e.code, e.message);
@@ -133,6 +138,7 @@ async function getLeaderboard(levelNum) {
         });
       }
     });
+
     return rows.sort((a, b) => a.t - b.t);
   } catch (e) {
     console.error('[FB] getLeaderboard:', e.message);
@@ -140,20 +146,11 @@ async function getLeaderboard(levelNum) {
   }
 }
 
-// 6. EXPOSE TO WINDOW
 window.FB = {
-  signInGoogle: () => {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    return auth.signInWithPopup(provider).catch(e => console.error('[FB] Popup Error:', e.message));
-  },
-  signOut: () => auth.signOut(),
-  onAuthChange: (cb) => {
-    auth.onAuthStateChanged(async (user) => {
-      if (user) await _ensureDefaults(user);
-      cb(user);
-    });
-  },
-  currentUser: () => auth.currentUser,
+  signInGoogle,
+  signOut:    logOut,
+  onAuthChange,
+  currentUser,
   getProfile,
   saveProfile,
   getSkinData,
@@ -164,4 +161,4 @@ window.FB = {
   getLeaderboard
 };
 
-console.log('[FB] Compat SDK Loaded Correctly ✓');
+console.log('[FB] Compat SDK loaded ✓');
