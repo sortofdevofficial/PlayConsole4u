@@ -1,22 +1,4 @@
-import { initializeApp } from "firebase/app";
-import { 
-  getAuth, 
-  signInWithPopup, 
-  GoogleAuthProvider, 
-  signOut, 
-  onAuthStateChanged 
-} from "firebase/auth";
-import { 
-  getDatabase, 
-  ref, 
-  get, 
-  update, 
-  set, 
-  child 
-} from "firebase/database";
-
-// Your web app's Firebase configuration
-const firebaseConfig = {
+firebase.initializeApp({
   apiKey: "AIzaSyC_fNfUQUcdhicNNx-e0weEGURbz-mZs8g",
   authDomain: "playconsole4u.firebaseapp.com",
   databaseURL: "https://playconsole4u-default-rtdb.firebaseio.com",
@@ -25,25 +7,21 @@ const firebaseConfig = {
   messagingSenderId: "383598421108",
   appId: "1:383598421108:web:12767cf3738cef9d8a9d21",
   measurementId: "G-FFXMD1550D"
-};
+});
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getDatabase(app);
+const auth = firebase.auth();
+const db = firebase.database();
 
-// Path Helpers
 const _user = uid => `users/${uid}`;
-const _lvl = (uid, n) => `users/${uid}/G/CP/L/L${n}`;
+const _lvl  = (uid, n) => `users/${uid}/G/CP/L/L${n}`;
 const _skin = uid => `users/${uid}/G/CP/C/S`;
 
-// Auth Functions
-const signInGoogle = () => signInWithPopup(auth, new GoogleAuthProvider());
-const logOut = () => signOut(auth);
-const currentUser = () => auth.currentUser;
+const signInGoogle = () => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+const logOut       = () => auth.signOut();
+const currentUser  = () => auth.currentUser;
 
 function onAuthChange(cb) {
-  onAuthStateChanged(auth, async (user) => {
+  auth.onAuthStateChanged(async (user) => {
     if (user) await _ensureDefaults(user);
     cb(user);
   });
@@ -51,26 +29,25 @@ function onAuthChange(cb) {
 
 async function _ensureDefaults(user) {
   try {
-    const userRef = ref(db, _user(user.uid));
-    const snap = await get(userRef);
-    const val = snap.exists() ? snap.val() : {};
-    
-    const up = {};
-    if (!val.name) up.name = user.displayName || 'Anonymous';
-    if (!val.photo && user.photoURL) up.photo = user.photoURL;
-    if (!val.G?.CP?.C?.S?.eq) up['G/CP/C/S/eq'] = 'default';
+    const userRef = db.ref(_user(user.uid));
+    const snap = await userRef.get();
+    const val  = snap.exists() ? snap.val() : {};
+    const up   = {};
+
+    if (!val.name)                       up.name = user.displayName || 'Anonymous';
+    if (!val.photo && user.photoURL)     up.photo = user.photoURL;
+    if (!val.G?.CP?.C?.S?.eq)           up['G/CP/C/S/eq'] = 'default';
     if (!val.G?.CP?.C?.S?.own?.default) up['G/CP/C/S/own/default'] = true;
 
-    if (Object.keys(up).length) await update(userRef, up);
+    if (Object.keys(up).length) await userRef.update(up);
   } catch (e) {
     console.warn('[FB] _ensureDefaults:', e.message);
   }
 }
 
-// Data Functions
 async function getProfile(uid) {
   try {
-    const snap = await get(ref(db, _user(uid)));
+    const snap = await db.ref(_user(uid)).get();
     return snap.exists() ? snap.val() : {};
   } catch (e) {
     console.warn('[FB] getProfile:', e.message);
@@ -80,14 +57,14 @@ async function getProfile(uid) {
 
 async function saveProfile(uid, name, photo) {
   const up = {};
-  if (name != null) up.name = name;
+  if (name  != null) up.name  = name;
   if (photo != null) up.photo = photo;
-  await update(ref(db, _user(uid)), up);
+  await db.ref(_user(uid)).update(up);
 }
 
 async function getSkinData(uid) {
   try {
-    const snap = await get(ref(db, _skin(uid)));
+    const snap = await db.ref(_skin(uid)).get();
     if (!snap.exists()) return { eq: 'default', own: { default: true } };
     const v = snap.val();
     return { eq: v.eq || 'default', own: v.own || { default: true } };
@@ -97,25 +74,23 @@ async function getSkinData(uid) {
 }
 
 async function equipSkin(uid, skinId) {
-  await set(ref(db, `${_skin(uid)}/eq`), skinId);
+  await db.ref(`${_skin(uid)}/eq`).set(skinId);
 }
 
 async function unlockSkin(uid, skinId) {
-  await set(ref(db, `${_skin(uid)}/own/${skinId}`), true);
+  await db.ref(`${_skin(uid)}/own/${skinId}`).set(true);
 }
 
 async function saveLevelTime(uid, levelNum, seconds) {
   try {
-    const levelRef = ref(db, _lvl(uid, levelNum));
-    const snap = await get(levelRef);
-    const t = Math.round(seconds * 1000) / 1000;
+    const levelRef = db.ref(_lvl(uid, levelNum));
+    const snap = await levelRef.get();
+    const t    = Math.round(seconds * 1000) / 1000;
     const prev = snap.exists() ? snap.val().t : null;
     const isRecord = prev === null || t < prev;
 
     if (isRecord) {
-      const ts = Date.now();
-      await update(levelRef, { t, ts });
-
+      await levelRef.update({ t, ts: Date.now() });
       const UNLOCKS = { 2:'ghost', 4:'neon', 6:'fire', 8:'void', 10:'rainbow' };
       if (UNLOCKS[levelNum]) await unlockSkin(uid, UNLOCKS[levelNum]);
     }
@@ -129,7 +104,7 @@ async function saveLevelTime(uid, levelNum, seconds) {
 
 async function getMyTimes(uid) {
   try {
-    const snap = await get(ref(db, `users/${uid}/G/CP/L`));
+    const snap = await db.ref(`users/${uid}/G/CP/L`).get();
     return snap.exists() ? snap.val() : {};
   } catch (e) {
     console.warn('[FB] getMyTimes:', e.message);
@@ -139,20 +114,19 @@ async function getMyTimes(uid) {
 
 async function getLeaderboard(levelNum) {
   try {
-    const snap = await get(ref(db, 'users'));
+    const snap = await db.ref('users').get();
     if (!snap.exists()) return [];
 
     const rows = [];
     snap.forEach(userSnap => {
-      const uid = userSnap.key;
       const levelData = userSnap.child(`G/CP/L/L${levelNum}`).val();
       if (levelData && typeof levelData.t === 'number') {
         rows.push({
-          uid,
-          name: userSnap.child('name').val() || 'Anonymous',
+          uid:   userSnap.key,
+          name:  userSnap.child('name').val()  || 'Anonymous',
           photo: userSnap.child('photo').val() || '',
-          t: levelData.t,
-          ts: levelData.ts || 0
+          t:     levelData.t,
+          ts:    levelData.ts || 0
         });
       }
     });
@@ -164,10 +138,9 @@ async function getLeaderboard(levelNum) {
   }
 }
 
-// Global Export for legacy scripts
 window.FB = {
   signInGoogle,
-  signOut: logOut,
+  signOut:    logOut,
   onAuthChange,
   currentUser,
   getProfile,
@@ -180,4 +153,4 @@ window.FB = {
   getLeaderboard
 };
 
-console.log('[FB] Modular SDK loaded ✓');
+console.log('[FB] Compat SDK loaded ✓');
