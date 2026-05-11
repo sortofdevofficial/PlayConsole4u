@@ -1,9 +1,10 @@
+// 1. IMPORT
 import * as firebaseModule from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js";
 import "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js";
 import "https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js";
 
-// The CDN "compat" library exports the actual firebase object as 'default'
-const firebase = firebaseModule.default;
+// 2. THE FIX: Extract the core firebase object
+const firebase = firebaseModule.default || firebaseModule;
 
 const firebaseConfig = {
   apiKey: "AIzaSyCZPK5A0UQSFB2D_zNj3wjZ5-Tbyb1VYn8",
@@ -16,7 +17,7 @@ const firebaseConfig = {
   measurementId: "G-NZ50CHHLFX"
 };
 
-// INITIALIZE
+// 3. INITIALIZE
 if (!firebase.apps.length) {
   firebase.initializeApp(firebaseConfig);
 }
@@ -24,50 +25,12 @@ if (!firebase.apps.length) {
 const auth = firebase.auth();
 const db = firebase.database();
 
-// EXPOSE TO WINDOW
-window.FB = {
-  signInGoogle: () => {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    return auth.signInWithPopup(provider);
-  },
-  signOut: () => auth.signOut(),
-  onAuthChange: (cb) => {
-    auth.onAuthStateChanged(async (user) => {
-      // If you have a private function _ensureDefaults, keep it, otherwise remove the line below
-      if (user && typeof _ensureDefaults === 'function') await _ensureDefaults(user);
-      cb(user);
-    });
-  },
-  currentUser: () => auth.currentUser,
-  getProfile: (uid) => db.ref(`users/${uid}`).get().then(s => s.val() || {}),
-  getMyTimes: (uid) => db.ref(`users/${uid}/G/CP/L`).get().then(s => s.val() || {}),
-  saveProfile: (uid, name) => db.ref(`users/${uid}`).update({ name })
-};
 // 4. PATH HELPERS
 const _user = uid => `users/${uid}`;
 const _lvl  = (uid, n) => `users/${uid}/G/CP/L/L${n}`;
 const _skin = uid => `users/${uid}/G/CP/C/S`;
 
-// 5. AUTH FUNCTIONS (Switched to Popup for GitHub Pages stability)
-const signInGoogle = () => {
-  const provider = new firebase.auth.GoogleAuthProvider();
-  return auth.signInWithPopup(provider)
-    .catch(e => console.error('[FB] Popup Error:', e.message));
-};
-
-const logOut      = () => auth.signOut();
-const currentUser  = () => auth.currentUser;
-
-function onAuthChange(cb) {
-  auth.onAuthStateChanged(async (user) => {
-    if (user) {
-      await _ensureDefaults(user);
-    }
-    cb(user);
-  });
-}
-
-// 6. DATA LOGIC
+// 5. DATA LOGIC (Your full original functions)
 async function _ensureDefaults(user) {
   try {
     const userRef = db.ref(_user(user.uid));
@@ -135,7 +98,6 @@ async function saveLevelTime(uid, levelNum, seconds) {
       const UNLOCKS = { 2:'ghost', 4:'neon', 6:'fire', 8:'void', 10:'rainbow' };
       if (UNLOCKS[levelNum]) await unlockSkin(uid, UNLOCKS[levelNum]);
     }
-
     return { saved: isRecord, isRecord, prev };
   } catch (e) {
     console.error('[FB] saveLevelTime FAILED:', e.code, e.message);
@@ -171,7 +133,6 @@ async function getLeaderboard(levelNum) {
         });
       }
     });
-
     return rows.sort((a, b) => a.t - b.t);
   } catch (e) {
     console.error('[FB] getLeaderboard:', e.message);
@@ -179,12 +140,20 @@ async function getLeaderboard(levelNum) {
   }
 }
 
-// 7. EXPOSE TO WINDOW
+// 6. EXPOSE TO WINDOW
 window.FB = {
-  signInGoogle,
-  signOut:    logOut,
-  onAuthChange,
-  currentUser,
+  signInGoogle: () => {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    return auth.signInWithPopup(provider).catch(e => console.error('[FB] Popup Error:', e.message));
+  },
+  signOut: () => auth.signOut(),
+  onAuthChange: (cb) => {
+    auth.onAuthStateChanged(async (user) => {
+      if (user) await _ensureDefaults(user);
+      cb(user);
+    });
+  },
+  currentUser: () => auth.currentUser,
   getProfile,
   saveProfile,
   getSkinData,
