@@ -1,12 +1,12 @@
 firebase.initializeApp({
-  apiKey: "AIzaSyC_fNfUQUcdhicNNx-e0weEGURbz-mZs8g",
-  authDomain: "playconsole4u.firebaseapp.com",
-  databaseURL: "https://playconsole4u-default-rtdb.firebaseio.com",
-  projectId: "playconsole4u",
-  storageBucket: "playconsole4u.firebasestorage.app",
-  messagingSenderId: "383598421108",
-  appId: "1:383598421108:web:12767cf3738cef9d8a9d21",
-  measurementId: "G-FFXMD1550D"
+  apiKey: "AIzaSyCZPK5A0UQSFB2D_zNj3wjZ5-Tbyb1VYn8",
+  authDomain: "playconsole4u-53a6a.firebaseapp.com",
+  databaseURL: "https://playconsole4u-53a6a-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "playconsole4u-53a6a",
+  storageBucket: "playconsole4u-53a6a.firebasestorage.app",
+  messagingSenderId: "306379034842",
+  appId: "1:306379034842:web:1b891d0ef20cdacb0a55e3",
+  measurementId: "G-NZ50CHHLFX"
 });
 
 const auth = firebase.auth();
