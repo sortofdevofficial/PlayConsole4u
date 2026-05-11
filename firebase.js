@@ -20,6 +20,13 @@ const signInGoogle = () => auth.signInWithPopup(new firebase.auth.GoogleAuthProv
 const logOut       = () => auth.signOut();
 const currentUser  = () => auth.currentUser;
 
+function onAuthChange(cb) {
+  auth.onAuthStateChanged(async (user) => {
+    if (user) await _ensureDefaults(user);
+    cb(user);
+  });
+}
+
 async function _ensureDefaults(user) {
   try {
     const userRef = db.ref(_user(user.uid));
