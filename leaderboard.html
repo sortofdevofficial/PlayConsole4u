@@ -54,9 +54,6 @@ body{
   cursor:pointer;display:flex;align-items:center;gap:8px;
 }
 #signin-strip button:hover{background:#6d28d9}
-#signin-strip button .gdot{
-  width:9px;height:9px;border-radius:50%;background:#fff;display:inline-block;
-}
 .page{
   max-width:860px;margin:0 auto;padding:30px 20px 80px;
 }
@@ -64,15 +61,9 @@ body{
   font-size:10px;font-weight:800;letter-spacing:4px;
   color:#c4b5fd;opacity:.55;text-transform:uppercase;margin-bottom:10px;
 }
-h1{
-  font-size:34px;font-weight:900;margin-bottom:6px;
-}
-.pg-sub{
-  font-size:13px;color:#8d8db6;margin-bottom:26px;
-}
-.tabs{
-  display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;
-}
+h1{font-size:34px;font-weight:900;margin-bottom:6px;}
+.pg-sub{font-size:13px;color:#8d8db6;margin-bottom:26px;}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;}
 .tab{
   padding:7px 14px;border-radius:999px;
   font-size:10px;font-weight:900;letter-spacing:.6px;
@@ -90,31 +81,20 @@ h1{
 .lb-box{
   background:rgba(15,15,26,.92);
   border:1px solid rgba(255,255,255,.06);
-  border-radius:16px;
-  overflow:hidden;
-  margin-bottom:18px;
-  min-height:130px;
+  border-radius:16px;overflow:hidden;margin-bottom:18px;min-height:130px;
   box-shadow:0 20px 50px rgba(0,0,0,.25);
 }
 .lb-head{
-  display:grid;
-  grid-template-columns:56px 1fr 110px 92px;
-  padding:12px 18px;
-  background:rgba(255,255,255,.03);
+  display:grid;grid-template-columns:56px 1fr 110px 92px;
+  padding:12px 18px;background:rgba(255,255,255,.03);
   border-bottom:1px solid rgba(255,255,255,.06);
-  font-size:9px;
-  font-weight:800;
-  letter-spacing:2px;
-  text-transform:uppercase;
-  color:rgba(255,255,255,.28);
+  font-size:9px;font-weight:800;letter-spacing:2px;
+  text-transform:uppercase;color:rgba(255,255,255,.28);
 }
 .lb-row{
-  display:grid;
-  grid-template-columns:56px 1fr 110px 92px;
-  padding:12px 18px;
-  border-bottom:1px solid rgba(255,255,255,.04);
-  align-items:center;
-  transition:background .12s;
+  display:grid;grid-template-columns:56px 1fr 110px 92px;
+  padding:12px 18px;border-bottom:1px solid rgba(255,255,255,.04);
+  align-items:center;transition:background .12s;
 }
 .lb-row:last-child{border-bottom:none}
 .lb-row:hover{background:rgba(255,255,255,.025)}
@@ -122,96 +102,42 @@ h1{
   background:color-mix(in srgb,var(--ac,#7c3aed) 10%,transparent)!important;
   border-left:3px solid var(--ac,#a78bfa)
 }
-.rank{
-  font-family:'Space Mono',monospace;
-  font-size:12px;
-  font-weight:700;
-  color:rgba(255,255,255,.22);
-  text-align:center;
-}
+.rank{font-family:'Space Mono',monospace;font-size:12px;font-weight:700;color:rgba(255,255,255,.22);text-align:center;}
 .rank.g{color:#fbbf24;font-size:17px}
 .rank.s{color:#cbd5e1;font-size:17px}
 .rank.b{color:#cd7c2f;font-size:17px}
-.player{
-  display:flex;align-items:center;gap:10px;min-width:0;
-}
+.player{display:flex;align-items:center;gap:10px;min-width:0;}
 .av{
   width:30px;height:30px;border-radius:50%;
-  background:rgba(255,255,255,.08);
-  border:1.5px solid rgba(255,255,255,.10);
-  flex-shrink:0;
-  display:flex;align-items:center;justify-content:center;
+  background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.10);
+  flex-shrink:0;display:flex;align-items:center;justify-content:center;
   font-size:11px;font-weight:900;color:#fff;
 }
-.pname{
-  font-size:13px;font-weight:800;color:#f2f2ff;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-}
+.pname{font-size:13px;font-weight:800;color:#f2f2ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .you{
   font-size:8px;font-weight:900;letter-spacing:1px;
   background:var(--ac,#7c3aed);color:#fff;
   padding:2px 5px;border-radius:4px;margin-left:6px;flex-shrink:0;
 }
-.tcell{
-  font-family:'Space Mono',monospace;
-  font-size:12px;color:var(--ac,#c4b5fd);
-  text-align:right;font-weight:700;
-}
-.dcell{
-  font-size:9px;color:rgba(255,255,255,.22);text-align:right;
-}
-.lb-state{
-  padding:54px 20px;
-  text-align:center;
-  color:rgba(255,255,255,.25);
-  font-size:12px;
-  font-weight:700;
-  letter-spacing:2px;
-}
+.tcell{font-family:'Space Mono',monospace;font-size:12px;color:var(--ac,#c4b5fd);text-align:right;font-weight:700;}
+.dcell{font-size:9px;color:rgba(255,255,255,.22);text-align:right;}
+.lb-state{padding:54px 20px;text-align:center;color:rgba(255,255,255,.25);font-size:12px;font-weight:700;letter-spacing:2px;}
 .lb-state.spin:after{
-  content:'';
-  display:inline-block;
-  width:14px;height:14px;
-  border:2px solid rgba(196,181,253,.28);
-  border-top-color:#c4b5fd;
-  border-radius:50%;
-  animation:sp .7s linear infinite;
-  margin-left:10px;
-  vertical-align:middle;
+  content:'';display:inline-block;width:14px;height:14px;
+  border:2px solid rgba(196,181,253,.28);border-top-color:#c4b5fd;
+  border-radius:50%;animation:sp .7s linear infinite;margin-left:10px;vertical-align:middle;
 }
 @keyframes sp{to{transform:rotate(360deg)}}
-.err-box{
-  background:rgba(239,68,68,.08);
-  border:1px solid rgba(239,68,68,.20);
-  border-radius:12px;
-  padding:14px 16px;
-  font-size:12px;
-  font-weight:700;
-  color:#fca5a5;
-  margin-bottom:16px;
-  display:none;
-}
-.pag{
-  display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;
-}
+.pag{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;}
 .pg-btn{
   padding:8px 16px;border-radius:10px;
-  border:1px solid rgba(255,255,255,.08);
-  background:rgba(255,255,255,.02);
-  color:rgba(255,255,255,.5);
-  font-family:'Nunito',sans-serif;font-size:11px;font-weight:900;
+  border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.02);
+  color:rgba(255,255,255,.5);font-family:'Nunito',sans-serif;font-size:11px;font-weight:900;
   cursor:pointer;transition:.15s;
 }
-.pg-btn:hover:not(:disabled){
-  border-color:rgba(255,255,255,.24);
-  color:#f4f4ff;
-}
+.pg-btn:hover:not(:disabled){border-color:rgba(255,255,255,.24);color:#f4f4ff;}
 .pg-btn:disabled{opacity:.18;cursor:not-allowed}
-.pg-info{
-  font-size:11px;font-weight:700;
-  color:rgba(255,255,255,.28);
-  padding:0 6px;
-}
+.pg-info{font-size:11px;font-weight:700;color:rgba(255,255,255,.28);padding:0 6px;}
 </style>
 </head>
 <body>
@@ -225,9 +151,9 @@ h1{
 </div>
 
 <div id="signin-strip">
-  <span>Sign in to see your row highlighted and submit your times</span>
+  <span>Sign in to see your row highlighted</span>
   <button onclick="doSignIn()">
-    <span class="gdot"></span>
+    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" style="width:13px;height:13px" alt="">
     Sign in with Google
   </button>
 </div>
@@ -236,8 +162,6 @@ h1{
   <div class="pg-label">// Leaderboard</div>
   <h1>Top Times</h1>
   <p class="pg-sub">Best completion times per level — live from Firebase.</p>
-
-  <div class="err-box" id="err-box"></div>
   <div class="tabs" id="tabs"></div>
   <div class="lb-box" id="lb-box"><div class="lb-state spin">LOADING</div></div>
   <div class="pag" id="pag"></div>
@@ -250,7 +174,7 @@ h1{
 <script>
 const ACCENTS = {1:'#f97316',2:'#22c55e',3:'#f43f5e',4:'#06b6d4',5:'#a855f7',6:'#eab308',7:'#38bdf8',8:'#f97316',9:'#84cc16',10:'#818cf8'};
 const PER = 10;
-let currentLvl = 1, rows = [], page = 1, currentUid = null, authReady = false;
+let currentLvl = 1, rows = [], page = 1, currentUid = null;
 
 function setAc(ac){ document.documentElement.style.setProperty('--ac', ac); }
 function fmt(s){ if(s==null) return '—'; return s < 60 ? s.toFixed(3)+'s' : `${Math.floor(s/60)}m ${(s%60).toFixed(3)}s`; }
@@ -263,15 +187,12 @@ function rankHtml(i){
   return `<div class="rank">#${i+1}</div>`;
 }
 function initials(name){
-  const parts = String(name || 'P').trim().split(/\s+/).filter(Boolean);
-  const a = parts[0]?.[0] || 'P';
-  const b = parts[1]?.[0] || '';
-  return (a + b).toUpperCase();
+  const parts = String(name||'P').trim().split(/\s+/).filter(Boolean);
+  return ((parts[0]?.[0]||'P')+(parts[1]?.[0]||'')).toUpperCase();
 }
 function avatarHtml(name){
-  const letter = initials(name);
-  const hue = [...String(name||'').split('')].reduce((a,c)=>a+c.charCodeAt(0),0) % 360;
-  return `<div class="av" style="background:hsl(${hue} 70% 40%);">${esc(letter)}</div>`;
+  const hue = [...String(name||'')].reduce((a,c)=>a+c.charCodeAt(0),0)%360;
+  return `<div class="av" style="background:hsl(${hue} 70% 40%);">${esc(initials(name))}</div>`;
 }
 
 function buildTabs(){
@@ -279,17 +200,17 @@ function buildTabs(){
   el.innerHTML = '';
   for(let i=1;i<=10;i++){
     const b = document.createElement('button');
-    b.className = 'tab' + (i===currentLvl ? ' active' : '');
-    b.textContent = String(i);
+    b.className = 'tab'+(i===currentLvl?' active':'');
+    b.textContent = 'LV '+i;
     b.onclick = () => loadLevel(i);
     el.appendChild(b);
   }
 }
 
 function renderPag(){
-  const total = Math.ceil(rows.length / PER);
+  const total = Math.ceil(rows.length/PER);
   const el = document.getElementById('pag');
-  if(total <= 1){ el.innerHTML = ''; return; }
+  if(total<=1){ el.innerHTML=''; return; }
   el.innerHTML = `
     <button class="pg-btn" onclick="goPage(${page-1})" ${page===1?'disabled':''}>← Prev</button>
     <span class="pg-info">Page ${page} / ${total} · ${rows.length} players</span>
@@ -297,66 +218,59 @@ function renderPag(){
 }
 
 function goPage(p){
-  const total = Math.ceil(rows.length / PER);
-  if(p < 1 || p > total) return;
+  const total = Math.ceil(rows.length/PER);
+  if(p<1||p>total) return;
   page = p;
   renderPage();
-  window.scrollTo({ top:0, behavior:'smooth' });
+  window.scrollTo({top:0,behavior:'smooth'});
 }
 
 function renderPage(){
   const box = document.getElementById('lb-box');
   if(!rows.length){
-    box.innerHTML = '<div class="lb-state">No times yet for this level. Be the first!</div>';
-    document.getElementById('pag').innerHTML = '';
+    box.innerHTML='<div class="lb-state">No times yet for this level. Be the first!</div>';
+    document.getElementById('pag').innerHTML='';
     return;
   }
-  const start = (page - 1) * PER;
-  const slice = rows.slice(start, start + PER);
-  let html = `<div class="lb-head">
+  const start=(page-1)*PER;
+  const slice=rows.slice(start,start+PER);
+  let html=`<div class="lb-head">
     <div>Rank</div><div>Player</div>
     <div style="text-align:right">Time</div>
     <div style="text-align:right">Date</div>
   </div>`;
-  slice.forEach((r, idx) => {
-    const gi = start + idx;
-    const isMe = r.uid === currentUid;
-    html += `<div class="lb-row${isMe ? ' me' : ''}">
+  slice.forEach((r,idx)=>{
+    const gi=start+idx;
+    const isMe=r.uid===currentUid;
+    html+=`<div class="lb-row${isMe?' me':''}">
       ${rankHtml(gi)}
-      <div class="player">${avatarHtml(r.name)}<span class="pname">${esc(r.name)}${isMe ? '<span class="you">YOU</span>' : ''}</span></div>
+      <div class="player">${avatarHtml(r.name)}<span class="pname">${esc(r.name)}${isMe?'<span class="you">YOU</span>':''}</span></div>
       <div class="tcell">${fmt(r.t)}</div>
       <div class="dcell">${fmtDate(r.ts)}</div>
     </div>`;
   });
-  box.innerHTML = html;
+  box.innerHTML=html;
   renderPag();
 }
 
 async function loadLevel(n){
-  if(!authReady) return;
-  if(!currentUid){
-    document.getElementById('lb-box').innerHTML = '<div class="lb-state">Sign in to view the leaderboard.</div>';
-    document.getElementById('pag').innerHTML = '';
-    return;
-  }
-  currentLvl = n;
-  page = 1;
+  currentLvl=n;
+  page=1;
   setAc(ACCENTS[n]);
   buildTabs();
-  document.getElementById('lb-box').innerHTML = '<div class="lb-state spin">LOADING</div>';
-  document.getElementById('pag').innerHTML = '';
+  document.getElementById('lb-box').innerHTML='<div class="lb-state spin">LOADING</div>';
+  document.getElementById('pag').innerHTML='';
   try{
     rows = await window.FB.getLeaderboard(n);
     renderPage();
   }catch(e){
-    document.getElementById('lb-box').innerHTML = '<div class="lb-state">Failed to load.</div>';
+    document.getElementById('lb-box').innerHTML='<div class="lb-state">Failed to load.</div>';
   }
 }
 
-async function doSignIn(){ try { await window.FB.signInGoogle(); } catch(e){} }
+async function doSignIn(){ try{ await window.FB.signInGoogle(); }catch(e){} }
 
 window.FB.onAuthChange(user => {
-  authReady = true;
   currentUid = user ? user.uid : null;
   document.getElementById('signin-strip').style.display = user ? 'none' : 'flex';
   loadLevel(currentLvl);
