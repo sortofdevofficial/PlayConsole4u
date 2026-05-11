@@ -305,10 +305,6 @@ header{
     </div>
   </div>
 </div>
-
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script type="module" src="firebase.js"></script>
 <script>
 const vid = document.getElementById('bg-video');
@@ -414,7 +410,13 @@ async function refreshUI(user){
   tg.innerHTML = html;
 }
 
-window.FB.onAuthChange(user => refreshUI(user));
+// Wait for the FB object to be attached to window
+const checkFB = setInterval(() => {
+  if (window.FB) {
+    clearInterval(checkFB);
+    window.FB.onAuthChange(user => refreshUI(user));
+  }
+}, 100);
 
 function openModal(){ document.getElementById('modal-bg').classList.add('open'); }
 function closeModal(){ document.getElementById('modal-bg').classList.remove('open'); }

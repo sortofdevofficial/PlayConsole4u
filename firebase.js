@@ -1,9 +1,9 @@
-// 1. IMPORT COMPAT LIBS FROM GOOGLE CDN
+// 1. USE THIS SPECIFIC IMPORT STYLE
 import firebase from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js";
 import "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js";
 import "https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js";
 
-// 2. CONFIGURATION (Your existing config)
+// 2. CONFIGURATION
 const firebaseConfig = {
   apiKey: "AIzaSyCZPK5A0UQSFB2D_zNj3wjZ5-Tbyb1VYn8",
   authDomain: "playconsole4u-53a6a.firebaseapp.com",
@@ -15,15 +15,13 @@ const firebaseConfig = {
   measurementId: "G-NZ50CHHLFX"
 };
 
-// 3. INITIALIZE
+// 3. INITIALIZE (Note the change to use the 'firebase' object directly)
 if (!firebase.apps.length) {
   firebase.initializeApp(firebaseConfig);
 }
 
 const auth = firebase.auth();
 const db = firebase.database();
-
-// ... rest of the code I gave you previously ...
 // 4. PATH HELPERS
 const _user = uid => `users/${uid}`;
 const _lvl  = (uid, n) => `users/${uid}/G/CP/L/L${n}`;
