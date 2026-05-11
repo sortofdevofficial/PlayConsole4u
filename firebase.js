@@ -1,9 +1,9 @@
-// 1. IMPORT COMPAT LIBS (Required for 'firebase.auth()' syntax)
-import firebase from "firebase/compat/app";
-import "firebase/compat/auth";
-import "firebase/compat/database";
+// 1. IMPORT COMPAT LIBS FROM GOOGLE CDN
+import firebase from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js";
+import "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js";
+import "https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js";
 
-// 2. CONFIGURATION
+// 2. CONFIGURATION (Your existing config)
 const firebaseConfig = {
   apiKey: "AIzaSyCZPK5A0UQSFB2D_zNj3wjZ5-Tbyb1VYn8",
   authDomain: "playconsole4u-53a6a.firebaseapp.com",
@@ -23,6 +23,7 @@ if (!firebase.apps.length) {
 const auth = firebase.auth();
 const db = firebase.database();
 
+// ... rest of the code I gave you previously ...
 // 4. PATH HELPERS
 const _user = uid => `users/${uid}`;
 const _lvl  = (uid, n) => `users/${uid}/G/CP/L/L${n}`;
