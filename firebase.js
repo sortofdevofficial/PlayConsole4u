@@ -1,7 +1,9 @@
-// 1. THIS IS THE ONLY WAY THE COMPAT CDN WORKS WITH IMPORT
-import * as firebase from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js";
+import * as firebaseModule from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js";
 import "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js";
 import "https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js";
+
+// The CDN "compat" library exports the actual firebase object as 'default'
+const firebase = firebaseModule.default;
 
 const firebaseConfig = {
   apiKey: "AIzaSyCZPK5A0UQSFB2D_zNj3wjZ5-Tbyb1VYn8",
@@ -14,26 +16,25 @@ const firebaseConfig = {
   measurementId: "G-NZ50CHHLFX"
 };
 
-// 2. INITIALIZE (We use firebase.default because of how the CDN bundles it)
-if (!firebase.default.apps.length) {
-  firebase.default.initializeApp(firebaseConfig);
+// INITIALIZE
+if (!firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
 }
 
-const auth = firebase.default.auth();
-const db = firebase.default.database();
+const auth = firebase.auth();
+const db = firebase.database();
 
-// ... the rest of your functions (signInGoogle, etc.) ...
-
-// 3. EXPOSE TO WINDOW (Ensure this is at the very bottom)
+// EXPOSE TO WINDOW
 window.FB = {
   signInGoogle: () => {
-    const provider = new firebase.default.auth.GoogleAuthProvider();
+    const provider = new firebase.auth.GoogleAuthProvider();
     return auth.signInWithPopup(provider);
   },
   signOut: () => auth.signOut(),
   onAuthChange: (cb) => {
     auth.onAuthStateChanged(async (user) => {
-      if (user) await _ensureDefaults(user);
+      // If you have a private function _ensureDefaults, keep it, otherwise remove the line below
+      if (user && typeof _ensureDefaults === 'function') await _ensureDefaults(user);
       cb(user);
     });
   },
