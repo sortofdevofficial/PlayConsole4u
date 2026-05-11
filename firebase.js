@@ -12,15 +12,6 @@ firebase.initializeApp({
 const auth = firebase.auth();
 const db = firebase.database();
 
-// Handle redirect result on page load
-auth.getRedirectResult().then(result => {
-  if (result && result.user) {
-    console.log('[FB] Redirect sign-in success:', result.user.displayName);
-  }
-}).catch(e => {
-  console.warn('[FB] getRedirectResult error:', e.message);
-});
-
 const _user = uid => `users/${uid}`;
 const _lvl  = (uid, n) => `users/${uid}/G/CP/L/L${n}`;
 const _skin = uid => `users/${uid}/G/CP/C/S`;
@@ -30,9 +21,18 @@ const logOut       = () => auth.signOut();
 const currentUser  = () => auth.currentUser;
 
 function onAuthChange(cb) {
-  auth.onAuthStateChanged(async (user) => {
-    if (user) await _ensureDefaults(user);
-    cb(user);
+  // First handle any pending redirect result, THEN listen for auth state
+  auth.getRedirectResult().then(result => {
+    if (result && result.user) {
+      console.log('[FB] Redirect sign-in success:', result.user.displayName);
+    }
+  }).catch(e => {
+    console.warn('[FB] getRedirectResult error:', e.message);
+  }).finally(() => {
+    auth.onAuthStateChanged(async (user) => {
+      if (user) await _ensureDefaults(user);
+      cb(user);
+    });
   });
 }
 
