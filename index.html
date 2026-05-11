@@ -359,7 +359,21 @@ function closeSB(){
   vid.style.opacity = '.28';
 }
 
-async function doSignIn(){ try { await window.FB.signInGoogle(); } catch(e){ console.error(e); } }
+async function doSignIn() { 
+  // 1. Safety check to prevent the 'undefined' crash
+  if (!window.FB) {
+    console.warn("Firebase not yet loaded.");
+    alert("The app is still warming up! Please try again in 2 seconds.");
+    return;
+  }
+  
+  try { 
+    // 2. Proceed with sign in
+    await window.FB.signInGoogle(); 
+  } catch(e) { 
+    console.error("Sign-in failed:", e); 
+  } 
+}
 async function doSignOut(){ await window.FB.signOut(); closeModal(); }
 
 function fmt(s){ return s == null ? '—' : s < 60 ? s.toFixed(2)+'s' : `${Math.floor(s/60)}m ${(s%60).toFixed(0)}s`; }

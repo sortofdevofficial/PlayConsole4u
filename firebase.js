@@ -1,9 +1,8 @@
-// 1. USE THIS SPECIFIC IMPORT STYLE
-import firebase from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js";
+// 1. THIS IS THE ONLY WAY THE COMPAT CDN WORKS WITH IMPORT
+import * as firebase from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js";
 import "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js";
 import "https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js";
 
-// 2. CONFIGURATION
 const firebaseConfig = {
   apiKey: "AIzaSyCZPK5A0UQSFB2D_zNj3wjZ5-Tbyb1VYn8",
   authDomain: "playconsole4u-53a6a.firebaseapp.com",
@@ -15,13 +14,34 @@ const firebaseConfig = {
   measurementId: "G-NZ50CHHLFX"
 };
 
-// 3. INITIALIZE (Note the change to use the 'firebase' object directly)
-if (!firebase.apps.length) {
-  firebase.initializeApp(firebaseConfig);
+// 2. INITIALIZE (We use firebase.default because of how the CDN bundles it)
+if (!firebase.default.apps.length) {
+  firebase.default.initializeApp(firebaseConfig);
 }
 
-const auth = firebase.auth();
-const db = firebase.database();
+const auth = firebase.default.auth();
+const db = firebase.default.database();
+
+// ... the rest of your functions (signInGoogle, etc.) ...
+
+// 3. EXPOSE TO WINDOW (Ensure this is at the very bottom)
+window.FB = {
+  signInGoogle: () => {
+    const provider = new firebase.default.auth.GoogleAuthProvider();
+    return auth.signInWithPopup(provider);
+  },
+  signOut: () => auth.signOut(),
+  onAuthChange: (cb) => {
+    auth.onAuthStateChanged(async (user) => {
+      if (user) await _ensureDefaults(user);
+      cb(user);
+    });
+  },
+  currentUser: () => auth.currentUser,
+  getProfile: (uid) => db.ref(`users/${uid}`).get().then(s => s.val() || {}),
+  getMyTimes: (uid) => db.ref(`users/${uid}/G/CP/L`).get().then(s => s.val() || {}),
+  saveProfile: (uid, name) => db.ref(`users/${uid}`).update({ name })
+};
 // 4. PATH HELPERS
 const _user = uid => `users/${uid}`;
 const _lvl  = (uid, n) => `users/${uid}/G/CP/L/L${n}`;
