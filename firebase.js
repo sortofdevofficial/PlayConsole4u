@@ -23,10 +23,10 @@ const currentUser  = () => auth.currentUser;
 function onAuthChange(cb) {
   auth.getRedirectResult().then(result => {
     if (result && result.user) {
-      console.log('[FB] Redirect sign-in success:', result.user.displayName);
+      console.log('[FB] Signed in:', result.user.displayName);
     }
   }).catch(e => {
-    console.warn('[FB] getRedirectResult error:', e.message);
+    console.warn('[FB] getRedirectResult:', e.message);
   }).finally(() => {
     auth.onAuthStateChanged(async (user) => {
       if (user) await _ensureDefaults(user);
@@ -41,12 +41,10 @@ async function _ensureDefaults(user) {
     const snap = await userRef.get();
     const val  = snap.exists() ? snap.val() : {};
     const up   = {};
-
     if (!val.name)                       up.name = user.displayName || 'Anonymous';
     if (!val.photo && user.photoURL)     up.photo = user.photoURL;
     if (!val.G?.CP?.C?.S?.eq)           up['G/CP/C/S/eq'] = 'default';
     if (!val.G?.CP?.C?.S?.own?.default) up['G/CP/C/S/own/default'] = true;
-
     if (Object.keys(up).length) await userRef.update(up);
   } catch (e) {
     console.warn('[FB] _ensureDefaults:', e.message);
@@ -57,10 +55,7 @@ async function getProfile(uid) {
   try {
     const snap = await db.ref(_user(uid)).get();
     return snap.exists() ? snap.val() : {};
-  } catch (e) {
-    console.warn('[FB] getProfile:', e.message);
-    return {};
-  }
+  } catch (e) { return {}; }
 }
 
 async function saveProfile(uid, name, photo) {
@@ -76,9 +71,7 @@ async function getSkinData(uid) {
     if (!snap.exists()) return { eq: 'default', own: { default: true } };
     const v = snap.val();
     return { eq: v.eq || 'default', own: v.own || { default: true } };
-  } catch {
-    return { eq: 'default', own: { default: true } };
-  }
+  } catch { return { eq: 'default', own: { default: true } }; }
 }
 
 async function equipSkin(uid, skinId) {
@@ -96,16 +89,14 @@ async function saveLevelTime(uid, levelNum, seconds) {
     const t    = Math.round(seconds * 1000) / 1000;
     const prev = snap.exists() ? snap.val().t : null;
     const isRecord = prev === null || t < prev;
-
     if (isRecord) {
       await levelRef.update({ t, ts: Date.now() });
       const UNLOCKS = { 2:'ghost', 4:'neon', 6:'fire', 8:'void', 10:'rainbow' };
       if (UNLOCKS[levelNum]) await unlockSkin(uid, UNLOCKS[levelNum]);
     }
-
     return { saved: isRecord, isRecord, prev };
   } catch (e) {
-    console.error('[FB] saveLevelTime FAILED:', e.code, e.message);
+    console.error('[FB] saveLevelTime:', e.message);
     return { saved: false, isRecord: false, prev: null };
   }
 }
@@ -114,17 +105,13 @@ async function getMyTimes(uid) {
   try {
     const snap = await db.ref(`users/${uid}/G/CP/L`).get();
     return snap.exists() ? snap.val() : {};
-  } catch (e) {
-    console.warn('[FB] getMyTimes:', e.message);
-    return {};
-  }
+  } catch (e) { return {}; }
 }
 
 async function getLeaderboard(levelNum) {
   try {
     const snap = await db.ref('users').get();
     if (!snap.exists()) return [];
-
     const rows = [];
     snap.forEach(userSnap => {
       const levelData = userSnap.child(`G/CP/L/L${levelNum}`).val();
@@ -138,7 +125,6 @@ async function getLeaderboard(levelNum) {
         });
       }
     });
-
     return rows.sort((a, b) => a.t - b.t);
   } catch (e) {
     console.error('[FB] getLeaderboard:', e.message);
