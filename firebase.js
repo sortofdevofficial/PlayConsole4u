@@ -1,6 +1,22 @@
-if (typeof firebase === 'undefined') throw new Error('[FB] Load Firebase compat SDK scripts before firebase.js');
+import { initializeApp } from "firebase/app";
+import { 
+  getAuth, 
+  signInWithPopup, 
+  GoogleAuthProvider, 
+  signOut, 
+  onAuthStateChanged 
+} from "firebase/auth";
+import { 
+  getDatabase, 
+  ref, 
+  get, 
+  update, 
+  set, 
+  child 
+} from "firebase/database";
 
-if (!firebase.apps.length) firebase.initializeApp({
+// Your web app's Firebase configuration
+const firebaseConfig = {
   apiKey: "AIzaSyC_fNfUQUcdhicNNx-e0weEGURbz-mZs8g",
   authDomain: "playconsole4u.firebaseapp.com",
   databaseURL: "https://playconsole4u-default-rtdb.firebaseio.com",
@@ -9,21 +25,25 @@ if (!firebase.apps.length) firebase.initializeApp({
   messagingSenderId: "383598421108",
   appId: "1:383598421108:web:12767cf3738cef9d8a9d21",
   measurementId: "G-FFXMD1550D"
-});
+};
 
-const auth = firebase.auth();
-const db = firebase.database();
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getDatabase(app);
 
+// Path Helpers
 const _user = uid => `users/${uid}`;
 const _lvl = (uid, n) => `users/${uid}/G/CP/L/L${n}`;
 const _skin = uid => `users/${uid}/G/CP/C/S`;
 
-const signInGoogle = () => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
-const signOut = () => auth.signOut();
+// Auth Functions
+const signInGoogle = () => signInWithPopup(auth, new GoogleAuthProvider());
+const logOut = () => signOut(auth);
 const currentUser = () => auth.currentUser;
 
 function onAuthChange(cb) {
-  auth.onAuthStateChanged(async user => {
+  onAuthStateChanged(auth, async (user) => {
     if (user) await _ensureDefaults(user);
     cb(user);
   });
@@ -31,23 +51,27 @@ function onAuthChange(cb) {
 
 async function _ensureDefaults(user) {
   try {
-    const snap = await db.ref(_user(user.uid)).get();
-    const val = snap.exists() ? (snap.val() || {}) : {};
+    const userRef = ref(db, _user(user.uid));
+    const snap = await get(userRef);
+    const val = snap.exists() ? snap.val() : {};
+    
     const up = {};
     if (!val.name) up.name = user.displayName || 'Anonymous';
     if (!val.photo && user.photoURL) up.photo = user.photoURL;
     if (!val.G?.CP?.C?.S?.eq) up['G/CP/C/S/eq'] = 'default';
     if (!val.G?.CP?.C?.S?.own?.default) up['G/CP/C/S/own/default'] = true;
-    if (Object.keys(up).length) await db.ref(_user(user.uid)).update(up);
+
+    if (Object.keys(up).length) await update(userRef, up);
   } catch (e) {
     console.warn('[FB] _ensureDefaults:', e.message);
   }
 }
 
+// Data Functions
 async function getProfile(uid) {
   try {
-    const s = await db.ref(_user(uid)).get();
-    return s.exists() ? (s.val() || {}) : {};
+    const snap = await get(ref(db, _user(uid)));
+    return snap.exists() ? snap.val() : {};
   } catch (e) {
     console.warn('[FB] getProfile:', e.message);
     return {};
@@ -55,17 +79,17 @@ async function getProfile(uid) {
 }
 
 async function saveProfile(uid, name, photo) {
-  const u = {};
-  if (name != null) u.name = name;
-  if (photo != null) u.photo = photo;
-  await db.ref(_user(uid)).update(u);
+  const up = {};
+  if (name != null) up.name = name;
+  if (photo != null) up.photo = photo;
+  await update(ref(db, _user(uid)), up);
 }
 
 async function getSkinData(uid) {
   try {
-    const s = await db.ref(_skin(uid)).get();
-    if (!s.exists()) return { eq: 'default', own: { default: true } };
-    const v = s.val() || {};
+    const snap = await get(ref(db, _skin(uid)));
+    if (!snap.exists()) return { eq: 'default', own: { default: true } };
+    const v = snap.val();
     return { eq: v.eq || 'default', own: v.own || { default: true } };
   } catch {
     return { eq: 'default', own: { default: true } };
@@ -73,32 +97,27 @@ async function getSkinData(uid) {
 }
 
 async function equipSkin(uid, skinId) {
-  await db.ref(`${_skin(uid)}/eq`).set(skinId);
+  await set(ref(db, `${_skin(uid)}/eq`), skinId);
 }
 
 async function unlockSkin(uid, skinId) {
-  await db.ref(`${_skin(uid)}/own/${skinId}`).set(true);
+  await set(ref(db, `${_skin(uid)}/own/${skinId}`), true);
 }
 
 async function saveLevelTime(uid, levelNum, seconds) {
   try {
-    const snap = await db.ref(_lvl(uid, levelNum)).get();
+    const levelRef = ref(db, _lvl(uid, levelNum));
+    const snap = await get(levelRef);
     const t = Math.round(seconds * 1000) / 1000;
     const prev = snap.exists() ? snap.val().t : null;
     const isRecord = prev === null || t < prev;
 
     if (isRecord) {
-      const profile = await getProfile(uid);
-      const name = profile.name || currentUser()?.displayName || 'Anonymous';
-      const photo = profile.photo || currentUser()?.photoURL || '';
       const ts = Date.now();
-
-      await db.ref().update({
-        [_lvl(uid, levelNum)]: { t, ts }
-      });
+      await update(levelRef, { t, ts });
 
       const UNLOCKS = { 2:'ghost', 4:'neon', 6:'fire', 8:'void', 10:'rainbow' };
-      if (UNLOCKS[levelNum]) unlockSkin(uid, UNLOCKS[levelNum]).catch(() => {});
+      if (UNLOCKS[levelNum]) await unlockSkin(uid, UNLOCKS[levelNum]);
     }
 
     return { saved: isRecord, isRecord, prev };
@@ -110,8 +129,8 @@ async function saveLevelTime(uid, levelNum, seconds) {
 
 async function getMyTimes(uid) {
   try {
-    const s = await db.ref(`users/${uid}/G/CP/L`).get();
-    return s.exists() ? (s.val() || {}) : {};
+    const snap = await get(ref(db, `users/${uid}/G/CP/L`));
+    return snap.exists() ? snap.val() : {};
   } catch (e) {
     console.warn('[FB] getMyTimes:', e.message);
     return {};
@@ -120,35 +139,35 @@ async function getMyTimes(uid) {
 
 async function getLeaderboard(levelNum) {
   try {
-    const usersSnap = await db.ref('users').get();
-    if (!usersSnap.exists()) return [];
+    const snap = await get(ref(db, 'users'));
+    if (!snap.exists()) return [];
 
     const rows = [];
-    usersSnap.forEach(userSnap => {
+    snap.forEach(userSnap => {
       const uid = userSnap.key;
-      const v = userSnap.child(`G/CP/L/L${levelNum}`).val();
-      if (v && typeof v.t === 'number') {
+      const levelData = userSnap.child(`G/CP/L/L${levelNum}`).val();
+      if (levelData && typeof levelData.t === 'number') {
         rows.push({
           uid,
           name: userSnap.child('name').val() || 'Anonymous',
           photo: userSnap.child('photo').val() || '',
-          t: v.t,
-          ts: v.ts || 0
+          t: levelData.t,
+          ts: levelData.ts || 0
         });
       }
     });
 
-    rows.sort((a, b) => a.t - b.t);
-    return rows;
+    return rows.sort((a, b) => a.t - b.t);
   } catch (e) {
     console.error('[FB] getLeaderboard:', e.message);
     return [];
   }
 }
 
+// Global Export for legacy scripts
 window.FB = {
   signInGoogle,
-  signOut,
+  signOut: logOut,
   onAuthChange,
   currentUser,
   getProfile,
@@ -161,4 +180,4 @@ window.FB = {
   getLeaderboard
 };
 
-console.log('[FB] loaded ✓ users-only, no root LB');
+console.log('[FB] Modular SDK loaded ✓');
