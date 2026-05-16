@@ -19,7 +19,7 @@
   --accent2:#8b6fff;
   --shadow:0 2px 12px rgba(91,58,247,.07);
   --shadow2:0 8px 32px rgba(91,58,247,.13);
-  --ac:var(--accent);
+  --ac:#5b3af7;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
@@ -32,7 +32,7 @@ body{
 body::after{
   content:'';position:fixed;top:-80px;right:-80px;
   width:420px;height:420px;border-radius:50%;
-  background:radial-gradient(circle,rgba(139,111,255,.10) 0%,transparent 65%);
+  background:radial-gradient(circle,rgba(139,111,255,.09) 0%,transparent 65%);
   z-index:0;pointer-events:none;
 }
 
@@ -40,7 +40,7 @@ body::after{
 .topbar{
   position:sticky;top:0;z-index:100;
   display:flex;align-items:center;justify-content:space-between;
-  padding:14px 24px;
+  padding:13px 24px;
   background:rgba(244,242,238,.92);
   backdrop-filter:blur(12px);
   border-bottom:1px solid var(--border);
@@ -56,14 +56,11 @@ body::after{
   display:flex;align-items:center;justify-content:center;font-size:14px;
   box-shadow:0 3px 10px rgba(91,58,247,.28);flex-shrink:0;
 }
-.topbar-right{display:flex;align-items:center;gap:10px}
 .back-lnk{
   display:flex;align-items:center;gap:5px;
-  font-size:11px;font-weight:700;letter-spacing:.5px;
-  color:var(--text2);text-decoration:none;
-  padding:6px 12px;border-radius:9px;
-  border:1.5px solid var(--border);
-  background:var(--surface);
+  font-size:11px;font-weight:700;color:var(--text2);
+  text-decoration:none;padding:6px 12px;border-radius:9px;
+  border:1.5px solid var(--border);background:var(--surface);
   transition:all .16s ease;box-shadow:var(--shadow);
 }
 .back-lnk:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-1px);box-shadow:var(--shadow2)}
@@ -73,19 +70,15 @@ body::after{
   display:none;
   background:linear-gradient(135deg,rgba(91,58,247,.06),rgba(139,111,255,.04));
   border-bottom:1px solid rgba(91,58,247,.12);
-  padding:11px 24px;
-  align-items:center;justify-content:space-between;
-  gap:12px;flex-wrap:wrap;
+  padding:10px 24px;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
 }
 #signin-strip span{font-size:12px;font-weight:600;color:var(--accent)}
 #signin-strip button{
   display:flex;align-items:center;gap:8px;
   background:var(--surface);color:var(--text);
-  border:1.5px solid var(--border);
-  padding:7px 14px;border-radius:10px;
+  border:1.5px solid var(--border);padding:7px 14px;border-radius:10px;
   font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;
-  cursor:pointer;transition:all .15s ease;box-shadow:var(--shadow);
-  white-space:nowrap;
+  cursor:pointer;transition:all .15s ease;box-shadow:var(--shadow);white-space:nowrap;
 }
 #signin-strip button:hover{border-color:var(--accent);box-shadow:var(--shadow2);transform:translateY(-1px)}
 #signin-strip button img{width:13px;height:13px}
@@ -98,100 +91,102 @@ body::after{
 }
 .pg-eyebrow{
   display:inline-flex;align-items:center;gap:7px;
-  background:rgba(91,58,247,.07);
-  border:1.5px solid rgba(91,58,247,.14);
+  background:rgba(91,58,247,.07);border:1.5px solid rgba(91,58,247,.14);
   border-radius:999px;padding:4px 13px;
   font-size:10px;font-weight:700;letter-spacing:2px;
-  text-transform:uppercase;color:var(--accent);
-  margin-bottom:14px;
+  text-transform:uppercase;color:var(--accent);margin-bottom:14px;
   animation:fadeUp .4s ease both;
 }
 h1{
   font-family:'Syne',sans-serif;
   font-size:clamp(26px,5vw,42px);font-weight:800;
   letter-spacing:-1px;color:var(--text);
-  margin-bottom:8px;
-  animation:fadeUp .4s .05s ease both;
+  margin-bottom:7px;animation:fadeUp .4s .04s ease both;
 }
-.pg-sub{
-  font-size:14px;color:var(--text2);margin-bottom:28px;
-  animation:fadeUp .4s .1s ease both;
-}
+.pg-sub{font-size:14px;color:var(--text2);margin-bottom:26px;animation:fadeUp .4s .08s ease both;}
 
 /* ── TABS ── */
 .tabs{
   display:flex;gap:7px;flex-wrap:wrap;
-  margin-bottom:20px;
-  animation:fadeUp .4s .15s ease both;
+  margin-bottom:18px;animation:fadeUp .4s .12s ease both;
 }
 .tab{
   padding:7px 15px;border-radius:999px;
   font-size:11px;font-weight:700;letter-spacing:.4px;
-  border:1.5px solid var(--border);
-  background:var(--surface);
-  color:var(--text2);
-  cursor:pointer;
+  border:1.5px solid var(--border);background:var(--surface);
+  color:var(--text2);cursor:pointer;
   font-family:'DM Sans',sans-serif;
-  transition:all .15s ease;
-  box-shadow:var(--shadow);
+  transition:all .15s ease;box-shadow:var(--shadow);
 }
-.tab:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-1px)}
+.tab:hover{border-color:var(--ac);color:var(--ac);transform:translateY(-1px)}
 .tab.active{
-  color:#fff;
-  border-color:var(--ac);
+  color:#fff;border-color:var(--ac);
   background:var(--ac);
-  box-shadow:0 4px 16px color-mix(in srgb,var(--ac) 30%,transparent);
+  box-shadow:0 4px 14px color-mix(in srgb,var(--ac) 28%,transparent);
 }
 
-/* ── LEADERBOARD BOX ── */
+/* ── LEVEL HERO ── */
+.level-hero{
+  display:flex;align-items:center;gap:14px;
+  padding:16px 20px;
+  background:var(--surface);border:1.5px solid var(--border);
+  border-radius:16px;margin-bottom:18px;box-shadow:var(--shadow);
+  animation:fadeUp .4s .15s ease both;
+  transition:border-color .2s ease;
+}
+.level-circle{
+  width:50px;height:50px;border-radius:14px;flex-shrink:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:color-mix(in srgb,var(--ac) 10%,transparent);
+  border:2px solid color-mix(in srgb,var(--ac) 22%,transparent);
+  transition:background .2s,border-color .2s;
+}
+.lc-num{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--ac);line-height:1}
+.lc-lbl{font-size:8px;font-weight:700;letter-spacing:1px;color:var(--ac);opacity:.7}
+.level-meta h3{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--text)}
+.level-meta p{font-size:12px;color:var(--text2);margin-top:2px}
+.player-count{margin-left:auto;text-align:right;flex-shrink:0}
+.pc-val{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:var(--text)}
+.pc-lbl{font-size:10px;color:var(--text3);font-weight:600}
+
+/* ── TABLE ── */
 .lb-wrap{
-  background:var(--surface);
-  border:1.5px solid var(--border);
-  border-radius:20px;overflow:hidden;
-  margin-bottom:18px;min-height:140px;
-  box-shadow:var(--shadow2);
-  animation:fadeUp .4s .2s ease both;
+  background:var(--surface);border:1.5px solid var(--border);
+  border-radius:20px;overflow:hidden;margin-bottom:18px;min-height:140px;
+  box-shadow:var(--shadow2);animation:fadeUp .4s .18s ease both;
 }
 .lb-head{
-  display:grid;
-  grid-template-columns:54px 1fr 110px 84px;
-  padding:12px 18px;
-  background:var(--bg2);
-  border-bottom:1.5px solid var(--border);
+  display:grid;grid-template-columns:52px 1fr 110px 80px;
+  padding:11px 18px;
+  background:var(--bg2);border-bottom:1.5px solid var(--border);
   font-size:9px;font-weight:700;letter-spacing:2px;
   text-transform:uppercase;color:var(--text3);
 }
-@media(max-width:480px){
-  .lb-head,.lb-row{
-    grid-template-columns:44px 1fr 90px;
-  }
-  .lb-head .col-date,.lb-row .dcell{display:none}
-}
 .lb-row{
-  display:grid;
-  grid-template-columns:54px 1fr 110px 84px;
-  padding:12px 18px;
-  border-bottom:1px solid var(--border);
-  align-items:center;
-  transition:background .12s ease;
+  display:grid;grid-template-columns:52px 1fr 110px 80px;
+  padding:12px 18px;border-bottom:1px solid var(--border);
+  align-items:center;transition:background .12s ease;
 }
 .lb-row:last-child{border-bottom:none}
 .lb-row:hover{background:rgba(91,58,247,.03)}
 .lb-row.me{
-  background:color-mix(in srgb,var(--ac) 7%,transparent) !important;
+  background:color-mix(in srgb,var(--ac) 6%,transparent) !important;
   border-left:3px solid var(--ac);
+}
+/* hide date on small screens */
+@media(max-width:480px){
+  .lb-head,.lb-row{grid-template-columns:44px 1fr 90px}
+  .col-date,.dcell{display:none}
 }
 .rank{
   font-family:'DM Mono',monospace;font-size:12px;
   font-weight:500;color:var(--text3);text-align:center;
 }
-.rank.g{font-size:18px}
-.rank.s{font-size:18px}
-.rank.b{font-size:18px}
+.rank.top{font-size:18px}
 .player{display:flex;align-items:center;gap:10px;min-width:0}
 .av{
-  width:32px;height:32px;border-radius:50%;
-  flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  width:32px;height:32px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
   font-size:11px;font-weight:700;color:#fff;
   border:2px solid rgba(255,255,255,.5);
   box-shadow:0 2px 8px rgba(0,0,0,.12);
@@ -200,11 +195,10 @@ h1{
   font-size:13px;font-weight:600;color:var(--text);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
-.you{
+.you-tag{
   font-size:8px;font-weight:700;letter-spacing:.8px;
   background:var(--ac);color:#fff;
   padding:2px 6px;border-radius:4px;margin-left:6px;flex-shrink:0;
-  vertical-align:middle;
 }
 .tcell{
   font-family:'DM Mono',monospace;font-size:13px;
@@ -228,46 +222,18 @@ h1{
 /* ── PAGINATION ── */
 .pag{
   display:flex;align-items:center;justify-content:center;
-  gap:8px;flex-wrap:wrap;
-  animation:fadeUp .4s .25s ease both;
+  gap:8px;flex-wrap:wrap;animation:fadeUp .4s .22s ease both;
 }
 .pg-btn{
   padding:8px 18px;border-radius:10px;
   border:1.5px solid var(--border);background:var(--surface);
   color:var(--text2);font-family:'DM Sans',sans-serif;
-  font-size:12px;font-weight:600;
-  cursor:pointer;transition:all .15s ease;box-shadow:var(--shadow);
+  font-size:12px;font-weight:600;cursor:pointer;
+  transition:all .15s ease;box-shadow:var(--shadow);
 }
-.pg-btn:hover:not(:disabled){border-color:var(--accent);color:var(--accent);transform:translateY(-1px);box-shadow:var(--shadow2)}
+.pg-btn:hover:not(:disabled){border-color:var(--ac);color:var(--ac);transform:translateY(-1px);box-shadow:var(--shadow2)}
 .pg-btn:disabled{opacity:.3;cursor:not-allowed}
 .pg-info{font-size:11px;font-weight:600;color:var(--text3);padding:0 4px}
-
-/* ── LEVEL HERO BADGE ── */
-.level-hero{
-  display:flex;align-items:center;gap:14px;
-  padding:16px 20px;
-  background:var(--surface);
-  border:1.5px solid var(--border);
-  border-radius:16px;margin-bottom:20px;
-  box-shadow:var(--shadow);
-  animation:fadeUp .4s .17s ease both;
-}
-.level-circle{
-  width:48px;height:48px;border-radius:14px;
-  background:color-mix(in srgb,var(--ac) 12%,transparent);
-  border:2px solid color-mix(in srgb,var(--ac) 25%,transparent);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  flex-shrink:0;
-}
-.level-circle .lc-num{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--ac);line-height:1}
-.level-circle .lc-lbl{font-size:8px;font-weight:700;letter-spacing:1px;color:var(--ac);opacity:.7}
-.level-meta h3{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--text)}
-.level-meta p{font-size:12px;color:var(--text2);margin-top:2px}
-.player-count{
-  margin-left:auto;text-align:right;flex-shrink:0;
-}
-.player-count .pc-val{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--text)}
-.player-count .pc-lbl{font-size:10px;color:var(--text3);font-weight:600}
 
 @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}}
 </style>
@@ -278,9 +244,7 @@ h1{
   <a class="logo" href="index.html">
     <div class="logo-box">🎮</div>PLAYCONSOLE4U
   </a>
-  <div class="topbar-right">
-    <a class="back-lnk" href="index.html">← Home</a>
-  </div>
+  <a class="back-lnk" href="index.html">← Home</a>
 </div>
 
 <div id="signin-strip">
@@ -294,11 +258,11 @@ h1{
 <div class="page">
   <div class="pg-eyebrow">🏆 Leaderboard</div>
   <h1>Top Times</h1>
-  <p class="pg-sub">Best completion times per level — live from Firebase.</p>
+  <p class="pg-sub">Best completion times per level — live from Firestore.</p>
 
   <div class="tabs" id="tabs"></div>
 
-  <div class="level-hero" id="level-hero">
+  <div class="level-hero">
     <div class="level-circle" id="lc">
       <div class="lc-num" id="lc-num">1</div>
       <div class="lc-lbl">LEVEL</div>
@@ -319,9 +283,10 @@ h1{
   <div class="pag" id="pag"></div>
 </div>
 
+<!-- Firestore compat SDKs -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="firebase.js"></script>
 <script>
 const ACCENTS = {
@@ -349,10 +314,11 @@ function fmtDate(ts){
 function esc(s){
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+
 function rankHtml(i){
-  if(i===0) return '<div class="rank g">🥇</div>';
-  if(i===1) return '<div class="rank s">🥈</div>';
-  if(i===2) return '<div class="rank b">🥉</div>';
+  if(i===0) return '<div class="rank top">🥇</div>';
+  if(i===1) return '<div class="rank top">🥈</div>';
+  if(i===2) return '<div class="rank top">🥉</div>';
   return `<div class="rank">#${i+1}</div>`;
 }
 function initials(name){
@@ -361,37 +327,37 @@ function initials(name){
 }
 function avatarHtml(name){
   const hue = [...String(name||'')].reduce((a,c)=>a+c.charCodeAt(0),0)%360;
-  return `<div class="av" style="background:hsl(${hue},62%,46%)">${esc(initials(name))}</div>`;
+  return `<div class="av" style="background:hsl(${hue},62%,44%)">${esc(initials(name))}</div>`;
 }
 
-function updateLevelHero(){
+function updateHero(){
   const ac = ACCENTS[currentLvl];
   document.getElementById('lc-num').textContent = currentLvl;
-  document.getElementById('lm-title').textContent = 'Level ' + currentLvl + ' — ' + (LVL_NAMES[currentLvl]||'');
-  document.getElementById('lm-sub').textContent = 'Cube Platformer · Best times';
+  document.getElementById('lc-num').style.color = ac;
+  document.getElementById('lm-title').textContent =
+    'Level ' + currentLvl + ' — ' + (LVL_NAMES[currentLvl]||'');
   document.getElementById('pc-val').textContent = rows.length || '0';
   const lc = document.getElementById('lc');
-  lc.style.background = `color-mix(in srgb,${ac} 12%,transparent)`;
-  lc.style.borderColor = `color-mix(in srgb,${ac} 25%,transparent)`;
-  document.getElementById('lc-num').style.color = ac;
+  lc.style.background = `color-mix(in srgb,${ac} 10%,transparent)`;
+  lc.style.borderColor = `color-mix(in srgb,${ac} 22%,transparent)`;
 }
 
 function buildTabs(){
   const el = document.getElementById('tabs');
   el.innerHTML = '';
-  for(let i=1;i<=10;i++){
+  for(let i = 1; i <= 10; i++){
     const b = document.createElement('button');
-    b.className = 'tab'+(i===currentLvl?' active':'');
-    b.textContent = 'LV '+i;
+    b.className = 'tab' + (i === currentLvl ? ' active' : '');
+    b.textContent = 'LV ' + i;
     b.onclick = () => loadLevel(i);
     el.appendChild(b);
   }
 }
 
 function renderPag(){
-  const total = Math.ceil(rows.length/PER);
+  const total = Math.ceil(rows.length / PER);
   const el = document.getElementById('pag');
-  if(total<=1){ el.innerHTML=''; return; }
+  if(total <= 1){ el.innerHTML = ''; return; }
   el.innerHTML = `
     <button class="pg-btn" onclick="goPage(${page-1})" ${page===1?'disabled':''}>← Prev</button>
     <span class="pg-info">Page ${page} of ${total} · ${rows.length} entries</span>
@@ -399,8 +365,8 @@ function renderPag(){
 }
 
 function goPage(p){
-  const total = Math.ceil(rows.length/PER);
-  if(p<1||p>total) return;
+  const total = Math.ceil(rows.length / PER);
+  if(p < 1 || p > total) return;
   page = p;
   renderPage();
   window.scrollTo({top:0,behavior:'smooth'});
@@ -408,67 +374,56 @@ function goPage(p){
 
 function renderPage(){
   const box = document.getElementById('lb-box');
-  updateLevelHero();
+  updateHero();
   if(!rows.length){
-    box.innerHTML='<div class="lb-state">No times yet — be the first!</div>';
-    document.getElementById('pag').innerHTML='';
+    box.innerHTML = '<div class="lb-state">No times yet — be the first!</div>';
+    document.getElementById('pag').innerHTML = '';
     return;
   }
-  const start=(page-1)*PER;
-  const slice=rows.slice(start,start+PER);
-  let html=`<div class="lb-head">
+  const start = (page-1) * PER;
+  const slice = rows.slice(start, start + PER);
+  let html = `<div class="lb-head">
     <div>Rank</div>
     <div>Player</div>
     <div style="text-align:right">Time</div>
     <div class="col-date" style="text-align:right">Date</div>
   </div>`;
-  slice.forEach((r,idx)=>{
-    const gi=start+idx;
-    const isMe=r.uid===currentUid;
-    html+=`<div class="lb-row${isMe?' me':''}">
+  slice.forEach((r, idx) => {
+    const gi    = start + idx;
+    const isMe  = r.uid === currentUid;
+    html += `<div class="lb-row${isMe?' me':''}">
       ${rankHtml(gi)}
-      <div class="player">${avatarHtml(r.name)}<span class="pname">${esc(r.name)}${isMe?'<span class="you">YOU</span>':''}</span></div>
+      <div class="player">
+        ${avatarHtml(r.name)}
+        <span class="pname">${esc(r.name)}${isMe?'<span class="you-tag">YOU</span>':''}</span>
+      </div>
       <div class="tcell">${fmt(r.t)}</div>
       <div class="dcell">${fmtDate(r.ts)}</div>
     </div>`;
   });
-  box.innerHTML=html;
+  box.innerHTML = html;
   renderPag();
 }
 
 async function loadLevel(n){
-  currentLvl=n;
-  page=1;
+  currentLvl = n;
+  page = 1;
   setAc(ACCENTS[n]);
   buildTabs();
-  document.getElementById('lb-box').innerHTML=
+  document.getElementById('lb-box').innerHTML =
     '<div class="lb-state"><div class="spin-ring"></div>LOADING</div>';
-  document.getElementById('pag').innerHTML='';
-  
+  document.getElementById('pag').innerHTML = '';
   try {
-    // 1. Force the database to wake up
-    firebase.database().goOnline(); 
-    
-    // 2. Pull the data
     rows = await window.FB.getLeaderboard(n);
     renderPage();
-    
-    // 3. THE KILL SWITCH: Force it offline instantly the millisecond data arrives
-    setTimeout(() => {
-      firebase.database().goOffline();
-      console.log("[PLAYCONSOLE4U] Connection forcefully severed. Slot freed!");
-    }, 200); // 200ms buffer to ensure data packet transmission finishes safely
-    
   } catch(e) {
-    document.getElementById('lb-box').innerHTML=
+    document.getElementById('lb-box').innerHTML =
       '<div class="lb-state">Failed to load. Check your connection.</div>';
-    // Ensure we still drop the connection even if it fails
-    firebase.database().goOffline(); 
   }
 }
 
 async function doSignIn(){
-  try{ await window.FB.signInGoogle(); }catch(e){}
+  try { await window.FB.signInGoogle(); } catch(e) {}
 }
 
 window.FB.onAuthChange(user => {
