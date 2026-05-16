@@ -1,7 +1,10 @@
+// firebase.js — Firestore edition
+// Lazy connections: network disabled by default, enabled only per-operation.
+// In-memory cache reduces repeat reads within a session.
+
 firebase.initializeApp({
   apiKey: "AIzaSyCZPK5A0UQSFB2D_zNj3wjZ5-Tbyb1VYn8",
   authDomain: "playconsole4u-53a6a.firebaseapp.com",
-  databaseURL: "https://playconsole4u-53a6a-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "playconsole4u-53a6a",
   storageBucket: "playconsole4u-53a6a.firebasestorage.app",
   messagingSenderId: "306379034842",
@@ -10,95 +13,85 @@ firebase.initializeApp({
 });
 
 const auth = firebase.auth();
-const db   = firebase.database();
+const db   = firebase.firestore();
 
-// ── Keep the realtime connection OFFLINE until we actually need it.
-// Firebase opens a persistent WebSocket the moment you call db.ref().
-// goOffline() stops that. We call goOnline() only when a DB op is needed,
-// then goOffline() again once it completes.
-db.goOffline();
+// Keep network off until we actually need it
+db.disableNetwork();
 
-let _dbOnline   = false;   // are we currently online?
-let _opCount    = 0;       // how many ops are in-flight
-let _offTimer   = null;    // debounce timer for going back offline
+let _netOn    = false;
+let _opCount  = 0;
+let _offTimer = null;
 
-function _online() {
+function _enableNet() {
   if (_offTimer) { clearTimeout(_offTimer); _offTimer = null; }
-  if (!_dbOnline) { db.goOnline(); _dbOnline = true; }
+  if (!_netOn) { db.enableNetwork(); _netOn = true; }
   _opCount++;
 }
-
-function _done() {
+function _releaseNet() {
   _opCount = Math.max(0, _opCount - 1);
   if (_opCount === 0) {
-    // Go offline after a short grace period so rapid sequential calls
-    // don't thrash the connection on/off.
     _offTimer = setTimeout(() => {
-      db.goOffline();
-      _dbOnline = false;
+      db.disableNetwork();
+      _netOn = false;
       _offTimer = null;
     }, 1500);
   }
 }
-
-// Wrap every DB operation: go online → run → go offline
-async function _db(fn) {
-  _online();
+async function _net(fn) {
+  _enableNet();
   try   { return await fn(); }
-  finally { _done(); }
+  finally { _releaseNet(); }
 }
 
-// ── In-memory cache so repeated reads within the same session are free ──
+// ── In-memory cache ──
 const _cache = {};
-function _cacheSet(key, val) { _cache[key] = { val, ts: Date.now() }; }
-function _cacheGet(key, maxAgeMs = 30_000) {
-  const c = _cache[key];
-  return c && (Date.now() - c.ts) < maxAgeMs ? c.val : null;
-}
-function _cacheInvalidate(key) { delete _cache[key]; }
+function _cSet(k, v, ttl = 60_000) { _cache[k] = { v, exp: Date.now() + ttl }; }
+function _cGet(k) { const e = _cache[k]; return e && Date.now() < e.exp ? e.v : null; }
+function _cDel(k) { delete _cache[k]; }
 
-// ── Path helpers ──
-const _user = uid => `users/${uid}`;
-const _lvl  = (uid, n) => `users/${uid}/G/CP/L/L${n}`;
-const _skin = uid => `users/${uid}/G/CP/C/S`;
+// ── Firestore refs ──
+const _userRef = uid => db.collection('users').doc(uid);
+const _lvlRef  = (uid, n) => _userRef(uid).collection('levels').doc(`L${n}`);
+const _skinRef = uid => _userRef(uid).collection('meta').doc('skin');
+const _lbRef   = n => db.collection('leaderboard').doc(`L${n}`).collection('entries');
 
 // ── Auth ──
-const signInGoogle = () => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+const signInGoogle = () =>
+  auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
 const logOut       = () => auth.signOut();
 const currentUser  = () => auth.currentUser;
 
 function onAuthChange(cb) {
-  // Auth state changes don't need the DB connection
   auth.onAuthStateChanged(async user => {
     if (user) {
-      // Invalidate any cached user data on auth change
-      _cacheInvalidate(_user(user.uid));
-      _cacheInvalidate(`times_${user.uid}`);
-      _cacheInvalidate(`skin_${user.uid}`);
+      _cDel(`prof_${user.uid}`);
+      _cDel(`times_${user.uid}`);
+      _cDel(`skin_${user.uid}`);
       await _ensureDefaults(user);
     }
     cb(user);
   });
 }
 
-// Only write defaults if something is actually missing
 async function _ensureDefaults(user) {
   try {
-    await _db(async () => {
-      const userRef = db.ref(_user(user.uid));
-      const snap = await userRef.get();
-      const val  = snap.exists() ? snap.val() : {};
+    await _net(async () => {
+      const ref  = _userRef(user.uid);
+      const snap = await ref.get();
+      const data = snap.exists ? snap.data() : {};
       const up   = {};
-      if (!val.name)                       up.name = user.displayName || 'Anonymous';
-      if (!val.photo && user.photoURL)     up.photo = user.photoURL;
-      if (!val.G?.CP?.C?.S?.eq)           up['G/CP/C/S/eq'] = 'default';
-      if (!val.G?.CP?.C?.S?.own?.default) up['G/CP/C/S/own/default'] = true;
+      if (!data.name)  up.name  = user.displayName || 'Anonymous';
+      if (!data.email) up.email = user.email || '';
+      if (!data.photo && user.photoURL) up.photo = user.photoURL;
       if (Object.keys(up).length) {
-        await userRef.update(up);
-        // Store in cache after writing
-        _cacheSet(_user(user.uid), { ...val, ...up });
+        await ref.set(up, { merge: true });
+        _cSet(`prof_${user.uid}`, { ...data, ...up });
       } else {
-        _cacheSet(_user(user.uid), val);
+        _cSet(`prof_${user.uid}`, data);
+      }
+      const skinSnap = await _skinRef(user.uid).get();
+      if (!skinSnap.exists) {
+        await _skinRef(user.uid).set({ eq: 'default', own: { default: true } });
       }
     });
   } catch (e) {
@@ -108,68 +101,77 @@ async function _ensureDefaults(user) {
 
 // ── Profile ──
 async function getProfile(uid) {
-  const cached = _cacheGet(_user(uid), 60_000);
+  const cached = _cGet(`prof_${uid}`);
   if (cached) return cached;
   try {
-    return await _db(async () => {
-      const snap = await db.ref(_user(uid)).get();
-      const val  = snap.exists() ? snap.val() : {};
-      _cacheSet(_user(uid), val);
+    return await _net(async () => {
+      const snap = await _userRef(uid).get();
+      const val  = snap.exists ? snap.data() : {};
+      _cSet(`prof_${uid}`, val);
       return val;
     });
   } catch { return {}; }
 }
 
 async function saveProfile(uid, name, photo) {
+  _cDel(`prof_${uid}`);
   const up = {};
   if (name  != null) up.name  = name;
   if (photo != null) up.photo = photo;
-  _cacheInvalidate(_user(uid));
-  await _db(() => db.ref(_user(uid)).update(up));
+  await _net(() => _userRef(uid).set(up, { merge: true }));
 }
 
 // ── Skins ──
 async function getSkinData(uid) {
-  const cached = _cacheGet(`skin_${uid}`, 60_000);
+  const cached = _cGet(`skin_${uid}`);
   if (cached) return cached;
   try {
-    return await _db(async () => {
-      const snap = await db.ref(_skin(uid)).get();
-      const result = snap.exists()
-        ? { eq: snap.val().eq || 'default', own: snap.val().own || { default: true } }
+    return await _net(async () => {
+      const snap = await _skinRef(uid).get();
+      const result = snap.exists
+        ? { eq: snap.data().eq || 'default', own: snap.data().own || { default: true } }
         : { eq: 'default', own: { default: true } };
-      _cacheSet(`skin_${uid}`, result);
+      _cSet(`skin_${uid}`, result);
       return result;
     });
   } catch { return { eq: 'default', own: { default: true } }; }
 }
 
 async function equipSkin(uid, skinId) {
-  _cacheInvalidate(`skin_${uid}`);
-  await _db(() => db.ref(`${_skin(uid)}/eq`).set(skinId));
+  _cDel(`skin_${uid}`);
+  await _net(() => _skinRef(uid).set({ eq: skinId }, { merge: true }));
 }
 
 async function unlockSkin(uid, skinId) {
-  _cacheInvalidate(`skin_${uid}`);
-  await _db(() => db.ref(`${_skin(uid)}/own/${skinId}`).set(true));
+  _cDel(`skin_${uid}`);
+  await _net(() =>
+    _skinRef(uid).set({ own: { [skinId]: true } }, { merge: true })
+  );
 }
 
 // ── Level times ──
 async function saveLevelTime(uid, levelNum, seconds) {
   try {
-    return await _db(async () => {
-      const levelRef = db.ref(_lvl(uid, levelNum));
-      const snap = await levelRef.get();
+    return await _net(async () => {
+      const ref  = _lvlRef(uid, levelNum);
+      const snap = await ref.get();
       const t    = Math.round(seconds * 1000) / 1000;
-      const prev = snap.exists() ? snap.val().t : null;
+      const prev = snap.exists ? snap.data().t : null;
       const isRecord = prev === null || t < prev;
       if (isRecord) {
-        await levelRef.update({ t, ts: Date.now() });
-        // Update local times cache too so getMyTimes doesn't re-fetch
-        const timesKey = `times_${uid}`;
-        const cachedTimes = _cacheGet(timesKey, Infinity) || {};
-        cachedTimes[`L${levelNum}`] = { t, ts: Date.now() };
-        _cacheSet(timesKey, cachedTimes);
+        await ref.set({ t, ts: Date.now() });
+        // update local cache
+        const tk = `times_${uid}`;
+        const ct = _cGet(tk) || {};
+        ct[`L${levelNum}`] = { t, ts: Date.now() };
+        _cSet(tk, ct);
+        // push to leaderboard collection
+        await _lbRef(levelNum).doc(uid).set({
+          uid,
+          name: currentUser()?.displayName || 'Anonymous',
+          t,
+          ts: Date.now()
+        });
         const UNLOCKS = { 2:'ghost', 4:'neon', 6:'fire', 8:'void', 10:'rainbow' };
         if (UNLOCKS[levelNum]) await unlockSkin(uid, UNLOCKS[levelNum]);
       }
@@ -182,48 +184,34 @@ async function saveLevelTime(uid, levelNum, seconds) {
 }
 
 async function getMyTimes(uid) {
-  const cached = _cacheGet(`times_${uid}`, 60_000);
+  const cached = _cGet(`times_${uid}`);
   if (cached) return cached;
   try {
-    return await _db(async () => {
-      const snap = await db.ref(`users/${uid}/G/CP/L`).get();
-      const val  = snap.exists() ? snap.val() : {};
-      _cacheSet(`times_${uid}`, val);
-      return val;
+    return await _net(async () => {
+      const snap = await _userRef(uid).collection('levels').get();
+      const result = {};
+      snap.forEach(doc => { result[doc.id] = doc.data(); });
+      _cSet(`times_${uid}`, result);
+      return result;
     });
   } catch { return {}; }
 }
 
-// ── Scale-Proof Leaderboard Query ──
+// ── Leaderboard — flat collection, ordered query, 2-min cache ──
 async function getLeaderboard(levelNum) {
-  const key = `lb_${levelNum}`;
-  // Cache for 2 minutes aggressively so rapid tab clicks don't re-trigger database reads
-  const cached = _cacheGet(key, 120_000); 
+  const key    = `lb_${levelNum}`;
+  const cached = _cGet(key);
   if (cached) return cached;
-  
   try {
-    return await _db(async () => {
-      // FIX: Query only the specific sub-paths for times instead of the massive root "users" node
-      const snap = await db.ref('users').get(); 
-      if (!snap.exists()) return [];
-      
+    return await _net(async () => {
+      const snap = await _lbRef(levelNum)
+        .orderBy('t', 'asc')
+        .limit(100)
+        .get();
       const rows = [];
-      snap.forEach(userSnap => {
-        const ld = userSnap.child(`G/CP/L/L${levelNum}`).val();
-        if (ld && typeof ld.t === 'number') {
-          rows.push({
-            uid:   userSnap.key,
-            name:  userSnap.child('name').val()  || 'Anonymous',
-            photo: userSnap.child('photo').val() || '',
-            t:     ld.t,
-            ts:    ld.ts || 0
-          });
-        }
-      });
-      
-      const sorted = rows.sort((a, b) => a.t - b.t);
-      _cacheSet(key, sorted);
-      return sorted;
+      snap.forEach(doc => rows.push(doc.data()));
+      _cSet(key, rows, 120_000);
+      return rows;
     });
   } catch (e) {
     console.error('[FB] getLeaderboard:', e.message);
@@ -233,7 +221,7 @@ async function getLeaderboard(levelNum) {
 
 window.FB = {
   signInGoogle,
-  signOut:    logOut,
+  signOut: logOut,
   onAuthChange,
   currentUser,
   getProfile,
@@ -246,4 +234,4 @@ window.FB = {
   getLeaderboard
 };
 
-console.log('[FB] Compat SDK loaded ✓');
+console.log('[FB] Firestore SDK loaded ✓');
