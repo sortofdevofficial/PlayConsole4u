@@ -444,12 +444,26 @@ async function loadLevel(n){
   document.getElementById('lb-box').innerHTML=
     '<div class="lb-state"><div class="spin-ring"></div>LOADING</div>';
   document.getElementById('pag').innerHTML='';
-  try{
+  
+  try {
+    // 1. Force the database to wake up
+    firebase.database().goOnline(); 
+    
+    // 2. Pull the data
     rows = await window.FB.getLeaderboard(n);
     renderPage();
-  }catch(e){
+    
+    // 3. THE KILL SWITCH: Force it offline instantly the millisecond data arrives
+    setTimeout(() => {
+      firebase.database().goOffline();
+      console.log("[PLAYCONSOLE4U] Connection forcefully severed. Slot freed!");
+    }, 200); // 200ms buffer to ensure data packet transmission finishes safely
+    
+  } catch(e) {
     document.getElementById('lb-box').innerHTML=
       '<div class="lb-state">Failed to load. Check your connection.</div>';
+    // Ensure we still drop the connection even if it fails
+    firebase.database().goOffline(); 
   }
 }
 
