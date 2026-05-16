@@ -2,406 +2,367 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>Cube Platformer</title>
 <link rel="icon" type="image/png" href="../../favicon.png">
-<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
+:root{
+  --bg:#f4f2ee;
+  --bg2:#ece9e3;
+  --surface:#fff;
+  --border:#e2ddd6;
+  --text:#1a1625;
+  --text2:#6b6579;
+  --text3:#a09ab0;
+  --accent:#5b3af7;
+  --accent2:#8b6fff;
+  --shadow:0 2px 12px rgba(91,58,247,.07);
+  --shadow2:0 8px 32px rgba(91,58,247,.14);
+}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
 body{
-  font-family:'Nunito',sans-serif;
-  background:#07070f;
-  color:#f0f0ff;
-  overflow:hidden;
-  height:100vh
+  font-family:'DM Sans',sans-serif;
+  background:var(--bg);
+  color:var(--text);
 }
+
+/* Subtle bg blobs */
 body::before{
-  content:'';
-  position:fixed;
-  inset:0;
-  pointer-events:none;
-  background:
-    radial-gradient(ellipse 50% 50% at 20% 55%,rgba(124,58,237,.08) 0%,transparent 60%),
-    radial-gradient(ellipse 40% 50% at 80% 30%,rgba(167,139,250,.05) 0%,transparent 60%)
+  content:'';position:fixed;
+  top:-100px;left:-80px;
+  width:500px;height:500px;border-radius:50%;
+  background:radial-gradient(circle,rgba(91,58,247,.08) 0%,transparent 65%);
+  pointer-events:none;z-index:0;
 }
+body::after{
+  content:'';position:fixed;
+  bottom:-100px;right:-60px;
+  width:400px;height:400px;border-radius:50%;
+  background:radial-gradient(circle,rgba(255,79,123,.06) 0%,transparent 65%);
+  pointer-events:none;z-index:0;
+}
+
+/* ── MENU ── */
 #menu{
-  position:relative;
-  z-index:1;
+  position:relative;z-index:1;
   height:100vh;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  padding:20px;gap:0;
 }
-h1{
-  font-size:28px;
-  font-weight:900;
-  letter-spacing:5px;
-  color:#fff;
+
+.menu-logo{
+  display:flex;align-items:center;gap:9px;
   margin-bottom:6px;
-  text-shadow:0 0 24px rgba(255,255,255,.18)
+  animation:fadeUp .4s ease both;
+}
+.menu-logo-box{
+  width:36px;height:36px;border-radius:11px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  display:flex;align-items:center;justify-content:center;font-size:17px;
+  box-shadow:0 4px 14px rgba(91,58,247,.3);
+}
+.menu-logo-text{
+  font-family:'Syne',sans-serif;font-size:12px;font-weight:800;
+  letter-spacing:3px;color:var(--text2);
+}
+
+h1{
+  font-family:'Syne',sans-serif;
+  font-size:clamp(22px,5vw,34px);font-weight:800;
+  letter-spacing:2px;color:var(--text);
+  margin-bottom:4px;
+  animation:fadeUp .4s .05s ease both;
 }
 .sub{
-  font-size:10px;
-  font-weight:700;
-  letter-spacing:3px;
-  color:rgba(255,255,255,.28);
-  margin-bottom:26px;
-  text-transform:uppercase
+  font-size:11px;font-weight:600;letter-spacing:2px;
+  color:var(--text3);text-transform:uppercase;
+  margin-bottom:28px;
+  animation:fadeUp .4s .08s ease both;
 }
+
+/* ── LEVEL GRID ── */
 .level-grid{
   display:grid;
-  grid-template-columns:repeat(5,76px);
-  gap:12px;
-  margin-bottom:22px
+  grid-template-columns:repeat(5,1fr);
+  gap:10px;
+  margin-bottom:22px;
+  width:100%;
+  max-width:440px;
+  animation:fadeUp .4s .12s ease both;
 }
+@media(max-width:380px){
+  .level-grid{grid-template-columns:repeat(5,1fr);gap:7px;max-width:320px}
+}
+
 .node{
-  width:76px;
-  height:76px;
-  border:2px solid rgba(255,255,255,.1);
+  aspect-ratio:1;
+  border:1.5px solid var(--border);
   border-radius:14px;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
   cursor:pointer;
-  background:#111118;
-  transition:transform .18s,border-color .18s,background .18s;
-  user-select:none;
-  position:relative
+  background:var(--surface);
+  transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease,background .18s ease;
+  user-select:none;position:relative;
+  box-shadow:var(--shadow);
+  min-width:0;
 }
-.n-num{font-size:22px;font-weight:900;color:var(--ac,#fff);line-height:1}
-.n-time{font-size:8px;font-weight:800;color:var(--ac,#aaa);margin-top:4px;opacity:.9}
-.n-icon{font-size:11px;margin-top:3px;line-height:1}
-.node:hover:not(.locked){transform:translateY(-4px);border-color:var(--ac,#fff);background:#1a1a26}
+.n-num{
+  font-family:'Syne',sans-serif;
+  font-size:clamp(16px,3.5vw,22px);font-weight:800;
+  color:var(--ac,var(--text));line-height:1;
+}
+.n-time{
+  font-size:7px;font-weight:700;
+  color:var(--ac,var(--text3));
+  margin-top:3px;opacity:.85;
+  white-space:nowrap;overflow:hidden;
+  max-width:90%;text-overflow:ellipsis;
+}
+.n-icon{font-size:10px;margin-top:2px;line-height:1}
+.node:hover:not(.locked){
+  transform:translateY(-3px);
+  border-color:var(--ac,var(--accent));
+  box-shadow:var(--shadow2);
+  background:rgba(91,58,247,.03);
+}
 .node.sel{
-  border-color:var(--ac,#fff)!important;
-  background:rgba(255,255,255,.07);
-  box-shadow:0 0 0 3px color-mix(in srgb,var(--ac,#fff) 25%,transparent),0 8px 20px rgba(0,0,0,.4)
+  border-color:var(--ac,var(--accent)) !important;
+  background:color-mix(in srgb,var(--ac,var(--accent)) 8%,white);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--ac,var(--accent)) 20%,transparent),var(--shadow2);
 }
 .node.sel::after{
-  content:'';
-  position:absolute;
-  inset:-5px;
-  border-radius:18px;
-  border:2px solid var(--ac,#fff);
-  opacity:.35;
+  content:'';position:absolute;inset:-4px;
+  border-radius:17px;
+  border:2px solid var(--ac,var(--accent));
+  opacity:.3;
   animation:ring 2s ease infinite;
-  pointer-events:none
+  pointer-events:none;
 }
 @keyframes ring{
-  0%,100%{opacity:.35;transform:scale(1)}
-  50%{opacity:.1;transform:scale(1.06)}
+  0%,100%{opacity:.3;transform:scale(1)}
+  50%{opacity:.08;transform:scale(1.05)}
 }
-.node.locked{opacity:.15;cursor:not-allowed;pointer-events:none}
+.node.locked{opacity:.28;cursor:not-allowed;pointer-events:none}
 .node.done .n-icon{color:#f59e0b}
+
+/* ── BUTTONS ── */
 .btn-row{
-  display:flex;
-  gap:12px;
-  margin-bottom:14px
+  display:flex;gap:10px;
+  margin-bottom:18px;
+  animation:fadeUp .4s .18s ease both;
+  flex-wrap:wrap;justify-content:center;
 }
 .play-btn{
-  padding:13px 64px;
-  background:linear-gradient(135deg,#7c3aed,#a78bfa);
-  color:#fff;
-  border:none;
-  font-family:'Nunito',sans-serif;
-  font-size:14px;
-  font-weight:900;
-  letter-spacing:3px;
-  border-radius:11px;
-  cursor:pointer;
-  transition:.2s;
-  box-shadow:0 0 24px rgba(124,58,237,.4)
+  padding:13px 52px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  color:#fff;border:none;
+  font-family:'Syne',sans-serif;
+  font-size:14px;font-weight:700;letter-spacing:2px;
+  border-radius:13px;cursor:pointer;
+  transition:all .18s ease;
+  box-shadow:0 6px 24px rgba(91,58,247,.32);
 }
-.play-btn:hover{filter:brightness(1.1);transform:translateY(-2px)}
-.skin-btn,.index-btn{
+.play-btn:hover{filter:brightness(1.08);transform:translateY(-2px);box-shadow:0 10px 32px rgba(91,58,247,.4)}
+.play-btn:active{transform:translateY(0)}
+.sec-btn{
   padding:13px 18px;
-  background:rgba(124,58,237,.18);
-  color:#a78bfa;
-  border:2px solid rgba(167,139,250,.3);
-  font-family:'Nunito',sans-serif;
-  font-size:13px;
-  font-weight:800;
-  border-radius:11px;
-  cursor:pointer;
-  transition:.2s
+  background:var(--surface);
+  color:var(--text2);
+  border:1.5px solid var(--border);
+  font-family:'DM Sans',sans-serif;
+  font-size:13px;font-weight:600;
+  border-radius:13px;cursor:pointer;
+  transition:all .18s ease;
+  box-shadow:var(--shadow);
 }
-.skin-btn:hover,.index-btn:hover{
-  background:rgba(124,58,237,.32);
-  border-color:#a78bfa;
-  transform:translateY(-2px)
+.sec-btn:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-2px);box-shadow:var(--shadow2)}
+.sec-btn:active{transform:translateY(0)}
+
+/* ── FOOTER LINKS ── */
+.footer{
+  display:flex;gap:16px;
+  animation:fadeUp .4s .22s ease both;
 }
-.footer{display:flex;gap:20px}
 .lnk{
-  font-size:10px;
-  font-weight:700;
-  color:rgba(255,255,255,.25);
-  text-decoration:none;
-  letter-spacing:2px;
-  transition:.2s
+  font-size:11px;font-weight:600;letter-spacing:.5px;
+  color:var(--text3);text-decoration:none;
+  padding:6px 12px;border-radius:8px;
+  border:1.5px solid var(--border);
+  background:var(--surface);
+  transition:all .15s ease;box-shadow:var(--shadow);
 }
-.lnk:hover{color:rgba(255,255,255,.6)}
+.lnk:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-1px);box-shadow:var(--shadow2)}
+
+/* ── GAME CONTAINER ── */
 #game-container{
-  display:none;
-  width:100%;
-  height:100vh;
-  position:relative;
-  background:#07070f;
-  align-items:center;
-  justify-content:center
+  display:none;width:100%;height:100vh;
+  position:relative;background:#07070f;
+  align-items:center;justify-content:center;
 }
 #game-container.visible{display:flex}
-canvas{display:block}
+canvas{display:block;max-width:100%;max-height:100vh}
+
 .back-btn{
-  position:absolute;
-  top:12px;
-  left:12px;
-  z-index:20;
-  background:#111118;
-  border:2px solid rgba(255,255,255,.12);
-  color:rgba(255,255,255,.6);
-  font-family:'Nunito',sans-serif;
-  font-size:11px;
-  font-weight:800;
-  padding:7px 16px;
-  border-radius:8px;
-  cursor:pointer;
-  transition:.2s
+  position:absolute;top:12px;left:12px;z-index:20;
+  background:rgba(255,255,255,.12);
+  backdrop-filter:blur(8px);
+  border:1.5px solid rgba(255,255,255,.2);
+  color:rgba(255,255,255,.8);
+  font-family:'DM Sans',sans-serif;
+  font-size:11px;font-weight:700;
+  padding:7px 14px;border-radius:9px;
+  cursor:pointer;transition:all .15s ease;
 }
-.back-btn:hover{border-color:rgba(255,255,255,.3);color:#fff}
-#obstacle-index{
-  position:absolute;
-  top:60px;
-  right:12px;
-  z-index:20;
-  width:220px;
-  padding:12px;
-  border-radius:12px;
-  background:rgba(10,10,20,.84);
-  border:1px solid rgba(255,255,255,.12);
-  color:#fff;
-  font-size:10px;
-  pointer-events:none;
-  backdrop-filter:blur(6px);
-  opacity:0;
-  transform:translateY(-8px);
-  transition:.2s
+.back-btn:hover{background:rgba(255,255,255,.22);border-color:rgba(255,255,255,.5);color:#fff}
+
+/* ── MODALS ── */
+.modal-bg{
+  display:none;position:fixed;inset:0;z-index:500;
+  background:rgba(26,22,37,.45);
+  backdrop-filter:blur(8px);
+  align-items:center;justify-content:center;
+  padding:20px;
 }
-#obstacle-index.open{
-  opacity:1;
-  transform:translateY(0)
+.modal-bg.open{display:flex}
+
+.modal-box{
+  background:var(--surface);
+  border:1.5px solid var(--border);
+  border-radius:22px;
+  padding:26px;width:400px;max-width:92vw;
+  box-shadow:0 24px 80px rgba(26,22,37,.18);
+  animation:popIn .2s ease both;
+  max-height:90vh;overflow-y:auto;
 }
-.idx-title{
-  font-weight:900;
-  letter-spacing:2px;
-  font-size:11px;
-  margin-bottom:8px;
-  color:#a78bfa
+@keyframes popIn{from{opacity:0;transform:scale(.96) translateY(8px)}}
+
+.modal-box h2{
+  font-family:'Syne',sans-serif;
+  font-size:17px;font-weight:800;letter-spacing:1px;
+  color:var(--text);margin-bottom:6px;
 }
-.idx-list{
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-  opacity:.92
+.modal-note{
+  font-size:11px;color:var(--text3);
+  margin-bottom:16px;font-weight:500;
 }
-#skin-modal{
-  display:none;
-  position:fixed;
-  inset:0;
-  z-index:500;
-  background:rgba(0,0,0,.82);
-  align-items:center;
-  justify-content:center
+.modal-close{
+  width:100%;padding:11px;
+  background:var(--bg2);
+  border:1.5px solid var(--border);
+  color:var(--text2);
+  font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;
+  border-radius:11px;cursor:pointer;transition:all .15s ease;
+  margin-top:4px;
 }
-#skin-modal.open{display:flex}
-.sm-box{
-  background:#0f0f1c;
-  border:2px solid rgba(167,139,250,.25);
-  border-radius:20px;
-  padding:30px;
-  width:420px;
-  max-width:92vw
+.modal-close:hover{border-color:var(--accent);color:var(--accent)}
+
+/* INDEX modal */
+.im-list{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+.im-item{
+  display:flex;align-items:center;gap:10px;
+  padding:11px 14px;border-radius:12px;
+  background:var(--bg2);border:1.5px solid var(--border);
+  font-size:13px;color:var(--text);font-weight:500;
+  transition:.15s ease;
 }
-.sm-box h2{
-  font-size:17px;
-  font-weight:900;
-  letter-spacing:2px;
-  color:#a78bfa;
-  margin-bottom:18px
-}
+.im-item:hover{border-color:rgba(91,58,247,.25);background:rgba(91,58,247,.04)}
+.im-icon{font-size:16px;flex-shrink:0;width:24px;text-align:center}
+.im-lbl{font-weight:600;font-size:12px}
+.im-desc{font-size:10px;color:var(--text3);margin-top:1px}
+
+/* SKIN modal */
 .skin-grid{
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
-  gap:10px;
-  margin-bottom:18px
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:10px;margin-bottom:16px;
 }
 .skin-card{
-  border:2px solid rgba(255,255,255,.1);
-  border-radius:12px;
-  padding:14px 8px;
-  text-align:center;
-  cursor:pointer;
-  transition:.18s;
-  background:#111120;
-  position:relative
+  border:1.5px solid var(--border);border-radius:14px;
+  padding:14px 8px;text-align:center;
+  cursor:pointer;transition:all .18s ease;
+  background:var(--bg2);position:relative;
 }
-.skin-card:hover:not(.locked-skin){border-color:rgba(167,139,250,.5);background:#1a1a2e}
-.skin-card.equipped{border-color:#a78bfa;background:rgba(124,58,237,.2)}
+.skin-card:hover:not(.locked-skin){
+  border-color:var(--accent);
+  background:rgba(91,58,247,.05);
+  transform:translateY(-2px);box-shadow:var(--shadow2);
+}
+.skin-card.equipped{
+  border-color:var(--accent);
+  background:rgba(91,58,247,.08);
+  box-shadow:0 0 0 2px rgba(91,58,247,.15);
+}
 .skin-card.locked-skin{opacity:.35;cursor:not-allowed}
 .sk-preview{
-  width:36px;
-  height:36px;
-  border-radius:7px;
+  width:36px;height:36px;border-radius:9px;
   margin:0 auto 8px;
-  border:2px solid rgba(255,255,255,.15)
+  border:2px solid rgba(0,0,0,.06);
+  box-shadow:0 2px 8px rgba(0,0,0,.1);
 }
-.sk-name{
-  font-size:10px;
-  font-weight:800;
-  letter-spacing:1px;
-  color:rgba(255,255,255,.7);
-  text-transform:uppercase
-}
-.sk-lock{
-  font-size:9px;
-  color:rgba(255,255,255,.3);
-  margin-top:3px
-}
-.sm-close{
-  width:100%;
-  padding:11px;
-  background:rgba(255,255,255,.06);
-  border:2px solid rgba(255,255,255,.12);
-  color:rgba(255,255,255,.5);
-  font-family:'Nunito',sans-serif;
-  font-size:13px;
-  font-weight:800;
-  border-radius:10px;
-  cursor:pointer;
-  transition:.2s
-}
-.sm-close:hover{background:rgba(255,255,255,.12);color:#fff}
-.sm-note{
-  font-size:11px;
-  color:rgba(167,139,250,.5);
-  text-align:center;
-  margin-bottom:16px
-}
-.index-modal{
-  display:none;
-  position:fixed;
-  inset:0;
-  z-index:600;
-  background:rgba(0,0,0,.72);
-  align-items:center;
-  justify-content:center;
-  padding:20px
-}
-.index-modal.open{display:flex}
-.im-box{
-  width:340px;
-  max-width:92vw;
-  background:#0f0f1c;
-  border:2px solid rgba(167,139,250,.25);
-  border-radius:20px;
-  padding:24px
-}
-.im-box h2{
-  font-size:17px;
-  font-weight:900;
-  letter-spacing:2px;
-  color:#a78bfa;
-  margin-bottom:14px
-}
-.im-list{
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-  margin-bottom:16px
-}
-.im-item{
-  padding:10px 12px;
-  border-radius:10px;
-  background:rgba(255,255,255,.04);
-  border:1px solid rgba(255,255,255,.08);
-  font-size:12px;
-  color:rgba(255,255,255,.82)
-}
-.im-close{
-  width:100%;
-  padding:11px;
-  background:rgba(255,255,255,.06);
-  border:2px solid rgba(255,255,255,.12);
-  color:rgba(255,255,255,.5);
-  font-family:'Nunito',sans-serif;
-  font-size:13px;
-  font-weight:800;
-  border-radius:10px;
-  cursor:pointer;
-  transition:.2s
-}
-.im-close:hover{background:rgba(255,255,255,.12);color:#fff}
+.sk-name{font-size:10px;font-weight:700;letter-spacing:.8px;color:var(--text);text-transform:uppercase}
+.sk-lock{font-size:9px;color:var(--text3);margin-top:3px}
+.sk-eq{font-size:9px;color:var(--accent);margin-top:3px;font-weight:700}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}}
 </style>
 </head>
 <body>
 
+<!-- MENU -->
 <div id="menu">
+  <div class="menu-logo">
+    <div class="menu-logo-box">🎮</div>
+    <span class="menu-logo-text">PLAYCONSOLE4U</span>
+  </div>
   <h1>CUBE PLATFORMER</h1>
   <div class="sub">Select a Level</div>
   <div class="level-grid" id="grid"></div>
   <div class="btn-row">
-    <button class="play-btn" onclick="startGame()">▶ PLAY</button>
-    <button class="index-btn" onclick="openIndex()">INDEX</button>
-    <button class="skin-btn" onclick="openSkins()">🎨 SKINS</button>
+    <button class="play-btn" onclick="startGame()">▶ &nbsp;PLAY</button>
+    <button class="sec-btn" onclick="openIndex()">📚 Index</button>
+    <button class="sec-btn" onclick="openSkins()">🎨 Skins</button>
   </div>
   <div class="footer">
-    <a class="lnk" href="../../index.html">← HOME</a>
-    <a class="lnk" href="../../leaderboard.html">🏆 LEADERBOARD</a>
+    <a class="lnk" href="../../index.html">← Home</a>
+    <a class="lnk" href="../../leaderboard.html">🏆 Leaderboard</a>
   </div>
 </div>
 
+<!-- GAME -->
 <div id="game-container">
-  <button class="back-btn" onclick="location.reload()">← BACK</button>
-  <div id="obstacle-index">
-    <div class="idx-title">OBSTACLES</div>
-    <div class="idx-list">
-      <div>◼ Moving Platforms</div>
-      <div>↟ Bounce Pads</div>
-      <div>⇢ Wind Fans</div>
-      <div>═ Lasers</div>
-      <div>▲ Spikes</div>
-      <div>◉ Saws</div>
-      <div>▭ Trap Doors</div>
-      <div>▱ Falling Platforms</div>
-    </div>
-  </div>
+  <button class="back-btn" onclick="location.reload()">← Back</button>
   <canvas id="gameCanvas"></canvas>
 </div>
 
-<div id="skin-modal">
-  <div class="sm-box">
-    <h2>🎨 SKINS</h2>
-    <div class="sm-note" id="sm-note">Sign in to save your skin choice.</div>
-    <div class="skin-grid" id="skin-grid"></div>
-    <button class="sm-close" onclick="closeSkins()">Close</button>
+<!-- INDEX MODAL -->
+<div id="index-modal" class="modal-bg" onclick="if(event.target===this)closeIndex()">
+  <div class="modal-box">
+    <h2>📚 Obstacle Index</h2>
+    <p class="modal-note">All obstacles you'll encounter across levels.</p>
+    <div class="im-list">
+      <div class="im-item"><div class="im-icon">◼</div><div><div class="im-lbl">Moving Platforms</div><div class="im-desc">Platforms that slide horizontally or vertically</div></div></div>
+      <div class="im-item"><div class="im-icon">↟</div><div><div class="im-lbl">Bounce Pads</div><div class="im-desc">Launch you high into the air on contact</div></div></div>
+      <div class="im-item"><div class="im-icon">⇢</div><div><div class="im-lbl">Wind Fans</div><div class="im-desc">Push you in a direction with airflow force</div></div></div>
+      <div class="im-item"><div class="im-icon">═</div><div><div class="im-lbl">Lasers</div><div class="im-desc">Timed beams that cycle on and off</div></div></div>
+      <div class="im-item"><div class="im-icon">▲</div><div><div class="im-lbl">Spikes</div><div class="im-desc">Sharp hazards that reset your run</div></div></div>
+      <div class="im-item"><div class="im-icon">◉</div><div><div class="im-lbl">Saws</div><div class="im-desc">Spinning blades that patrol back and forth</div></div></div>
+      <div class="im-item"><div class="im-icon">▭</div><div><div class="im-lbl">Trap Doors</div><div class="im-desc">Platforms that fall away after you step on them</div></div></div>
+      <div class="im-item"><div class="im-icon">▱</div><div><div class="im-lbl">Falling Platforms</div><div class="im-desc">Drop after a short delay when touched</div></div></div>
+    </div>
+    <button class="modal-close" onclick="closeIndex()">Close</button>
   </div>
 </div>
 
-<div id="index-modal" class="index-modal">
-  <div class="im-box">
-    <h2>📚 INDEX</h2>
-    <div class="im-list">
-      <div class="im-item">◼ Moving Platforms</div>
-      <div class="im-item">↟ Bounce Pads</div>
-      <div class="im-item">⇢ Wind Fans</div>
-      <div class="im-item">═ Lasers</div>
-      <div class="im-item">▲ Spikes</div>
-      <div class="im-item">◉ Saws</div>
-      <div class="im-item">▭ Trap Doors</div>
-      <div class="im-item">▱ Falling Platforms</div>
-    </div>
-    <button class="im-close" onclick="closeIndex()">Close</button>
+<!-- SKIN MODAL -->
+<div id="skin-modal" class="modal-bg" onclick="if(event.target===this)closeSkins()">
+  <div class="modal-box">
+    <h2>🎨 Skins</h2>
+    <div class="modal-note" id="sm-note">Sign in to save your skin choice.</div>
+    <div class="skin-grid" id="skin-grid"></div>
+    <button class="modal-close" onclick="closeSkins()">Close</button>
   </div>
 </div>
 
@@ -411,7 +372,6 @@ canvas{display:block}
 <script src="../../firebase.js"></script>
 <script src="levels.js"></script>
 <script src="game.js"></script>
-
 <script>
 let current = 1;
 let progressCache = 1;
@@ -422,167 +382,135 @@ const ACCENTS = {
   6:'#eab308',7:'#38bdf8',8:'#f97316',9:'#84cc16',10:'#818cf8'
 };
 
-function fmt(s){ return s==null ? '' : s < 60 ? s.toFixed(2) + 's' : `${Math.floor(s/60)}m ${(s%60).toFixed(0)}s`; }
-
-function getLocalProgress() {
-  const v = parseInt(sessionStorage.getItem('cube_prog') || '1', 10);
-  return Number.isFinite(v) ? Math.max(1, Math.min(MAX_LEVELS, v)) : 1;
+function fmt(s){
+  return s==null ? '' : s < 60 ? s.toFixed(2)+'s' : `${Math.floor(s/60)}m ${(s%60).toFixed(0)}s`;
 }
-
-function setProgress(n) {
-  progressCache = Math.max(1, Math.min(MAX_LEVELS, n));
-  sessionStorage.setItem('cube_prog', String(progressCache));
+function getLocalProgress(){
+  const v = parseInt(sessionStorage.getItem('cube_prog')||'1',10);
+  return Number.isFinite(v) ? Math.max(1,Math.min(MAX_LEVELS,v)) : 1;
+}
+function setProgress(n){
+  progressCache = Math.max(1,Math.min(MAX_LEVELS,n));
+  sessionStorage.setItem('cube_prog',String(progressCache));
   progressLoaded = true;
 }
-
-function inferProgressFromTimes(times) {
-  const ids = Object.keys(times || {});
-  let highestCompleted = 0;
-  for (const k of ids) {
-    const m = String(k).match(/L(\d+)/i);
-    if (m) highestCompleted = Math.max(highestCompleted, parseInt(m[1], 10));
+function inferProgressFromTimes(times){
+  let h=0;
+  for(const k of Object.keys(times||{})){
+    const m=String(k).match(/L(\d+)/i);
+    if(m) h=Math.max(h,parseInt(m[1],10));
   }
-  return Math.max(1, Math.min(MAX_LEVELS, highestCompleted + 1));
+  return Math.max(1,Math.min(MAX_LEVELS,h+1));
 }
-
-async function loadProgress() {
-  const local = getLocalProgress();
-  const u = window.FB?.currentUser?.();
-
-  if (!u) {
-    setProgress(local);
-    await buildGrid();
-    return;
+async function loadProgress(){
+  const local=getLocalProgress();
+  const u=window.FB?.currentUser?.();
+  if(!u){ setProgress(local); await buildGrid(); return; }
+  try{
+    const times=await window.FB.getMyTimes(u.uid);
+    setProgress(Math.max(local,inferProgressFromTimes(times)));
+  }catch(e){
+    try{
+      const prof=await window.FB.getProfile(u.uid);
+      const fbP=parseInt(prof?.progress||prof?.highest||prof?.level||1,10);
+      setProgress(Math.max(local,Number.isFinite(fbP)?fbP:1));
+    }catch(err){ setProgress(local); }
   }
-
-  try {
-    const times = await window.FB.getMyTimes(u.uid);
-    const inferred = inferProgressFromTimes(times);
-    setProgress(Math.max(local, inferred));
-  } catch (e) {
-    try {
-      const prof = await window.FB.getProfile(u.uid);
-      const fbProg = parseInt(prof?.progress || prof?.highest || prof?.level || 1, 10);
-      setProgress(Math.max(local, Number.isFinite(fbProg) ? fbProg : 1));
-    } catch (err) {
-      setProgress(local);
-    }
-  }
-
   await buildGrid();
 }
-
-async function buildGrid() {
-  const prog = progressLoaded ? progressCache : getLocalProgress();
-  let times = {};
-  const u = window.FB?.currentUser?.();
-  if (u) {
-    try { times = await window.FB.getMyTimes(u.uid); } catch(e) {}
-  }
-
-  const grid = document.getElementById('grid');
-  grid.innerHTML = '';
-  for (let i = 1; i <= MAX_LEVELS; i++) {
-    const unlocked = i <= prog;
-    const sel = i === current;
-    const ac = ACCENTS[i];
-    const entry = times['L' + i];
-    const el = document.createElement('div');
-    el.className = 'node' + (!unlocked ? ' locked' : '') + (sel ? ' sel' : '') + (unlocked ? ' done' : '');
-    el.style.setProperty('--ac', ac);
-    el.id = 'n' + i;
-    el.innerHTML = `
+async function buildGrid(){
+  const prog=progressLoaded?progressCache:getLocalProgress();
+  let times={};
+  const u=window.FB?.currentUser?.();
+  if(u){ try{ times=await window.FB.getMyTimes(u.uid); }catch(e){} }
+  const grid=document.getElementById('grid');
+  grid.innerHTML='';
+  for(let i=1;i<=MAX_LEVELS;i++){
+    const unlocked=i<=prog;
+    const sel=i===current;
+    const ac=ACCENTS[i];
+    const entry=times['L'+i];
+    const el=document.createElement('div');
+    el.className='node'+((!unlocked)?' locked':'')+(sel?' sel':'')+(unlocked?' done':'');
+    el.style.setProperty('--ac',ac);
+    el.id='n'+i;
+    el.innerHTML=`
       <div class="n-num">${i}</div>
-      ${entry ? `<div class="n-time">⏱${fmt(entry.t)}</div>` : ''}
-      <div class="n-icon">${unlocked ? '★' : '🔒'}</div>`;
-    if (unlocked) el.onclick = () => select(i);
+      ${entry?`<div class="n-time">⏱${fmt(entry.t)}</div>`:''}
+      <div class="n-icon">${unlocked?'★':'🔒'}</div>`;
+    if(unlocked) el.onclick=()=>select(i);
     grid.appendChild(el);
   }
 }
-
-function select(n) {
-  if (n > (progressLoaded ? progressCache : getLocalProgress())) return;
-  current = n;
-  document.querySelectorAll('.node').forEach(e => e.classList.remove('sel'));
-  const el = document.getElementById('n' + n);
-  if (el) el.classList.add('sel');
+function select(n){
+  if(n>(progressLoaded?progressCache:getLocalProgress())) return;
+  current=n;
+  document.querySelectorAll('.node').forEach(e=>e.classList.remove('sel'));
+  document.getElementById('n'+n)?.classList.add('sel');
 }
-
-function startGame() {
-  document.getElementById('menu').style.display = 'none';
+function startGame(){
+  document.getElementById('menu').style.display='none';
   document.getElementById('game-container').classList.add('visible');
   initGame(current);
 }
+function openIndex(){ document.getElementById('index-modal').classList.add('open'); }
+function closeIndex(){ document.getElementById('index-modal').classList.remove('open'); }
 
-function openIndex() {
-  document.getElementById('index-modal').classList.add('open');
-}
+const SKIN_UNLOCK_LEVEL={default:0,ghost:2,neon:4,fire:6,void:8,rainbow:10};
+let _skinOwned={default:true};
+let _skinEquipped='default';
 
-function closeIndex() {
-  document.getElementById('index-modal').classList.remove('open');
-}
-
-const SKIN_UNLOCK_LEVEL = { default:0, ghost:2, neon:4, fire:6, void:8, rainbow:10 };
-let _skinOwned = { default:true };
-let _skinEquipped = 'default';
-
-async function openSkins() {
-  const u = window.FB?.currentUser();
-  document.getElementById('sm-note').textContent = u ? `Signed in as ${u.displayName || u.email}` : 'Sign in to save your skin.';
-  if (u) {
-    try {
-      const sd = await window.FB.getSkinData(u.uid);
-      _skinOwned = sd.own || { default:true };
-      _skinEquipped = sd.eq || 'default';
-    } catch(e) {}
+async function openSkins(){
+  const u=window.FB?.currentUser();
+  document.getElementById('sm-note').textContent=u?`Signed in as ${u.displayName||u.email}`:'Sign in to save your skin choice.';
+  if(u){
+    try{
+      const sd=await window.FB.getSkinData(u.uid);
+      _skinOwned=sd.own||{default:true};
+      _skinEquipped=sd.eq||'default';
+    }catch(e){}
   }
   renderSkinGrid();
   document.getElementById('skin-modal').classList.add('open');
 }
-
-function closeSkins() {
-  document.getElementById('skin-modal').classList.remove('open');
-}
-
-function renderSkinGrid() {
-  const grid = document.getElementById('skin-grid');
-  grid.innerHTML = '';
-  Object.keys(SKINS).forEach(id => {
-    const owned = !!_skinOwned[id];
-    const equipped = _skinEquipped === id;
-    const unlockAt = SKIN_UNLOCK_LEVEL[id];
-    const card = document.createElement('div');
-    card.className = 'skin-card' + (equipped ? ' equipped' : '') + (!owned ? ' locked-skin' : '');
-    const prev = document.createElement('div');
-    prev.className = 'sk-preview';
-    prev.style.background = SKINS[id].rainbow ? 'linear-gradient(135deg,#f00,#ff0,#0f0,#00f,#f0f)' : (SKINS[id].body || ACCENTS[1]);
-    prev.style.boxShadow = `0 0 8px ${(SKINS[id].body || ACCENTS[1])}66`;
+function closeSkins(){ document.getElementById('skin-modal').classList.remove('open'); }
+function renderSkinGrid(){
+  const grid=document.getElementById('skin-grid');
+  grid.innerHTML='';
+  Object.keys(SKINS).forEach(id=>{
+    const owned=!!_skinOwned[id];
+    const equipped=_skinEquipped===id;
+    const unlockAt=SKIN_UNLOCK_LEVEL[id];
+    const card=document.createElement('div');
+    card.className='skin-card'+(equipped?' equipped':'')+(!owned?' locked-skin':'');
+    const prev=document.createElement('div');
+    prev.className='sk-preview';
+    prev.style.background=SKINS[id].rainbow?'linear-gradient(135deg,#f00,#ff0,#0f0,#00f,#f0f)':(SKINS[id].body||ACCENTS[1]);
+    prev.style.boxShadow=`0 3px 10px ${(SKINS[id].body||ACCENTS[1])}55`;
     card.appendChild(prev);
-    card.innerHTML += `<div class="sk-name">${SKINS[id].label}</div>`;
-    if (!owned) card.innerHTML += `<div class="sk-lock">Unlock @ Lvl ${unlockAt}</div>`;
-    else if (equipped) card.innerHTML += `<div class="sk-lock" style="color:#a78bfa">Equipped ✓</div>`;
-    if (owned && !equipped) card.onclick = () => equipSkinLocal(id);
+    const name=document.createElement('div');
+    name.className='sk-name';
+    name.textContent=SKINS[id].label;
+    card.appendChild(name);
+    const sub=document.createElement('div');
+    if(!owned){ sub.className='sk-lock'; sub.textContent='Unlock @ Lvl '+unlockAt; }
+    else if(equipped){ sub.className='sk-eq'; sub.textContent='Equipped ✓'; }
+    card.appendChild(sub);
+    if(owned&&!equipped) card.onclick=()=>equipSkinLocal(id);
     grid.appendChild(card);
   });
 }
-
-async function equipSkinLocal(id) {
-  _skinEquipped = id;
-  const u = window.FB?.currentUser();
-  if (u) {
-    try { await window.FB.equipSkin(u.uid, id); } catch(e) {}
-  }
+async function equipSkinLocal(id){
+  _skinEquipped=id;
+  const u=window.FB?.currentUser();
+  if(u){ try{ await window.FB.equipSkin(u.uid,id); }catch(e){} }
   renderSkinGrid();
 }
-
-async function refreshAll() {
-  progressLoaded = false;
-  await loadProgress();
-}
+async function refreshAll(){ progressLoaded=false; await loadProgress(); }
 
 buildGrid();
 refreshAll();
-window.FB?.onAuthChange(() => refreshAll());
+window.FB?.onAuthChange(()=>refreshAll());
 </script>
 </body>
 </html>
