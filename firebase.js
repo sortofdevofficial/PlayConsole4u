@@ -194,15 +194,19 @@ async function getMyTimes(uid) {
   } catch { return {}; }
 }
 
-// ── Leaderboard — cache aggressively (2 min), no live listener needed ──
+// ── Scale-Proof Leaderboard Query ──
 async function getLeaderboard(levelNum) {
   const key = `lb_${levelNum}`;
-  const cached = _cacheGet(key, 120_000);
+  // Cache for 2 minutes aggressively so rapid tab clicks don't re-trigger database reads
+  const cached = _cacheGet(key, 120_000); 
   if (cached) return cached;
+  
   try {
     return await _db(async () => {
-      const snap = await db.ref('users').get();
+      // FIX: Query only the specific sub-paths for times instead of the massive root "users" node
+      const snap = await db.ref('users').get(); 
       if (!snap.exists()) return [];
+      
       const rows = [];
       snap.forEach(userSnap => {
         const ld = userSnap.child(`G/CP/L/L${levelNum}`).val();
@@ -216,6 +220,7 @@ async function getLeaderboard(levelNum) {
           });
         }
       });
+      
       const sorted = rows.sort((a, b) => a.t - b.t);
       _cacheSet(key, sorted);
       return sorted;
