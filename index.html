@@ -394,6 +394,69 @@ header{
   #sidebar.open{width:100vw}
   .discord-col{position:static}
 }
+/* ── LIVE YOUTUBE WIDGET STYLING ── */
+.yt-subscriber-widget {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 20px;
+  padding: 22px;
+  text-align: center;
+  box-shadow: var(--shadow);
+  transition: all .18s ease;
+}
+.yt-subscriber-widget:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow2);
+  border-color: rgba(239, 68, 68, 0.2);
+}
+.yt-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.yt-live-dot {
+  width: 7px;
+  height: 7px;
+  background-color: #ef4444;
+  border-radius: 50%;
+  animation: yt-blink 1.5s linear infinite;
+}
+.yt-title {
+  color: var(--text2);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+}
+.yt-number {
+  color: var(--text);
+  font-family: 'Syne', sans-serif;
+  font-size: 32px;
+  font-weight: 800;
+  margin-bottom: 12px;
+}
+.yt-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #ef4444;
+  color: #fff;
+  font-family: 'Syne', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 8px 18px;
+  border-radius: 10px;
+  transition: all 0.15s ease;
+  width: 100%;
+}
+.yt-btn:hover {
+  filter: brightness(1.08);
+  box-shadow: 0 4px 14px rgba(239, 64, 64, 0.25);
+}
+@keyframes yt-blink {
+  50% { opacity: 0; }
+}
 </style>
 </head>
 <body>
@@ -500,24 +563,31 @@ header{
     </div>
 
     <!-- RIGHT: Discord -->
-    <div class="discord-col">
+<div class="discord-col">
+      
+      <div class="discord-label" style="color:#ef4444 !important;"><span class="yt-live-dot"></span> Content Creator Hub</div>
+      <div class="yt-subscriber-widget">
+        <div class="yt-header">
+          <span class="yt-title">LIVE SUBSCRIBERS</span>
+        </div>
+        <div id="yt-count" class="yt-number">000</div>
+        <a href="https://www.youtube.com/@sortofdev0" target="_blank" rel="noopener" class="yt-btn">▶ &nbsp; SUBSCRIBE</a>
+      </div>
+
       <div class="discord-label">Discord Community</div>
       <div class="discord-card">
         <iframe
           src="https://discord.com/widget?id=1503297362246897694&theme=dark"
-          width="100%" height="500"
+          width="100%" height="415"
           allowtransparency="true"
           frameborder="0"
           sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts">
-        </iframe>
+         iframe>
       </div>
-      <a class="discord-join" href="https://discord.gg/placeholder" target="_blank" rel="noopener">
+      <a class="discord-join" href="https://discord.gg/dS4pgC9J5H" target="_blank" rel="noopener">
         <span class="dc-icon">💬</span> Join our Discord
       </a>
     </div>
-
-  </div>
-</div>
 
 <!-- GAME SIDEBAR -->
 <div id="veil" onclick="closeSB()"></div>
@@ -676,6 +746,35 @@ async function saveUsername(){
   msg.className='mmsg ok'; msg.textContent='✓ Saved!';
   setTimeout(()=>msg.textContent='',2000);
 }
+// ── LIVE YOUTUBE DATA COUNTER LOOP ──
+const GOOGLE_API_KEY = "AIzaSyAmJzKU1txxHAL_Xeu-owQ2DFVeC8j8tF0";
+const YT_CHANNEL_ID  = "UC8eEGtjt9tW3jpkXucPBvvA";
+
+async function fetchLiveSubscribers() {
+  // Gracefully skip execution if placeholders aren't configured yet
+  if(GOOGLE_API_KEY.includes("PASTE_")) return;
+  
+  const url = `https://www.googleapis.com/youtube/v3/channels?part=statistics&id=${YT_CHANNEL_ID}&key=${GOOGLE_API_KEY}`;
+  
+  try {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error("API Network limit or configuration failure.");
+    
+    const data = await response.json();
+    if (data.items && data.items.length > 0) {
+      const subCount = data.items[0].statistics.subscriberCount;
+      document.getElementById("yt-count").innerText = Number(subCount).toLocaleString();
+    }
+  } catch (err) {
+    console.error("[YouTube Counter Error]:", err.message);
+    document.getElementById("yt-count").innerText = "ONLINE";
+  }
+}
+
+// Fire request stack instantly on layout assembly
+fetchLiveSubscribers();
+// Safe clock cycle query interval set to 120 seconds to guarantee quota safety
+setInterval(fetchLiveSubscribers, 120000);
 </script>
 </body>
 </html>
