@@ -1,12 +1,10 @@
-// firebase.js — Firestore
-//
-// Data paths:
-//   users/{uid}                             → { name, email, photo }
-//   users/{uid}/G/CP/L/{ver}/levels/{n}    → { t, ts }   (level times, ver = game version e.g. "1")
-//   users/{uid}/G/CP/C/S                   → { eq, own } (skins)
-//
-// Leaderboard: scans users, parallel-fetches each user's level doc, returns top 100.
-// Lazy network: stays offline until an operation is needed, goes offline 1.5s after last op.
+// firebase.js — Firestore, minimal
+// Path: users/{uid}/G/CP/L/{ver}/lv/{n}  → { t, ts, lp, uk }
+//   t  = best time (seconds)
+//   ts = timestamp when best was set
+//   lp = last played timestamp
+//   uk = unlocked (bool)
+// users/{uid} → { n, e, ph }  (name, email, photo)
 
 firebase.initializeApp({
   apiKey:            "AIzaSyCZPK5A0UQSFB2D_zNj3wjZ5-Tbyb1VYn8",
@@ -21,266 +19,173 @@ firebase.initializeApp({
 const auth = firebase.auth();
 const db   = firebase.firestore();
 
-// Current game version — change this to "2", "3" etc when you release a new game version
-const GAME_VERSION = "1";
+// Game version — bump to "2" when releasing a new version
+const VER = "1";
 
-// Stay offline until we actually need to talk to Firestore
+// Lazy network — offline until needed
 db.disableNetwork();
+let _on = false, _ops = 0, _timer = null;
 
-let _netOn    = false;
-let _opCount  = 0;
-let _offTimer = null;
-
-function _enableNet(){
-  if(_offTimer){ clearTimeout(_offTimer); _offTimer = null; }
-  if(!_netOn){ db.enableNetwork(); _netOn = true; }
-  _opCount++;
+function _up() {
+  if (_timer) { clearTimeout(_timer); _timer = null; }
+  if (!_on) { db.enableNetwork(); _on = true; }
+  _ops++;
 }
-function _releaseNet(){
-  _opCount = Math.max(0, _opCount - 1);
-  if(_opCount === 0){
-    _offTimer = setTimeout(() => {
-      db.disableNetwork();
-      _netOn    = false;
-      _offTimer = null;
-    }, 1500);
+function _dn() {
+  _ops = Math.max(0, _ops - 1);
+  if (_ops === 0) {
+    _timer = setTimeout(() => { db.disableNetwork(); _on = false; _timer = null; }, 1500);
   }
 }
-async function _net(fn){
-  _enableNet();
-  try   { return await fn(); }
-  finally { _releaseNet(); }
-}
+async function _go(fn) { _up(); try { return await fn(); } finally { _dn(); } }
 
-// ── In-memory cache ──
-const _cache = {};
-function _cSet(k, v, ttl = 60_000){ _cache[k] = { v, exp: Date.now() + ttl }; }
-function _cGet(k){ const e = _cache[k]; return (e && Date.now() < e.exp) ? e.v : null; }
-function _cDel(k){ delete _cache[k]; }
+// Cache
+const _c = {};
+const cSet = (k, v, ttl = 60000) => { _c[k] = { v, x: Date.now() + ttl }; };
+const cGet = k => { const e = _c[k]; return e && Date.now() < e.x ? e.v : null; };
+const cDel = k => { delete _c[k]; };
 
-// ── Path helpers ──
+// Refs
+const uRef  = uid => db.collection('users').doc(uid);
+const lvRef = (uid, n) => uRef(uid).collection('G').doc('CP').collection('L').doc(VER).collection('lv').doc(String(n));
+const lvCol = uid => uRef(uid).collection('G').doc('CP').collection('L').doc(VER).collection('lv');
 
-// Root user doc  →  users/{uid}
-const _userDoc = uid =>
-  db.collection('users').doc(uid);
-
-// Level time doc  →  users/{uid}/G/CP/L/{ver}/levels/{n}
-const _lvlDoc  = (uid, n, ver = GAME_VERSION) =>
-  _userDoc(uid)
-    .collection('G').doc('CP')
-    .collection('L').doc(ver)
-    .collection('levels').doc(String(n));
-
-// All levels collection  →  users/{uid}/G/CP/L/{ver}/levels
-const _lvlCol  = (uid, ver = GAME_VERSION) =>
-  _userDoc(uid)
-    .collection('G').doc('CP')
-    .collection('L').doc(ver)
-    .collection('levels');
-
-// Skin doc  →  users/{uid}/G/CP/C/S
-const _skinDoc = uid =>
-  _userDoc(uid)
-    .collection('G').doc('CP')
-    .collection('C').doc('S');
-
-// ── Auth ──
-const signInGoogle = () =>
-  auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+// Auth
+const signInGoogle = () => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
 const logOut       = () => auth.signOut();
 const currentUser  = () => auth.currentUser;
 
-function onAuthChange(cb){
+function onAuthChange(cb) {
   auth.onAuthStateChanged(async user => {
-    if(user){
-      _cDel(`prof_${user.uid}`);
-      _cDel(`times_${user.uid}`);
-      _cDel(`skin_${user.uid}`);
-      await _ensureDefaults(user);
+    if (user) {
+      cDel('p_' + user.uid);
+      cDel('t_' + user.uid);
+      await _ensureUser(user);
     }
     cb(user);
   });
 }
 
-async function _ensureDefaults(user){
-  try{
-    await _net(async () => {
-      const ref  = _userDoc(user.uid);
-      const snap = await ref.get();
-      const data = snap.exists ? snap.data() : {};
-      const up   = {};
-      if(!data.name)              up.name  = user.displayName || 'Anonymous';
-      if(!data.email)             up.email = user.email || '';
-      if(!data.photo && user.photoURL) up.photo = user.photoURL;
-      if(Object.keys(up).length){
-        await ref.set(up, { merge: true });
-        _cSet(`prof_${user.uid}`, { ...data, ...up });
+async function _ensureUser(user) {
+  try {
+    await _go(async () => {
+      const snap = await uRef(user.uid).get();
+      const d = snap.exists ? snap.data() : {};
+      const up = {};
+      if (!d.n)  up.n  = user.displayName || 'Anonymous';
+      if (!d.e)  up.e  = user.email || '';
+      if (!d.ph && user.photoURL) up.ph = user.photoURL;
+      if (Object.keys(up).length) {
+        await uRef(user.uid).set(up, { merge: true });
+        cSet('p_' + user.uid, { ...d, ...up });
       } else {
-        _cSet(`prof_${user.uid}`, data);
-      }
-      // Ensure skin doc exists
-      const skinSnap = await _skinDoc(user.uid).get();
-      if(!skinSnap.exists){
-        await _skinDoc(user.uid).set({ eq: 'default', own: { default: true } });
+        cSet('p_' + user.uid, d);
       }
     });
-  } catch(e){
-    console.warn('[FB] _ensureDefaults:', e.message);
-  }
+  } catch (e) { console.warn('[FB]', e.message); }
 }
 
-// ── Profile ──
-async function getProfile(uid){
-  const hit = _cGet(`prof_${uid}`);
-  if(hit) return hit;
-  try{
-    return await _net(async () => {
-      const snap = await _userDoc(uid).get();
-      const val  = snap.exists ? snap.data() : {};
-      _cSet(`prof_${uid}`, val);
-      return val;
+async function getProfile(uid) {
+  const hit = cGet('p_' + uid);
+  if (hit) return hit;
+  try {
+    return await _go(async () => {
+      const s = await uRef(uid).get();
+      const v = s.exists ? s.data() : {};
+      cSet('p_' + uid, v);
+      return v;
     });
   } catch { return {}; }
 }
 
-async function saveProfile(uid, name, photo){
-  _cDel(`prof_${uid}`);
-  const up = {};
-  if(name  != null) up.name  = name;
-  if(photo != null) up.photo = photo;
-  await _net(() => _userDoc(uid).set(up, { merge: true }));
+async function saveProfile(uid, name) {
+  cDel('p_' + uid);
+  await _go(() => uRef(uid).set({ n: name }, { merge: true }));
 }
 
-// ── Skins ──
-async function getSkinData(uid){
-  const hit = _cGet(`skin_${uid}`);
-  if(hit) return hit;
-  try{
-    return await _net(async () => {
-      const snap   = await _skinDoc(uid).get();
-      const result = snap.exists
-        ? { eq: snap.data().eq || 'default', own: snap.data().own || { default: true } }
-        : { eq: 'default', own: { default: true } };
-      _cSet(`skin_${uid}`, result);
-      return result;
-    });
-  } catch { return { eq: 'default', own: { default: true } }; }
-}
-
-async function equipSkin(uid, skinId){
-  _cDel(`skin_${uid}`);
-  await _net(() => _skinDoc(uid).set({ eq: skinId }, { merge: true }));
-}
-
-async function unlockSkin(uid, skinId){
-  _cDel(`skin_${uid}`);
-  await _net(() =>
-    _skinDoc(uid).set({ own: { [skinId]: true } }, { merge: true })
-  );
-}
-
-// ── Level times ──
-async function saveLevelTime(uid, levelNum, seconds){
-  try{
-    return await _net(async () => {
-      const ref  = _lvlDoc(uid, levelNum);
+// Level times
+// Returns { saved, isRecord, prev }
+async function saveLevelTime(uid, lvlNum, secs) {
+  try {
+    return await _go(async () => {
+      const ref  = lvRef(uid, lvlNum);
       const snap = await ref.get();
-      const t    = Math.round(seconds * 1000) / 1000;
-      const prev = snap.exists ? snap.data().t : null;
-      const isRecord = (prev === null || t < prev);
-
-      if(isRecord){
-        await ref.set({ t, ts: Date.now() });
-
-        // Update local cache immediately — avoids re-fetch for grid refresh
-        const tk = `times_${uid}`;
-        const ct = _cGet(tk) || {};
-        ct[String(levelNum)] = { t, ts: Date.now() };
-        _cSet(tk, ct);
-
-        // Skin unlocks
-        const UNLOCKS = { 2:'ghost', 4:'neon', 6:'fire', 8:'void', 10:'rainbow' };
-        if(UNLOCKS[levelNum]) await unlockSkin(uid, UNLOCKS[levelNum]);
-      }
-      return { saved: isRecord, isRecord, prev };
+      const t    = Math.round(secs * 1000) / 1000;
+      const prev = snap.exists ? (snap.data().t ?? null) : null;
+      const isRecord = prev === null || t < prev;
+      const now  = Date.now();
+      const data = { lp: now, uk: true };
+      if (isRecord) { data.t = t; data.ts = now; }
+      await ref.set(data, { merge: true });
+      // Update cache
+      const tk = 't_' + uid;
+      const ct = cGet(tk) || {};
+      ct[String(lvlNum)] = { ...(snap.exists ? snap.data() : {}), ...data };
+      cSet(tk, ct);
+      return { saved: true, isRecord, prev };
     });
-  } catch(e){
+  } catch (e) {
     console.error('[FB] saveLevelTime:', e.message);
     return { saved: false, isRecord: false, prev: null };
   }
 }
 
-// Returns { "1": {t,ts}, "2": {t,ts}, ... } keyed by level number string
-async function getMyTimes(uid){
-  const hit = _cGet(`times_${uid}`);
-  if(hit) return hit;
-  try{
-    return await _net(async () => {
-      const snap   = await _lvlCol(uid).get();
-      const result = {};
-      snap.forEach(doc => { result[doc.id] = doc.data(); });
-      _cSet(`times_${uid}`, result);
-      return result;
+// Returns { "1":{t,ts,lp,uk}, ... }
+async function getMyTimes(uid) {
+  const hit = cGet('t_' + uid);
+  if (hit) return hit;
+  try {
+    return await _go(async () => {
+      const snap = await lvCol(uid).get();
+      const r = {};
+      snap.forEach(d => { r[d.id] = d.data(); });
+      cSet('t_' + uid, r);
+      return r;
     });
   } catch { return {}; }
 }
 
-// ── Leaderboard ──
-// Scans all users docs, parallel-fetches each user's level/{n} doc, returns top 100 sorted by time.
-// 2-minute cache so tab-switching is free.
-async function getLeaderboard(levelNum){
-  const key = `lb_${levelNum}`;
-  const hit = _cGet(key);
-  if(hit) return hit;
-  try{
-    return await _net(async () => {
-      const usersSnap = await db.collection('users').get();
-      const rows      = [];
-
-      const fetches = [];
-      usersSnap.forEach(userDoc => {
-        fetches.push(
-          _lvlDoc(userDoc.id, levelNum).get()
-            .then(lvlSnap => {
-              if(lvlSnap.exists){
-                const d = userDoc.data();
-                rows.push({
-                  uid:  userDoc.id,
-                  name: d.name || 'Anonymous',
-                  t:    lvlSnap.data().t,
-                  ts:   lvlSnap.data().ts || 0
-                });
-              }
-            })
-            .catch(() => {}) // skip users with missing sub-collections
-        );
-      });
-
-      await Promise.all(fetches);
-      const sorted = rows.sort((a, b) => a.t - b.t).slice(0, 100);
-      _cSet(key, sorted, 120_000);
-      return sorted;
+// Unlock level explicitly (called when previous level is beaten)
+async function unlockLevel(uid, lvlNum) {
+  try {
+    await _go(async () => {
+      const ref = lvRef(uid, lvlNum);
+      const snap = await ref.get();
+      if (!snap.exists || !snap.data().uk) {
+        await ref.set({ uk: true }, { merge: true });
+        const tk = 't_' + uid;
+        const ct = cGet(tk) || {};
+        ct[String(lvlNum)] = { ...(ct[String(lvlNum)] || {}), uk: true };
+        cSet(tk, ct);
+      }
     });
-  } catch(e){
-    console.error('[FB] getLeaderboard:', e.message);
-    return [];
-  }
+  } catch (e) { console.warn('[FB] unlockLevel:', e.message); }
 }
 
-window.FB = {
-  signInGoogle,
-  signOut:      logOut,
-  onAuthChange,
-  currentUser,
-  getProfile,
-  saveProfile,
-  getSkinData,
-  equipSkin,
-  unlockSkin,
-  saveLevelTime,
-  getMyTimes,
-  getLeaderboard,
-  GAME_VERSION
-};
+// Leaderboard — parallel fetch, top 100, 2min cache
+async function getLeaderboard(lvlNum) {
+  const key = 'lb_' + lvlNum;
+  const hit = cGet(key);
+  if (hit) return hit;
+  try {
+    return await _go(async () => {
+      const users = await db.collection('users').get();
+      const rows  = [];
+      await Promise.all(users.docs.map(ud =>
+        lvRef(ud.id, lvlNum).get()
+          .then(ls => {
+            if (ls.exists && ls.data().t != null) {
+              rows.push({ uid: ud.id, name: ud.data().n || 'Anonymous', t: ls.data().t, ts: ls.data().ts || 0 });
+            }
+          })
+          .catch(() => {})
+      ));
+      const sorted = rows.sort((a, b) => a.t - b.t).slice(0, 100);
+      cSet(key, sorted, 120000);
+      return sorted;
+    });
+  } catch (e) { console.error('[FB] getLeaderboard:', e.message); return []; }
+}
 
-console.log('[FB] Firestore SDK loaded ✓  (game version:', GAME_VERSION, ')');
+window.FB = { signInGoogle, signOut: logOut, onAuthChange, currentUser, getProfile, saveProfile, saveLevelTime, getMyTimes, unlockLevel, getLeaderboard, VER };
+console.log('[FB] ready, ver=' + VER);
