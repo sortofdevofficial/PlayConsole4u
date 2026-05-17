@@ -38,7 +38,7 @@ h1{font-family:'Syne',sans-serif;font-size:clamp(26px,5vw,42px);font-weight:800;
 .pg-sub{font-size:14px;color:var(--text2);margin-bottom:26px;animation:fadeUp .4s .08s ease both;}
 
 .tabs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:18px;animation:fadeUp .4s .12s ease both;}
-.tab{padding:7px 16px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:.4px;border:1.5px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s ease;box-shadow:var(--shadow);}
+.tab{padding:7px 16px;border-radius:999px;font-size:11px;font-weight:700;border:1.5px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s ease;box-shadow:var(--shadow);}
 .tab:hover{border-color:var(--ac);color:var(--ac);transform:translateY(-1px)}
 .tab.active{color:#fff;border-color:var(--ac);background:var(--ac);box-shadow:0 4px 14px color-mix(in srgb,var(--ac) 28%,transparent);}
 
@@ -80,7 +80,6 @@ h1{font-family:'Syne',sans-serif;font-size:clamp(26px,5vw,42px);font-weight:800;
 .pg-btn:hover:not(:disabled){border-color:var(--ac);color:var(--ac);transform:translateY(-1px);box-shadow:var(--shadow2)}
 .pg-btn:disabled{opacity:.3;cursor:not-allowed}
 .pg-info{font-size:11px;font-weight:600;color:var(--text3);padding:0 4px}
-
 @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}}
 </style>
 </head>
@@ -122,10 +121,10 @@ const LVL_NAMES={1:'The Beginning',2:'Green Rush',3:'Red Zone',4:'Cyan Surge',5:
 const PER=10;
 let currentLvl=1,rows=[],page=1,currentUid=null;
 
-function setAc(ac){ document.documentElement.style.setProperty('--ac',ac); }
-function fmt(s){ if(s==null)return'—'; return s<60?s.toFixed(3)+'s':`${Math.floor(s/60)}m ${(s%60).toFixed(3)}s`; }
-function fmtDate(ts){ if(!ts)return''; return new Date(ts).toLocaleDateString(undefined,{month:'short',day:'numeric'}); }
-function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function setAc(ac){document.documentElement.style.setProperty('--ac',ac);}
+function fmt(s){if(s==null)return'—';return s<60?s.toFixed(3)+'s':`${Math.floor(s/60)}m ${(s%60).toFixed(3)}s`;}
+function fmtDate(ts){if(!ts)return'';return new Date(ts).toLocaleDateString(undefined,{month:'short',day:'numeric'});}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
 function rankHtml(i){
   if(i===0)return'<div class="rank top">🥇</div>';
@@ -155,8 +154,7 @@ function updateHero(){
 }
 
 function buildTabs(){
-  const el=document.getElementById('tabs');
-  el.innerHTML='';
+  const el=document.getElementById('tabs');el.innerHTML='';
   for(let i=1;i<=5;i++){
     const b=document.createElement('button');
     b.className='tab'+(i===currentLvl?' active':'');
@@ -165,7 +163,6 @@ function buildTabs(){
     el.appendChild(b);
   }
 }
-
 function renderPag(){
   const total=Math.ceil(rows.length/PER);
   const el=document.getElementById('pag');
@@ -178,8 +175,7 @@ function renderPag(){
 function goPage(p){
   const total=Math.ceil(rows.length/PER);
   if(p<1||p>total)return;
-  page=p;renderPage();
-  window.scrollTo({top:0,behavior:'smooth'});
+  page=p;renderPage();window.scrollTo({top:0,behavior:'smooth'});
 }
 function renderPage(){
   const box=document.getElementById('lb-box');
@@ -188,16 +184,10 @@ function renderPage(){
     box.innerHTML='<div class="lb-state">No times yet — be the first!</div>';
     document.getElementById('pag').innerHTML='';return;
   }
-  const start=(page-1)*PER;
-  const slice=rows.slice(start,start+PER);
-  let html=`<div class="lb-head">
-    <div>Rank</div><div>Player</div>
-    <div style="text-align:right">Time</div>
-    <div class="col-date" style="text-align:right">Date</div>
-  </div>`;
+  const start=(page-1)*PER,slice=rows.slice(start,start+PER);
+  let html=`<div class="lb-head"><div>Rank</div><div>Player</div><div style="text-align:right">Time</div><div class="col-date" style="text-align:right">Date</div></div>`;
   slice.forEach((r,idx)=>{
-    const gi=start+idx;
-    const isMe=r.uid===currentUid;
+    const gi=start+idx,isMe=r.uid===currentUid;
     html+=`<div class="lb-row${isMe?' me':''}">
       ${rankHtml(gi)}
       <div class="player">${avatarHtml(r.name)}<span class="pname">${esc(r.name)}${isMe?'<span class="you-tag">YOU</span>':''}</span></div>
@@ -209,15 +199,14 @@ function renderPage(){
 }
 
 async function loadLevel(n){
-  currentLvl=n;page=1;
-  setAc(ACCENTS[n]);buildTabs();
+  currentLvl=n;page=1;setAc(ACCENTS[n]);buildTabs();
   document.getElementById('lb-box').innerHTML='<div class="lb-state"><div class="spin-ring"></div>LOADING</div>';
   document.getElementById('pag').innerHTML='';
-  try{ rows=await window.FB.getLeaderboard(n); renderPage(); }
-  catch(e){ document.getElementById('lb-box').innerHTML='<div class="lb-state">Failed to load.</div>'; }
+  try{rows=await window.FB.getLeaderboard(n);renderPage();}
+  catch(e){document.getElementById('lb-box').innerHTML='<div class="lb-state">Failed to load.</div>';}
 }
 
-async function doSignIn(){ try{ await window.FB.signInGoogle(); }catch(e){} }
+async function doSignIn(){try{await window.FB.signInGoogle();}catch(e){}}
 
 window.FB.onAuthChange(user=>{
   currentUid=user?user.uid:null;

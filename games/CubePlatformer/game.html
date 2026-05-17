@@ -17,10 +17,8 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;overflow:hidden}
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
-body::before{content:'';position:fixed;top:-100px;left:-80px;width:500px;height:500px;border-radius:50%;
-  background:radial-gradient(circle,rgba(91,58,247,.08) 0%,transparent 65%);pointer-events:none;z-index:0;}
+body::before{content:'';position:fixed;top:-100px;left:-80px;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(91,58,247,.08) 0%,transparent 65%);pointer-events:none;z-index:0;}
 
-/* MENU */
 #menu{position:relative;z-index:1;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;}
 .menu-logo{display:flex;align-items:center;gap:9px;margin-bottom:6px;animation:fadeUp .4s ease both;}
 .menu-logo-box{width:36px;height:36px;border-radius:11px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:17px;box-shadow:0 4px 14px rgba(91,58,247,.3);}
@@ -28,7 +26,6 @@ body::before{content:'';position:fixed;top:-100px;left:-80px;width:500px;height:
 h1{font-family:'Syne',sans-serif;font-size:clamp(22px,5vw,34px);font-weight:800;letter-spacing:2px;color:var(--text);margin-bottom:4px;animation:fadeUp .4s .05s ease both;}
 .sub{font-size:11px;font-weight:600;letter-spacing:2px;color:var(--text3);text-transform:uppercase;margin-bottom:28px;animation:fadeUp .4s .08s ease both;}
 
-/* LEVEL GRID */
 .level-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:22px;width:100%;max-width:420px;animation:fadeUp .4s .12s ease both;}
 @media(max-width:380px){.level-grid{gap:7px;max-width:300px}}
 .node{aspect-ratio:1;border:1.5px solid var(--border);border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;background:var(--surface);transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease;user-select:none;position:relative;box-shadow:var(--shadow);min-width:0;}
@@ -42,7 +39,6 @@ h1{font-family:'Syne',sans-serif;font-size:clamp(22px,5vw,34px);font-weight:800;
 .node.locked{opacity:.25;cursor:not-allowed;pointer-events:none}
 .node.done .n-icon{color:#f59e0b}
 
-/* BUTTONS */
 .btn-row{display:flex;gap:10px;margin-bottom:18px;animation:fadeUp .4s .18s ease both;flex-wrap:wrap;justify-content:center;}
 .play-btn{padding:13px 56px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border:none;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;letter-spacing:2px;border-radius:13px;cursor:pointer;transition:all .18s ease;box-shadow:0 6px 24px rgba(91,58,247,.3);}
 .play-btn:hover{filter:brightness(1.08);transform:translateY(-2px)}
@@ -52,14 +48,12 @@ h1{font-family:'Syne',sans-serif;font-size:clamp(22px,5vw,34px);font-weight:800;
 .lnk{font-size:11px;font-weight:600;color:var(--text3);text-decoration:none;padding:6px 12px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface);transition:all .15s ease;box-shadow:var(--shadow);}
 .lnk:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-1px);box-shadow:var(--shadow2)}
 
-/* GAME */
 #game-container{display:none;width:100%;height:100vh;position:relative;background:#07070f;align-items:center;justify-content:center;}
 #game-container.visible{display:flex}
 canvas{display:block;max-width:100%;max-height:100vh}
 .back-btn{position:absolute;top:12px;left:12px;z-index:20;background:rgba(255,255,255,.12);backdrop-filter:blur(8px);border:1.5px solid rgba(255,255,255,.2);color:rgba(255,255,255,.8);font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;padding:7px 14px;border-radius:9px;cursor:pointer;transition:all .15s ease;}
 .back-btn:hover{background:rgba(255,255,255,.22);color:#fff}
 
-/* INDEX MODAL */
 .modal-bg{display:none;position:fixed;inset:0;z-index:500;background:rgba(26,22,37,.45);backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:20px;}
 .modal-bg.open{display:flex}
 .modal-box{background:var(--surface);border:1.5px solid var(--border);border-radius:22px;padding:26px;width:380px;max-width:92vw;box-shadow:0 24px 80px rgba(26,22,37,.18);animation:popIn .2s ease both;}
@@ -79,7 +73,6 @@ canvas{display:block;max-width:100%;max-height:100vh}
 </style>
 </head>
 <body>
-
 <div id="menu">
   <div class="menu-logo">
     <div class="menu-logo-box">🎮</div>
@@ -109,7 +102,7 @@ canvas{display:block;max-width:100%;max-height:100vh}
     <p class="modal-note">What you'll face as levels progress.</p>
     <div class="im-list">
       <div class="im-item"><div class="im-icon">❄️</div><div><div class="im-lbl">Ice Surface</div><div class="im-desc">Slippery — hard to stop</div></div></div>
-      <div class="im-item"><div class="im-icon">🟫</div><div><div class="im-lbl">Mud Surface</div><div class="im-desc">Slows you down quickly</div></div></div>
+      <div class="im-item"><div class="im-icon">🟫</div><div><div class="im-lbl">Mud Surface</div><div class="im-desc">Slows you down</div></div></div>
       <div class="im-item"><div class="im-icon">◼</div><div><div class="im-lbl">Moving Platforms</div><div class="im-desc">Slide horizontally or vertically</div></div></div>
       <div class="im-item"><div class="im-icon">↟</div><div><div class="im-lbl">Bounce Pads</div><div class="im-desc">Launch you into the air</div></div></div>
       <div class="im-item"><div class="im-icon">▲</div><div><div class="im-lbl">Spikes</div><div class="im-desc">Touch = reset</div></div></div>
@@ -127,11 +120,10 @@ canvas{display:block;max-width:100%;max-height:100vh}
 <script src="levels.js"></script>
 <script src="game.js"></script>
 <script>
-let current = 1, progCache = 1, progLoaded = false;
+let current=1,progCache=1,progLoaded=false;
+const ACCENTS={1:'#f97316',2:'#22c55e',3:'#f43f5e',4:'#06b6d4',5:'#a855f7'};
 
-const ACCENTS = {1:'#f97316',2:'#22c55e',3:'#f43f5e',4:'#06b6d4',5:'#a855f7'};
-
-function fmt(s){ return s==null?'':s<60?s.toFixed(2)+'s':`${Math.floor(s/60)}m${(s%60).toFixed(0)}s`; }
+function fmt(s){return s==null?'':s<60?s.toFixed(2)+'s':`${Math.floor(s/60)}m${(s%60).toFixed(0)}s`;}
 
 function getLocalProg(){
   const v=parseInt(sessionStorage.getItem('cp_prog')||'1',10);
@@ -143,6 +135,7 @@ function setProg(n){
   progLoaded=true;
 }
 function inferProg(times){
+  // times = { "1":{t,ts,lp,uk}, "2":... }
   let h=0;
   for(const k of Object.keys(times||{})){
     const n=parseInt(k,10);
@@ -154,11 +147,11 @@ function inferProg(times){
 async function loadProg(){
   const local=getLocalProg();
   const u=window.FB?.currentUser?.();
-  if(!u){ setProg(local); await buildGrid(); return; }
+  if(!u){setProg(local);await buildGrid();return;}
   try{
     const times=await window.FB.getMyTimes(u.uid);
     setProg(Math.max(local,inferProg(times)));
-  }catch(e){ setProg(local); }
+  }catch(e){setProg(local);}
   await buildGrid();
 }
 
@@ -166,24 +159,24 @@ async function buildGrid(){
   const prog=progLoaded?progCache:getLocalProg();
   let times={};
   const u=window.FB?.currentUser?.();
-  if(u){ try{ times=await window.FB.getMyTimes(u.uid); }catch(e){} }
+  if(u){try{times=await window.FB.getMyTimes(u.uid);}catch(e){}}
   const grid=document.getElementById('grid');
   grid.innerHTML='';
   for(let i=1;i<=MAX_LEVELS;i++){
     const unlocked=i<=prog;
     const sel=i===current;
     const ac=ACCENTS[i];
+    // times keys = String(n)
     const entry=times[String(i)];
     const el=document.createElement('div');
     el.className='node'+((!unlocked)?' locked':'')+(sel?' sel':'')+(unlocked?' done':'');
     el.style.setProperty('--ac',ac);
     el.id='n'+i;
-    el.innerHTML=`<div class="n-num">${i}</div>${entry?.t?`<div class="n-time">⏱${fmt(entry.t)}</div>`:''}<div class="n-icon">${unlocked?'★':'🔒'}</div>`;
+    el.innerHTML=`<div class="n-num">${i}</div>${entry?.t!=null?`<div class="n-time">⏱${fmt(entry.t)}</div>`:''}<div class="n-icon">${unlocked?'★':'🔒'}</div>`;
     if(unlocked) el.onclick=()=>select(i);
     grid.appendChild(el);
   }
 }
-
 function select(n){
   if(n>(progLoaded?progCache:getLocalProg()))return;
   current=n;
@@ -195,10 +188,10 @@ function startGame(){
   document.getElementById('game-container').classList.add('visible');
   initGame(current);
 }
-function openIndex(){ document.getElementById('index-modal').classList.add('open'); }
-function closeIndex(){ document.getElementById('index-modal').classList.remove('open'); }
+function openIndex(){document.getElementById('index-modal').classList.add('open');}
+function closeIndex(){document.getElementById('index-modal').classList.remove('open');}
 
-async function refreshAll(){ progLoaded=false; await loadProg(); }
+async function refreshAll(){progLoaded=false;await loadProg();}
 buildGrid();
 refreshAll();
 window.FB?.onAuthChange(()=>refreshAll());

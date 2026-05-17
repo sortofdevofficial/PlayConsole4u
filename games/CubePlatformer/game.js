@@ -4,72 +4,48 @@ const VW = 800, VH = 500;
 canvas.width  = VW;
 canvas.height = VH;
 
-const G             = 0.48;
-const MAX_RUN_SPEED = 4.2;
-const MAX_FALL_SPEED= 12.5;
-const FAN_CAP       = 0.55;
+const G              = 0.48;
+const MAX_RUN_SPEED  = 4.2;
+const MAX_FALL_SPEED = 12.5;
+const FAN_CAP        = 0.55;
 
 let cam, player, currentLvl, running, won, keys;
 let timerStart = 0, elapsedMs = 0;
 
-// Single fixed skin — no skin system
-const CUBE = {
-  body:   null,       // uses level accent
-  shine:  'rgba(255,255,255,.28)',
-  eyeW:   '#fff',
-  pupil:  'rgba(0,0,0,.6)',
-  glint:  'rgba(255,255,255,.65)',
-};
-
 const rectHit = (ax,ay,aw,ah,bx,by,bw,bh) =>
-  ax < bx+bw && ax+aw > bx && ay < by+bh && ay+ah > by;
+  ax<bx+bw && ax+aw>bx && ay<by+bh && ay+ah>by;
 
 function mkPlayer(sx,sy){
-  return{ x:sx,y:sy,w:24,h:24,dx:0,dy:0,jumps:0,maxJumps:2,
+  return{x:sx,y:sy,w:24,h:24,dx:0,dy:0,jumps:0,maxJumps:2,
     onWall:false,wallDir:0,onGround:false,
-    prevX:sx,prevY:sy,rot:0,spin:0,sx,sy };
+    prevX:sx,prevY:sy,rot:0,spin:0,sx,sy};
 }
 
-keys = {};
-window.addEventListener('keydown', e => {
-  keys[e.code] = true;
-  if (/Space|ArrowUp|KeyW/.test(e.code) && running && !won) doJump();
+keys={};
+window.addEventListener('keydown',e=>{
+  keys[e.code]=true;
+  if(/Space|ArrowUp|KeyW/.test(e.code)&&running&&!won) doJump();
 });
-window.addEventListener('keyup', e => { keys[e.code] = false; });
+window.addEventListener('keyup',e=>{keys[e.code]=false;});
 
 function doJump(){
-  if (player.onWall){
-    player.dy   = -11.2;
-    player.dx   = -player.wallDir * 7.5;
-    player.jumps = 1;
-    player.onWall = false;
-    player.spin  = player.wallDir * 0.18;
-  } else if (player.jumps < player.maxJumps){
-    player.dy = -11.2;
-    player.jumps++;
-    const d = keys['KeyD']||keys['ArrowRight'] ? 1
-             : keys['KeyA']||keys['ArrowLeft']  ? -1
-             : player.dx > 0 ? 1 : -1;
-    player.spin = d * 0.15;
+  if(player.onWall){
+    player.dy=-11.2; player.dx=-player.wallDir*7.5;
+    player.jumps=1; player.onWall=false; player.spin=player.wallDir*0.18;
+  }else if(player.jumps<player.maxJumps){
+    player.dy=-11.2; player.jumps++;
+    const d=keys['KeyD']||keys['ArrowRight']?1:keys['KeyA']||keys['ArrowLeft']?-1:player.dx>0?1:-1;
+    player.spin=d*0.15;
   }
 }
 
-// Touch controls
 function setupTouch(){
   document.getElementById('touch-hud')?.remove();
-  const hud = document.createElement('div');
-  hud.id = 'touch-hud';
-  hud.innerHTML = `<style>
-#touch-hud{
-  position:fixed;bottom:0;left:0;width:100%;
-  display:flex;justify-content:space-between;align-items:flex-end;
-  padding:10px 14px 18px;box-sizing:border-box;
-  pointer-events:none;z-index:30;
-  background:linear-gradient(to top,rgba(0,0,0,.3),transparent);
-}
-.tb{width:62px;height:62px;background:rgba(255,255,255,.13);border:2px solid rgba(255,255,255,.26);border-radius:50%;
-  display:flex;align-items:center;justify-content:center;font-size:22px;color:#fff;
-  pointer-events:all;user-select:none;-webkit-user-select:none;backdrop-filter:blur(4px);transition:background .1s;}
+  const hud=document.createElement('div');
+  hud.id='touch-hud';
+  hud.innerHTML=`<style>
+#touch-hud{position:fixed;bottom:0;left:0;width:100%;display:flex;justify-content:space-between;align-items:flex-end;padding:10px 14px 18px;box-sizing:border-box;pointer-events:none;z-index:30;background:linear-gradient(to top,rgba(0,0,0,.3),transparent);}
+.tb{width:62px;height:62px;background:rgba(255,255,255,.13);border:2px solid rgba(255,255,255,.26);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;color:#fff;pointer-events:all;user-select:none;-webkit-user-select:none;backdrop-filter:blur(4px);transition:background .1s;}
 .tb:active{background:rgba(255,255,255,.28)}
 #t-dpad{display:flex;gap:12px}
 #tj{background:rgba(124,58,237,.32);border-color:rgba(167,139,250,.55)}
@@ -78,29 +54,27 @@ function setupTouch(){
 <div id="t-dpad"><div class="tb" id="tl">◀</div><div class="tb" id="tr">▶</div></div>
 <div class="tb" id="tj">▲</div>`;
   document.body.appendChild(hud);
-  const bind = (id, code) => {
-    const el = document.getElementById(id);
-    el.addEventListener('touchstart', e=>{e.preventDefault();keys[code]=true;},{passive:false});
-    el.addEventListener('touchend',   e=>{e.preventDefault();keys[code]=false;},{passive:false});
+  const bind=(id,code)=>{
+    const el=document.getElementById(id);
+    el.addEventListener('touchstart',e=>{e.preventDefault();keys[code]=true;},{passive:false});
+    el.addEventListener('touchend',  e=>{e.preventDefault();keys[code]=false;},{passive:false});
   };
   bind('tl','KeyA'); bind('tr','KeyD');
-  document.getElementById('tj').addEventListener('touchstart', e=>{
+  document.getElementById('tj').addEventListener('touchstart',e=>{
     e.preventDefault(); if(running&&!won) doJump();
   },{passive:false});
 }
 
 async function initGame(lvlNum){
-  currentLvl = lvlNum;
-  won = false; running = true;
-  const lvl = LEVELS[lvlNum];
+  currentLvl=lvlNum; won=false; running=true;
+  const lvl=LEVELS[lvlNum];
   lvl.platforms.forEach(p=>{
     if(p.moving){p._t=0;p._ox=p.x;p._oy=p.y;}
     p._lx=p.x;p._ly=p.y;
   });
-  player = mkPlayer(lvl.spawn.x, lvl.spawn.y);
-  cam    = {x:0,y:0};
-  timerStart = performance.now();
-  elapsedMs  = 0;
+  player=mkPlayer(lvl.spawn.x,lvl.spawn.y);
+  cam={x:0,y:0};
+  timerStart=performance.now(); elapsedMs=0;
   setupTouch();
   requestAnimationFrame(loop);
 }
@@ -114,15 +88,15 @@ function resetPlayer(){
 }
 
 function updateCam(wW,wH){
-  cam.x += (player.x+player.w/2-VW/2-cam.x)*0.12;
-  cam.y += (player.y+player.h/2-VH/2-cam.y)*0.12;
-  cam.x  = Math.max(0,Math.min(cam.x,wW-VW));
-  cam.y  = Math.max(0,Math.min(cam.y,wH-VH));
+  cam.x+=(player.x+player.w/2-VW/2-cam.x)*0.12;
+  cam.y+=(player.y+player.h/2-VH/2-cam.y)*0.12;
+  cam.x=Math.max(0,Math.min(cam.x,wW-VW));
+  cam.y=Math.max(0,Math.min(cam.y,wH-VH));
 }
 
 function applySurface(s){
-  if     (s==='ice')       player.dx*=0.995;
-  else if(s==='mud')       player.dx*=0.75;
+  if(s==='ice')       player.dx*=0.995;
+  else if(s==='mud')  player.dx*=0.75;
   else if(s==='conveyorL') player.x-=1;
   else if(s==='conveyorR') player.x+=1;
 }
@@ -130,7 +104,7 @@ function applySurface(s){
 function hazardOn(item,cycle,phase=0){
   if(cycle==null)return true;
   const t=(performance.now()/16)%cycle;
-  return t>phase && t<phase+cycle*0.5;
+  return t>phase&&t<phase+cycle*0.5;
 }
 
 function loop(){
@@ -138,21 +112,19 @@ function loop(){
   const lvl=LEVELS[currentLvl];
   elapsedMs=performance.now()-timerStart;
 
-  // Move platforms
   for(const p of lvl.platforms){
     p._lx=p.x;p._ly=p.y;
     if(p.moving){
       p._t+=p.moving.speed*0.016;
       const off=Math.sin(p._t)*p.moving.range;
-      if(p.moving.axis==='x') p.x=p._ox+off;
-      else                    p.y=p._oy+off;
+      if(p.moving.axis==='x')p.x=p._ox+off;
+      else p.y=p._oy+off;
     }
     p._dx=p.x-p._lx;p._dy=p.y-p._ly;
   }
 
-  // Player input
-  if(keys['KeyD']||keys['ArrowRight']) player.dx+=0.82;
-  if(keys['KeyA']||keys['ArrowLeft'])  player.dx-=0.82;
+  if(keys['KeyD']||keys['ArrowRight'])player.dx+=0.82;
+  if(keys['KeyA']||keys['ArrowLeft']) player.dx-=0.82;
   player.dx*=player.onGround?0.84:0.985;
   player.dx=Math.max(-MAX_RUN_SPEED,Math.min(MAX_RUN_SPEED,player.dx));
 
@@ -166,13 +138,12 @@ function loop(){
 
   player.onGround=false;player.onWall=false;
 
-  // Platform collisions
   for(const p of lvl.platforms){
     if(!rectHit(player.x,player.y,player.w,player.h,p.x,p.y,p.w,p.h))continue;
-    const fT=player.prevY+player.h<=p.y+5  &&player.dy>=0;
-    const fB=player.prevY          >=p.y+p.h-5&&player.dy<0;
+    const fT=player.prevY+player.h<=p.y+5&&player.dy>=0;
+    const fB=player.prevY>=p.y+p.h-5&&player.dy<0;
     const fL=player.prevX+player.w<=p.x+5;
-    const fR=player.prevX          >=p.x+p.w-5;
+    const fR=player.prevX>=p.x+p.w-5;
     if(fT){
       player.y=p.y-player.h;player.dy=0;player.jumps=0;player.onGround=true;
       if(p._dx||p._dy){player.x+=p._dx;player.y+=p._dy;}
@@ -185,7 +156,6 @@ function loop(){
     }
   }
 
-  // Bounce pads
   for(const b of(lvl.bouncePads||[])){
     if(rectHit(player.x,player.y,player.w,player.h,b.x,b.y,b.w,b.h)&&player.dy>0){
       player.dy=-b.force;player.y=b.y-player.h;
@@ -193,46 +163,37 @@ function loop(){
     }
   }
 
-  // Wind fans
   for(const f of(lvl.windFans||[])){
     if(rectHit(player.x-20,player.y-20,player.w+40,player.h+40,f.x-10,f.y-10,f.w+20,f.h+20)){
       const force=Math.min(f.force||0,FAN_CAP);
-      if(f.dir==='up')    player.dy-=force;
-      if(f.dir==='down')  player.dy+=force;
-      if(f.dir==='left')  player.dx-=force;
-      if(f.dir==='right') player.dx+=force;
+      if(f.dir==='up')   player.dy-=force;
+      if(f.dir==='down') player.dy+=force;
+      if(f.dir==='left') player.dx-=force;
+      if(f.dir==='right')player.dx+=force;
     }
   }
 
-  // Static hazards
   for(const h of(lvl.hazards||[])){
     if(rectHit(player.x,player.y,player.w,player.h,h.x,h.y,h.w,h.h)){
       resetPlayer();return requestAnimationFrame(loop);
     }
   }
-
-  // Lasers
   for(const l of(lvl.lasers||[])){
     if(hazardOn(l,l.cycle,l.phase||0)&&rectHit(player.x,player.y,player.w,player.h,l.x,l.y,l.w,l.h)){
       resetPlayer();return requestAnimationFrame(loop);
     }
   }
-
-  // Timed spikes
   for(const s of(lvl.spikes||[])){
     if(hazardOn(s,s.cycle,s.phase||0)&&rectHit(player.x,player.y,player.w,player.h,s.x,s.y,s.w,s.h)){
       resetPlayer();return requestAnimationFrame(loop);
     }
   }
 
-  // Spin in air
   if(!player.onGround){
-    player.rot  +=player.spin;
-    player.spin *=0.98;
-    if(Math.abs(player.spin)<0.04) player.spin=player.dx*0.012;
+    player.rot+=player.spin; player.spin*=0.98;
+    if(Math.abs(player.spin)<0.04)player.spin=player.dx*0.012;
   }
 
-  // Goal
   const g=lvl.goal;
   if(rectHit(player.x,player.y,player.w,player.h,g.x,g.y,g.w,g.h)){
     won=true;running=false;
@@ -241,7 +202,6 @@ function loop(){
     if(u){
       window.FB.saveLevelTime(u.uid,currentLvl,secs)
         .then(async res=>{
-          // Unlock next level if exists
           if(currentLvl<MAX_LEVELS) await window.FB.unlockLevel(u.uid,currentLvl+1);
           drawWin(secs,res.isRecord,res.prev);
         })
@@ -263,24 +223,20 @@ function draw(lvl){
   gr.addColorStop(0,lvl.bgA);gr.addColorStop(1,lvl.bgB);
   ctx.fillStyle=gr;ctx.fillRect(0,0,VW,VH);
 
-  ctx.save();
-  ctx.translate(-cam.x,-cam.y);
+  ctx.save();ctx.translate(-cam.x,-cam.y);
 
   // Platforms
   for(const p of lvl.platforms){
     ctx.fillStyle=p.c;
     ctx.beginPath();ctx.roundRect(p.x,p.y,p.w,p.h,5);ctx.fill();
     if(p.surface==='ice'){
-      ctx.fillStyle='rgba(180,225,255,.35)';
-      ctx.fillRect(p.x+3,p.y+2,p.w-6,3);
+      ctx.fillStyle='rgba(180,225,255,.35)';ctx.fillRect(p.x+3,p.y+2,p.w-6,3);
     }else if(p.surface==='mud'){
-      ctx.fillStyle='rgba(50,25,0,.2)';
-      ctx.fillRect(p.x,p.y+p.h-4,p.w,4);
+      ctx.fillStyle='rgba(50,25,0,.2)';ctx.fillRect(p.x,p.y+p.h-4,p.w,4);
     }else if(p.surface==='conveyorL'||p.surface==='conveyorR'){
       ctx.fillStyle='rgba(255,255,255,.12)';
       for(let i=0;i<p.w;i+=12)ctx.fillRect(p.x+i,p.y+3,7,p.h-6);
-      ctx.fillStyle='rgba(255,255,255,.45)';
-      ctx.font='8px sans-serif';
+      ctx.fillStyle='rgba(255,255,255,.45)';ctx.font='8px sans-serif';
       ctx.fillText(p.surface==='conveyorL'?'◄◄':'►►',p.x+5,p.y+p.h-4);
     }
     if(p.moving){
@@ -365,27 +321,27 @@ function draw(lvl){
 }
 
 function drawCube(accent){
-  const hw=player.w/2, hh=player.h/2;
+  const hw=player.w/2,hh=player.h/2;
   ctx.save();
-  ctx.translate(player.x+hw, player.y+hh);
-  // Shadow
+  ctx.translate(player.x+hw,player.y+hh);
+  // shadow
   ctx.fillStyle='rgba(0,0,0,.16)';
   ctx.beginPath();ctx.ellipse(2,hh+4,hw+2,4,0,0,Math.PI*2);ctx.fill();
   ctx.rotate(player.rot);
-  // Body
+  // body
   ctx.fillStyle=accent;
   ctx.beginPath();ctx.roundRect(-hw,-hh,player.w,player.h,4);ctx.fill();
-  // Shine
-  ctx.fillStyle=CUBE.shine;
+  // shine
+  ctx.fillStyle='rgba(255,255,255,.26)';
   ctx.beginPath();ctx.roundRect(-hw+2,-hh+2,hw-1,hh-1,3);ctx.fill();
-  // Eye white
-  ctx.fillStyle=CUBE.eyeW;
+  // eye white
+  ctx.fillStyle='#fff';
   ctx.beginPath();ctx.arc(3,-2,4.5,0,Math.PI*2);ctx.fill();
-  // Pupil
-  ctx.fillStyle=CUBE.pupil;
+  // pupil
+  ctx.fillStyle='rgba(0,0,0,.6)';
   ctx.beginPath();ctx.arc(4,-1.5,2,0,Math.PI*2);ctx.fill();
-  // Glint
-  ctx.fillStyle=CUBE.glint;
+  // glint
+  ctx.fillStyle='rgba(255,255,255,.65)';
   ctx.beginPath();ctx.arc(2.5,-2.8,0.9,0,Math.PI*2);ctx.fill();
   ctx.restore();
 }
@@ -393,16 +349,14 @@ function drawCube(accent){
 function drawHUD(lvl){
   const t=(elapsedMs/1000).toFixed(2);
   ctx.fillStyle='rgba(255,255,255,.82)';
-  ctx.beginPath();ctx.roundRect(10,10,230,30,9);ctx.fill();
+  ctx.beginPath();ctx.roundRect(10,10,200,30,9);ctx.fill();
   ctx.strokeStyle='rgba(0,0,0,.05)';ctx.lineWidth=1.5;
-  ctx.beginPath();ctx.roundRect(10,10,230,30,9);ctx.stroke();
+  ctx.beginPath();ctx.roundRect(10,10,200,30,9);ctx.stroke();
   ctx.lineWidth=1;
-  // Level badge
   ctx.fillStyle=lvl.accent;
   ctx.beginPath();ctx.roundRect(14,14,40,22,6);ctx.fill();
   ctx.fillStyle='#fff';ctx.font='bold 10px "DM Sans",sans-serif';ctx.textAlign='center';
   ctx.fillText('LV '+currentLvl,34,28);ctx.textAlign='left';
-  // Timer
   ctx.fillStyle='#1a1625';ctx.font='bold 11px "DM Mono","DM Sans",sans-serif';
   ctx.fillText('⏱ '+t+'s',60,28);
 }
