@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>FloppySticks 2D - Nature Brawl</title>
+    <title>FloppySticks - Nature Brawl</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         html, body {
             width: 100%;
             height: 100%;
-            /* FIX: clamp to viewport, no overflow */
             overflow: hidden;
             max-width: 100vw;
             max-height: 100vh;
@@ -23,7 +22,6 @@
 
         canvas {
             display: block;
-            /* FIX: canvas fills exactly the viewport, never overflows */
             width: 100vw;
             height: 100vh;
             position: fixed;
@@ -73,7 +71,6 @@
             padding: clamp(8px, 2vw, 15px);
             display: none; justify-content: space-between; align-items: flex-start;
             pointer-events: none; z-index: 5;
-            /* FIX: prevent HUD from causing overflow */
             box-sizing: border-box;
         }
 
