@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FloppySticks 2D - Mobile Nature Brawl</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body, html {
+            width: 100%; height: 100%; overflow: hidden;
+            background-color: #87CEEB; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            user-select: none; -webkit-user-select: none; touch-action: none;
+        }
+        canvas { display: block; }
+
+        /* --- STYLISH OVERLAY MENU --- */
+        #menu-container {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(180deg, rgba(135, 206, 235, 0.85) 0%, rgba(240, 253, 255, 0.95) 100%);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 10; transition: opacity 0.4s ease;
+        }
+        h1 {
+            color: #2c3e50; font-size: 56px; font-weight: 800; letter-spacing: 1px;
+            margin-bottom: 5px; text-shadow: 0 4px 10px rgba(0,0,0,0.1); text-align: center;
+        }
+        .subtitle {
+            color: #7f8c8d; font-size: 13px; letter-spacing: 3px; text-transform: uppercase;
+            margin-bottom: 40px; font-weight: 700;
+        }
+        .menu-btn {
+            width: 260px; padding: 15px; margin: 10px; font-size: 15px; font-weight: bold;
+            text-transform: uppercase; letter-spacing: 1px; border: none; border-radius: 30px;
+            cursor: pointer; transition: all 0.2s ease; font-family: inherit;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        .btn-primary { background: #2ecc71; color: #ffffff; }
+        .btn-primary:hover {
+            background: #27ae60; transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(46, 204, 113, 0.35);
+        }
+        .btn-disabled { background: #bdc3c7; color: #7f8c8d; cursor: not-allowed; position: relative; }
+        .coming-soon-tag {
+            font-size: 9px; background: #e74c3c; color: white; padding: 2px 6px;
+            position: absolute; top: -8px; right: 15px; border-radius: 10px;
+        }
+
+        /* --- HUD GAME INTERFACE --- */
+        #hud-container {
+            position: absolute; top: 0; left: 0; width: 100%; padding: 15px;
+            display: flex; justify-content: space-between; align-items: flex-start;
+            pointer-events: none; display: none; z-index: 5;
+        }
+        .hud-panel {
+            background: rgba(255, 255, 255, 0.92); padding: 10px 12px; border-radius: 12px;
+            width: 220px; box-shadow: 0 6px 20px rgba(0,0,0,0.06);
+            border: 1px solid rgba(0,0,0,0.04); backdrop-filter: blur(4px);
+        }
+        .hud-title {
+            color: #2c3e50; font-size: 11px; font-weight: bold;
+            letter-spacing: 1px; margin-bottom: 5px; display: flex; justify-content: space-between;
+        }
+        .score-display {
+            background: #34495e; color: #fff; padding: 1px 6px; border-radius: 8px; font-size: 10px;
+        }
+        .bar-container { width: 100%; height: 10px; background-color: #eaeded; border-radius: 5px; overflow: hidden; }
+        .hp-bar { height: 100%; width: 100%; transition: width 0.1s ease; }
+        #player-hp { background-color: #2ecc71; }
+        #bot-hp { background-color: #e74c3c; }
+        .weapon-tag { margin-top: 5px; color: #7f8c8d; font-size: 10px; font-weight: 600; }
+
+        /* --- LIVE DROP TIMER --- */
+        #spawner-timer-panel {
+            background: rgba(44, 62, 80, 0.9); color: #ffffff; padding: 8px 16px;
+            border-radius: 20px; font-size: 11px; font-weight: bold; letter-spacing: 1px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15); text-align: center; min-width: 130px;
+        }
+
+        /* --- MOBILE INPUT VIRTUAL CONTROLS --- */
+        #mobile-controls {
+            position: absolute; bottom: 20px; left: 0; width: 100%;
+            display: none; justify-content: space-between; padding: 0 25px;
+            pointer-events: none; z-index: 6;
+        }
+        .btn-group { display: flex; gap: 15px; pointer-events: none; }
+        .touch-btn {
+            width: 65px; height: 65px; background: rgba(255, 255, 255, 0.55);
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-weight: bold; color: #2c3e50; font-size: 20px; border: 2px solid rgba(0,0,0,0.15);
+            pointer-events: auto; user-select: none; -webkit-user-select: none;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        .touch-btn:active { background: rgba(255, 255, 255, 0.85); transform: scale(0.92); }
+
+        #version-tag {
+            position: absolute; bottom: 10px; right: 15px;
+            color: rgba(0,0,0,0.25); font-size: 11px; font-weight: bold;
+            pointer-events: none; z-index: 8;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="version-tag">Version 1</div>
+
+    <div id="menu-container">
+        <h1>FloppySticks</h1>
+        <div class="subtitle">Mobile Nature Brawl</div>
+        <button class="menu-btn btn-primary" onclick="startBotMode()">Start Local Fight</button>
+        <button class="menu-btn btn-disabled" disabled>
+            Online Match
+            <span class="coming-soon-tag">Coming Soon</span>
+        </button>
+    </div>
+
+    <div id="hud-container">
+        <div class="hud-panel">
+            <div class="hud-title">
+                <span>PLAYER (YOU)</span>
+                <span id="player-score-tag" class="score-display">0 Wins</span>
+            </div>
+            <div class="bar-container">
+                <div id="player-hp" class="hp-bar"></div>
+            </div>
+            <div class="weapon-tag">WEAPON: <span id="player-weapon-text" style="color:#2c3e50;">NONE</span></div>
+        </div>
+
+        <div id="spawner-timer-panel">NEXT DROP: --</div>
+
+        <div class="hud-panel" style="text-align: right;">
+            <div class="hud-title" style="flex-direction: row-reverse;">
+                <span>AI_BOT_UNIT</span>
+                <span id="bot-score-tag" class="score-display">0 Wins</span>
+            </div>
+            <div class="bar-container">
+                <div id="bot-hp" class="hp-bar" style="margin-left: auto;"></div>
+            </div>
+            <div class="weapon-tag">AI STATUS: <span id="bot-status-text" style="color:#e74c3c;">HUNTING</span></div>
+        </div>
+    </div>
+
+    <div id="mobile-controls">
+        <div class="btn-group">
+            <div class="touch-btn" id="btn-left">←</div>
+            <div class="touch-btn" id="btn-right">→</div>
+        </div>
+        <div class="btn-group">
+            <div class="touch-btn" id="btn-jump">↑</div>
+            <div class="touch-btn" id="btn-attack" style="background: rgba(46, 204, 113, 0.55); font-size: 16px;">HIT</div>
+        </div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let isMobileLayout = false;
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            // Dynamically detect mobile dimensions or touch compatibility
+            if (window.innerWidth < 1024 || 'ontouchstart' in window) {
+                isMobileLayout = true;
+                if (gameState === 'BOT_MODE' || gameState === 'MATCH_OVER') {
+                    document.getElementById('mobile-controls').style.display = 'flex';
+                }
+            } else {
+                isMobileLayout = false;
+                document.getElementById('mobile-controls').style.display = 'none';
+            }
+        }
+        window.addEventListener('resize', resize);
+
+        // --- GLOBAL MATRIX SETTINGS ---
+        let gameState = 'MENU';
+        const gravity = 0.55;
+        const keys = { a: false, d: false, w: false };
+        const weaponsPool = ['Buster Sword', 'Assault Rifle', 'Smasher Club'];
+        
+        let playerScore = 0;
+        let botScore = 0;
+        const maxPoints = 3;
+
+        let activePickups = [];
+        let activeBullets = [];
+        let activeParticles = [];
+        let cloudsArray = [];
+        let screenShake = 0;
+        let spawnerTicksLeft = 0;
+
+        function resetSpawnerCooldown() {
+            // Drop interval scaled smoothly between 1 and 15 seconds
+            const randomSeconds = Math.random() * (15 - 1) + 1;
+            spawnerTicksLeft = Math.floor(randomSeconds * 60);
+        }
+
+        // Generate Clouds
+        for(let i=0; i<4; i++) {
+            cloudsArray.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * (canvas.height * 0.25) + 30,
+                speed: Math.random() * 0.12 + 0.05,
+                size: Math.random() * 30 + 20
+            });
+        }
+
+        // --- HIGH OPTIMIZATION RENDERING SYSTEM ---
+        class Particle {
+            constructor(x, y, vx, vy, color, size, life) {
+                this.x = x; this.y = y;
+                this.vx = vx; this.vy = vy;
+                this.color = color;
+                this.size = size;
+                this.maxLife = life;
+                this.life = life;
+            }
+            update() {
+                this.x += this.vx; this.y += this.vy;
+                this.vy += 0.05;
+                this.life--;
+            }
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = this.life / this.maxLife;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        function spawnNaturalImpactFX(x, y, color, count=5) {
+            for(let i=0; i<count; i++) {
+                activeParticles.push(new Particle(
+                    x, y,
+                    (Math.random() - 0.5) * 4,
+                    (Math.random() - 1) * 3,
+                    color,
+                    Math.random() * 2 + 1,
+                    Math.random() * 15 + 10
+                ));
+            }
+            // Lag prevention limit guard
+            if (activeParticles.length > 25) {
+                activeParticles.splice(0, activeParticles.length - 25);
+            }
+        }
+
+        // --- STICKMAN ENTITY ENGINE ---
+        class Stickman {
+            constructor(x, color, isBot = false) {
+                this.x = x;
+                this.y = canvas.height - 100;
+                this.vx = 0; this.vy = 0;
+                this.hp = 100;
+                this.isGrounded = false;
+                this.animTime = 0;
+                this.facingLeft = isBot;
+                this.equippedWeapon = null;
+                this.color = color;
+                this.isBot = isBot;
+
+                this.jumpCount = 0;
+                this.flipAngle = 0;
+                this.isFlipping = false;
+                this.squashStretchY = 1;
+
+                this.attackCooldown = 0;
+                this.attackSwingAngle = 0;
+                this.isAttacking = false;
+                this.flashFrame = 0;
+
+                this.isRagdoll = false;
+                this.ragdollParts = [];
+            }
+
+            takeDamage(amount, knockbackDir) {
+                if (this.isRagdoll || gameState === 'MATCH_OVER') return;
+                this.hp = Math.max(0, this.hp - amount);
+                this.flashFrame = 6;
+                this.vx += knockbackDir * 5.5;
+                this.vy -= 2;
+                screenShake = 7;
+
+                // CLEAN REPLACEMENT: White/Gold energy dust explosions instead of blood
+                spawnNaturalImpactFX(this.x, this.y - 40, '#ffffff', 5);
+                spawnNaturalImpactFX(this.x, this.y - 40, '#f1c40f', 3);
+
+                if (!this.isBot) {
+                    document.getElementById('player-hp').style.width = this.hp + '%';
+                } else {
+                    document.getElementById('bot-hp').style.width = this.hp + '%';
+                }
+
+                if (this.hp <= 0) {
+                    this.triggerRagdoll(knockbackDir);
+                }
+            }
+
+            triggerRagdoll(forceDirection) {
+                this.isRagdoll = true;
+                
+                if (this.isBot) {
+                    playerScore++;
+                    document.getElementById('player-score-tag').innerText = playerScore + " Wins";
+                } else {
+                    botScore++;
+                    document.getElementById('bot-score-tag').innerText = botScore + " Wins";
+                }
+
+                const skeleton = [
+                    { name: 'head', rx: 0, ry: -65, size: 11, shape: 'circle' },
+                    { name: 'torso', rx: 0, ry: -42, w: 4, h: 24, shape: 'line' },
+                    { name: 'lArm', rx: -8, ry: -48, w: 3, h: 18, shape: 'line' },
+                    { name: 'rArm', rx: 8, ry: -48, w: 3, h: 18, shape: 'line' },
+                    { name: 'lLeg', rx: -6, ry: -18, w: 3.5, h: 20, shape: 'line' },
+                    { name: 'rLeg', rx: 6, ry: -18, w: 3.5, h: 20, shape: 'line' }
+                ];
+
+                skeleton.forEach(p => {
+                    this.ragdollParts.push({
+                        x: this.x + p.rx,
+                        y: this.y + p.ry,
+                        vx: (forceDirection * 5) + (Math.random() - 0.5) * 4,
+                        vy: -3 + (Math.random() - 1.5) * 2,
+                        angle: Math.random() * Math.PI,
+                        vAngle: (Math.random() - 0.5) * 0.2,
+                        config: p
+                    });
+                });
+
+                if (playerScore >= maxPoints || botScore >= maxPoints) {
+                    gameState = 'MATCH_OVER';
+                } else {
+                    setTimeout(() => this.respawn(), 1800);
+                }
+            }
+
+            respawn() {
+                if (gameState === 'MATCH_OVER') return;
+                this.hp = 100;
+                this.isRagdoll = false;
+                this.ragdollParts = [];
+                this.x = this.isBot ? canvas.width - 200 : 200;
+                this.y = canvas.height - 100;
+                this.vx = 0; this.vy = 0;
+                this.equippedWeapon = null;
+                this.jumpCount = 0;
+                this.isFlipping = false;
+                this.flipAngle = 0;
+
+                if (!this.isBot) {
+                    document.getElementById('player-hp').style.width = '100%';
+                    document.getElementById('player-weapon-text').innerText = 'NONE';
+                } else {
+                    document.getElementById('bot-hp').style.width = '100%';
+                }
+            }
+
+            executeAttack() {
+                if (this.attackCooldown > 0 || !this.equippedWeapon || this.isRagdoll || gameState === 'MATCH_OVER') return;
+
+                this.isAttacking = true;
+                this.attackCooldown = this.equippedWeapon === 'Assault Rifle' ? 14 : 22;
+
+                const direction = this.facingLeft ? -1 : 1;
+
+                if (this.equippedWeapon === 'Assault Rifle') {
+                    activeBullets.push({
+                        x: this.x + (25 * direction),
+                        y: this.y - 45,
+                        vx: direction * 15,
+                        firedByBot: this.isBot
+                    });
+                    spawnNaturalImpactFX(this.x + (26 * direction), this.y - 45, '#e67e22', 2);
+                } else {
+                    this.attackSwingAngle = -Math.PI / 2.5;
+                    const foe = this.isBot ? player : bot;
+                    
+                    if (!foe.isRagdoll) {
+                        const separation = Math.abs(this.x - foe.x);
+                        const correctWay = (this.facingLeft && foe.x < this.x) || (!this.facingLeft && foe.x > this.x);
+                        
+                        // BUFFED ATTACK REACH: Increased separation window check from 80 to 125 for easier hitboxes
+                        if (separation < 125 && correctWay && Math.abs(this.y - foe.y) < 70) {
+                            const weaponDmg = this.equippedWeapon === 'Buster Sword' ? 24 : 35;
+                            foe.takeDamage(weaponDmg, direction);
+                        }
+                    }
+                }
+            }
+
+            update() {
+                if (this.isRagdoll) {
+                    const floorY = canvas.height - 100;
+                    this.ragdollParts.forEach(p => {
+                        p.vx *= 0.98; p.vy += gravity;
+                        p.x += p.vx; p.y += p.vy;
+                        p.angle += p.vAngle;
+
+                        if (p.y >= floorY) {
+                            p.y = floorY;
+                            p.vy = -p.vy * 0.25;
+                            p.vAngle *= 0.5;
+                        }
+                    });
+                    return;
+                }
+
+                if (gameState === 'MATCH_OVER') {
+                    this.vx *= 0.8;
+                    return;
+                }
+
+                if (this.attackCooldown > 0) this.attackCooldown--;
+
+                if (this.isAttacking) {
+                    this.attackSwingAngle += 0.28;
+                    if (this.attackSwingAngle >= Math.PI / 2) {
+                        this.isAttacking = false;
+                        this.attackSwingAngle = 0;
+                    }
+                }
+
+                if (this.isFlipping) {
+                    this.flipAngle += this.facingLeft ? -0.22 : 0.22;
+                    if (Math.abs(this.flipAngle) >= Math.PI * 2) {
+                        this.isFlipping = false;
+                        this.flipAngle = 0;
+                    }
+                }
+
+                this.squashStretchY += (1 - this.squashStretchY) * 0.14;
+
+                // --- BOT BRAIN ---
+                if (this.isBot) {
+                    const distToPlayer = Math.abs(this.x - player.x);
+                    this.facingLeft = player.x < this.x;
+
+                    if (player.hp > 0 && !player.isRagdoll) {
+                        activeBullets.forEach(b => {
+                            if (!b.firedByBot && Math.abs(this.x - b.x) < 140 && this.isGrounded) {
+                                this.vy = -12;
+                                this.isGrounded = false;
+                                this.jumpCount = 1;
+                            }
+                        });
+
+                        let bestCrate = null;
+                        let closestDist = 9999;
+                        activePickups.forEach(p => {
+                            let d = Math.abs(this.x - p.x);
+                            if (d < closestDist) { closestDist = d; bestCrate = p; }
+                        });
+
+                        let targetDestinationX = (bestCrate && !this.equippedWeapon) ? bestCrate.x : player.x;
+
+                        if (this.x < targetDestinationX - 45) this.vx = 3.6; // Slightly slower speed so you can catch him
+                        else if (this.x > targetDestinationX + 45) this.vx = -3.6;
+                        else this.vx *= 0.5;
+
+                        if (distToPlayer < 75 || (this.equippedWeapon === 'Assault Rifle' && distToPlayer < 350)) {
+                            this.executeAttack();
+                        }
+                    }
+                } 
+                // --- PLAYER SYSTEMS ---
+                else {
+                    if (keys.a) { this.vx = -5.5; this.facingLeft = true; } 
+                    else if (keys.d) { this.vx = 5.5; this.facingLeft = false; } 
+                    else { this.vx *= 0.76; }
+                }
+
+                this.vy += gravity; this.x += this.vx; this.y += this.vy;
+
+                const groundY = canvas.height - 100;
+                if (this.y >= groundY) {
+                    if (!this.isGrounded) {
+                        this.squashStretchY = 0.78;
+                        spawnNaturalImpactFX(this.x, groundY, '#6a824e', 2);
+                    }
+                    this.y = groundY; this.vy = 0; this.isGrounded = true; this.jumpCount = 0;
+                }
+
+                if (this.x < 25) this.x = 25;
+                if (this.x > canvas.width - 25) this.x = canvas.width - 25;
+
+                if (Math.abs(this.vx) > 0.5 && this.isGrounded) this.animTime += 0.28;
+                else if (!this.isGrounded) this.animTime = 1.1;
+                else this.animTime *= 0.7;
+            }
+
+            draw() {
+                if (this.isRagdoll) {
+                    ctx.lineWidth = 4; ctx.lineCap = 'round';
+                    ctx.strokeStyle = this.color; ctx.fillStyle = this.color;
+
+                    this.ragdollParts.forEach(p => {
+                        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.angle);
+                        ctx.beginPath();
+                        if (p.config.shape === 'circle') {
+                            ctx.arc(0, 0, p.config.size, 0, Math.PI * 2); ctx.fill();
+                        } else {
+                            ctx.moveTo(0, -p.config.h / 2); ctx.lineTo(0, p.config.h / 2);
+                        }
+                        ctx.stroke(); ctx.restore();
+                    });
+                    return;
+                }
+
+                ctx.save();
+                ctx.translate(this.x, this.y); ctx.scale(1, this.squashStretchY); ctx.translate(-this.x, -this.y);
+
+                ctx.lineWidth = 4; ctx.lineCap = 'round';
+                ctx.strokeStyle = this.flashFrame > 0 && this.flashFrame-- % 2 === 0 ? '#ffffff' : this.color;
+                ctx.fillStyle = ctx.strokeStyle;
+
+                ctx.save();
+                ctx.translate(this.x, this.y - 30);
+                if (this.isGrounded && Math.abs(this.vx) > 0.5) ctx.rotate(this.vx * 0.025);
+                if (this.isFlipping) ctx.rotate(this.flipAngle);
+                ctx.translate(-this.x, -(this.y - 30));
+
+                let breathingBob = (this.isGrounded && Math.abs(this.vx) <= 0.5) ? Math.sin(Date.now() * 0.005) * 1.5 : 0;
+                const neckY = this.y - 55 + breathingBob;
+                const hipY = this.y - 25;
+                const headY = neckY - 12;
+
+                ctx.beginPath(); ctx.arc(this.x, headY, 11, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(this.x, neckY); ctx.lineTo(this.x, hipY); ctx.stroke();
+
+                const swing = Math.sin(this.animTime) * 16;
+                const flip = this.facingLeft ? -1 : 1;
+
+                ctx.beginPath(); ctx.moveTo(this.x, hipY); ctx.lineTo(this.x + (swing * flip), this.y); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(this.x, hipY); ctx.lineTo(this.x - (swing * flip), this.y); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(this.x, neckY + 4); ctx.lineTo(this.x - (14 * flip) - (swing * 0.1 * flip), neckY + 14 + swing); ctx.stroke();
+
+                let handX = this.x + (18 * flip);
+                let handY = neckY + 12 - swing;
+                if (this.isAttacking && (this.equippedWeapon === 'Buster Sword' || this.equippedWeapon === 'Smasher Club')) {
+                    handX = this.x + (24 * flip); handY = neckY + 4;
+                }
+                ctx.beginPath(); ctx.moveTo(this.x, neckY + 4); ctx.lineTo(handX, handY); ctx.stroke();
+                ctx.restore();
+
+                if (this.equippedWeapon) {
+                    ctx.save(); ctx.translate(handX, handY);
+                    if (this.facingLeft) ctx.scale(-1, 1);
+                    if (this.isAttacking) ctx.rotate(this.attackSwingAngle);
+
+                    if (this.equippedWeapon === 'Buster Sword') {
+                        ctx.strokeStyle = '#7f8c8d'; ctx.fillStyle = '#bdc3c7'; ctx.lineWidth = 3;
+                        ctx.beginPath(); ctx.rect(0, -7, 46, 14); ctx.fill(); ctx.stroke();
+                        ctx.strokeStyle = '#7a4a2a'; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-8, 0); ctx.stroke();
+                    } 
+                    else if (this.equippedWeapon === 'Assault Rifle') {
+                        ctx.fillStyle = '#2c3e50'; ctx.fillRect(0, -5, 32, 10);
+                        ctx.fillStyle = '#34495e'; ctx.fillRect(10, 2, 6, 7);
+                    } 
+                    else if (this.equippedWeapon === 'Smasher Club') {
+                        ctx.strokeStyle = '#d35400'; ctx.lineWidth = 6;
+                        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(38, -3); ctx.stroke();
+                    }
+                    ctx.restore();
+                }
+                ctx.restore();
+            }
+        }
+
+        const player = new Stickman(200, '#2c3e50', false);
+        const bot = new Stickman(canvas.width - 200, '#962d22', true);
+
+        function executeWeaponDropEvent() {
+            if (gameState !== 'BOT_MODE' || activePickups.length >= 3 || gameState === 'MATCH_OVER') return;
+            activePickups.push({
+                type: weaponsPool[Math.floor(Math.random() * weaponsPool.length)],
+                x: Math.random() * (canvas.width - 260) + 130,
+                y: canvas.height - 115,
+                bobTimer: Math.random() * 100
+            });
+        }
+
+        function startBotMode() {
+            playerScore = 0; botScore = 0;
+            document.getElementById('player-score-tag').innerText = "0 Wins";
+            document.getElementById('bot-score-tag').innerText = "0 Wins";
+            
+            gameState = 'BOT_MODE';
+            document.getElementById('menu-container').style.opacity = 0;
+            setTimeout(() => {
+                document.getElementById('menu-container').style.display = 'none';
+                document.getElementById('hud-container').style.display = 'flex';
+                if (isMobileLayout) document.getElementById('mobile-controls').style.display = 'flex';
+            }, 400);
+
+            resetSpawnerCooldown();
+            player.respawn();
+            bot.respawn();
+            executeWeaponDropEvent();
+        }
+
+        function handlePlayerJump() {
+            if (player.isRagdoll || gameState !== 'BOT_MODE') return;
+            if (player.isGrounded) {
+                player.vy = -13; player.isGrounded = false; player.jumpCount = 1; player.squashStretchY = 1.25;
+                spawnNaturalImpactFX(player.x, canvas.height - 100, '#95a5a6', 3);
+            } else if (player.jumpCount === 1) {
+                player.vy = -9.8; player.jumpCount = 2; player.isFlipping = true; player.flipAngle = 0;
+                spawnNaturalImpactFX(player.x, player.y - 30, '#ecf0f1', 3);
+            }
+        }
+
+        // --- KEYBOARD LISTENERS ---
+        window.addEventListener('keydown', (e) => {
+            const key = e.key.toLowerCase();
+            if (key === 'a' || key === 'arrowleft') keys.a = true;
+            if (key === 'd' || key === 'arrowright') keys.d = true;
+            if (key === 'w' || key === ' ' || key === 'arrowup') handlePlayerJump();
+            if (key === 'enter' && gameState === 'MATCH_OVER') {
+                gameState = 'MENU';
+                document.getElementById('hud-container').style.display = 'none';
+                document.getElementById('mobile-controls').style.display = 'none';
+                document.getElementById('menu-container').style.display = 'flex';
+                document.getElementById('menu-container').style.opacity = 1;
+            }
+        });
+        window.addEventListener('keyup', (e) => {
+            const key = e.key.toLowerCase();
+            if (key === 'a' || key === 'arrowleft') keys.a = false;
+            if (key === 'd' || key === 'arrowright') keys.d = false;
+        });
+        window.addEventListener('mousedown', (e) => {
+            if (gameState === 'BOT_MODE' && player.hp > 0 && !player.isRagdoll && !isMobileLayout) {
+                player.executeAttack();
+            }
+        });
+
+        // --- MOBILE TOUCH SCREEN VIRTUAL CONTROLLER BINDINGS ---
+        document.getElementById('btn-left').addEventListener('touchstart', (e) => { e.preventDefault(); keys.a = true; });
+        document.getElementById('btn-left').addEventListener('touchend', () => { keys.a = false; });
+        document.getElementById('btn-right').addEventListener('touchstart', (e) => { e.preventDefault(); keys.d = true; });
+        document.getElementById('btn-right').addEventListener('touchend', () => { keys.d = false; });
+        document.getElementById('btn-jump').addEventListener('touchstart', (e) => { e.preventDefault(); handlePlayerJump(); });
+        document.getElementById('btn-attack').addEventListener('touchstart', (e) => { 
+            e.preventDefault(); 
+            if (gameState === 'BOT_MODE' && player.hp > 0 && !player.isRagdoll) player.executeAttack();
+        });
+
+        // Click to close match over screen on mobile touch
+        window.addEventListener('touchstart', () => {
+            if (gameState === 'MATCH_OVER') {
+                gameState = 'MENU';
+                document.getElementById('hud-container').style.display = 'none';
+                document.getElementById('mobile-controls').style.display = 'none';
+                document.getElementById('menu-container').style.display = 'flex';
+                document.getElementById('menu-container').style.opacity = 1;
+            }
+        });
+
+        // --- TICK GAME RUNTIME ENGINE ---
+        function gameLoop() {
+            ctx.save();
+            if (screenShake > 0) {
+                ctx.translate((Math.random() - 0.5) * screenShake, (Math.random() - 0.5) * screenShake);
+                screenShake *= 0.88; if (screenShake < 0.5) screenShake = 0;
+            }
+
+            // Sky Backdrop
+            let skyGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            skyGrad.addColorStop(0, '#7ec0ee'); skyGrad.addColorStop(0.7, '#e0f4ff');
+            ctx.fillStyle = skyGrad; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Clouds
+            ctx.fillStyle = 'rgba(255,255,255,0.7)';
+            cloudsArray.forEach(c => {
+                c.x += c.speed; if (c.x - c.size > canvas.width) c.x = -c.size;
+                ctx.beginPath(); ctx.arc(c.x, c.y, c.size, 0, Math.PI * 2);
+                ctx.arc(c.x + c.size * 0.6, c.y - c.size * 0.2, c.size * 0.75, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Parallax Nature Hills
+            ctx.fillStyle = '#9dc183'; ctx.beginPath(); ctx.moveTo(0, canvas.height);
+            for (let x = 0; x <= canvas.width; x += 40) ctx.lineTo(x, (canvas.height - 220) + Math.sin(x * 0.003) * 35);
+            ctx.lineTo(canvas.width, canvas.height); ctx.fill();
+
+            ctx.fillStyle = '#7da061'; ctx.beginPath(); ctx.moveTo(0, canvas.height);
+            for (let x = 0; x <= canvas.width; x += 35) ctx.lineTo(x, (canvas.height - 160) + Math.cos(x * 0.005) * 20);
+            ctx.lineTo(canvas.width, canvas.height); ctx.fill();
+
+            // Ground Line
+            const floorLine = canvas.height - 100;
+            ctx.fillStyle = '#27ae60'; ctx.fillRect(0, floorLine, canvas.width, 14);
+            ctx.fillStyle = '#795548'; ctx.fillRect(0, floorLine + 14, canvas.width, 86);
+
+            if (gameState === 'BOT_MODE' || gameState === 'MATCH_OVER') {
+                if (gameState === 'BOT_MODE') {
+                    spawnerTicksLeft--;
+                    let secondsLeft = Math.max(0, (spawnerTicksLeft / 60)).toFixed(1);
+                    document.getElementById('spawner-timer-panel').innerText = `NEXT DROP: ${secondsLeft}s`;
+
+                    if (spawnerTicksLeft <= 0) {
+                        executeWeaponDropEvent(); resetSpawnerCooldown();
+                    }
+                }
+
+                player.update(); bot.update();
+
+                // Particle processing loop
+                for(let i = activeParticles.length - 1; i >= 0; i--) {
+                    activeParticles[i].update(); activeParticles[i].draw();
+                    if(activeParticles[i].life <= 0) activeParticles.splice(i, 1);
+                }
+
+                // Bullet loops
+                for (let i = activeBullets.length - 1; i >= 0; i--) {
+                    const b = activeBullets[i]; b.x += b.vx;
+
+                    ctx.fillStyle = '#e67e22'; ctx.beginPath(); ctx.arc(b.x, b.y, 3, 0, Math.PI * 2); ctx.fill();
+
+                    let target = b.firedByBot ? player : bot;
+                    if (!target.isRagdoll) {
+                        if (target.isBot) {
+                            // WIDENED BOT HITBOX: Huge width buffer area so you can secure direct hit scores easily!
+                            if (b.x > target.x - 30 && b.x < target.x + 30 && b.y > target.y - 65 && b.y < target.y) {
+                                target.takeDamage(12, b.vx > 0 ? 1 : -1); activeBullets.splice(i, 1); continue;
+                            }
+                        } else {
+                            // PLAYER HITBOX: Shifted higher up into torso/chest plane vectors natively
+                            if (b.x > target.x - 15 && b.x < target.x + 15 && b.y > target.y - 72 && b.y < target.y - 14) {
+                                target.takeDamage(12, b.vx > 0 ? 1 : -1); activeBullets.splice(i, 1); continue;
+                            }
+                        }
+                    }
+                    if (b.x < 0 || b.x > canvas.width) activeBullets.splice(i, 1);
+                }
+
+                // Drop Pickups
+                for (let i = activePickups.length - 1; i >= 0; i--) {
+                    const p = activePickups[i]; p.bobTimer += 0.06;
+                    const bobY = p.y + Math.sin(p.bobTimer) * 5;
+
+                    ctx.fillStyle = '#2c3e50'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
+                    ctx.fillText(p.type.toUpperCase(), p.x, bobY - 14);
+
+                    ctx.strokeStyle = 'rgba(0,0,0,0.12)'; ctx.lineWidth = 1.5;
+                    ctx.beginPath(); ctx.ellipse(p.x, p.y + 12, 14, 3, 0, 0, Math.PI * 2); ctx.stroke();
+
+                    const contenders = [player, bot];
+                    contenders.forEach(ent => {
+                        if (!ent.isRagdoll && Math.hypot(ent.x - p.x, (ent.y - 30) - p.y) < 38) {
+                            ent.equippedWeapon = p.type;
+                            if (!ent.isBot) document.getElementById('player-weapon-text').innerText = p.type.toUpperCase();
+                            activePickups.splice(i, 1);
+                        }
+                    });
+                }
+
+                player.draw(); bot.draw();
+            }
+
+            // Win Game Overlay Screen Splashes
+            if (gameState === 'MATCH_OVER') {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.45)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.textAlign = 'center'; ctx.font = 'bold 54px sans-serif';
+
+                if (playerScore >= maxPoints) {
+                    ctx.fillStyle = '#2ecc71'; ctx.fillText('YOU WIN!', canvas.width / 2, canvas.height / 2 - 20);
+                } else {
+                    ctx.fillStyle = '#e74c3c'; ctx.fillText('YOU LOSE!', canvas.width / 2, canvas.height / 2 - 20);
+                }
+
+                ctx.fillStyle = '#ffffff'; ctx.font = '16px sans-serif';
+                ctx.fillText(isMobileLayout ? 'Tap screen to return to Menu' : 'Press [ENTER] to Return to Menu', canvas.width / 2, canvas.height / 2 + 40);
+            }
+
+            ctx.restore();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Initialize layouts and activate engine loops
+        resize();
+        requestAnimationFrame(gameLoop);
+    </script>
+</body>
+</html>

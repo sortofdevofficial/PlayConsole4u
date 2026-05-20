@@ -29,7 +29,7 @@ a{text-decoration:none}
 .wrap{position:relative;z-index:1;max-width:1200px;margin:0 auto;padding:28px 32px 60px;}
 
 /* HEADER */
-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:44px;animation:slideDown .45s ease both;}
+header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:44px;animation:slideDown .45s ease both;}
 .logo{display:flex;align-items:center;gap:10px;font-family:'Syne',sans-serif;font-size:15px;font-weight:800;letter-spacing:3px;color:var(--text);}
 .logo-box{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 4px 14px rgba(91,58,247,.3);}
 .header-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;}
@@ -138,7 +138,46 @@ header{display:flex;align-items:center;justify-content:space-between;margin-bott
 .sb-play{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border:none;padding:15px;font-family:'Syne',sans-serif;font-size:14px;font-weight:800;letter-spacing:2px;border-radius:13px;cursor:pointer;margin-top:18px;flex-shrink:0;transition:all .18s ease;box-shadow:0 4px 20px rgba(91,58,247,.3);}
 .sb-play:hover{filter:brightness(1.08);transform:translateY(-1px);box-shadow:0 8px 32px rgba(91,58,247,.4)}
 
-/* MODAL */
+/* MULTIPLAYER MATCHMAKING MODAL */
+#mm-modal-bg{display:none;position:fixed;inset:0;z-index:600;background:rgba(26,22,37,.5);backdrop-filter:blur(10px);align-items:center;justify-content:center;}
+#mm-modal-bg.open{display:flex}
+.mm-modal{background:var(--surface);border:1.5px solid var(--border);border-radius:24px;padding:32px;width:min(420px,92vw);display:flex;flex-direction:column;gap:20px;box-shadow:0 24px 80px rgba(91,58,247,.2);animation:popIn .2s ease both;position:relative;overflow:hidden;}
+.mm-modal::before{content:'';position:absolute;top:-60px;right:-60px;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(91,58,247,.12),transparent 70%);pointer-events:none;}
+.mm-header{display:flex;align-items:center;justify-content:space-between;}
+.mm-header h2{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--text);}
+.mm-close{width:30px;height:30px;border-radius:8px;border:1.5px solid var(--border);background:transparent;cursor:pointer;color:var(--text2);font-size:12px;display:flex;align-items:center;justify-content:center;transition:.15s ease;}
+.mm-close:hover{border-color:var(--accent);color:var(--accent)}
+.mm-game-select{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.mm-game-btn{border:1.5px solid var(--border);background:var(--bg2);border-radius:14px;padding:14px 12px;cursor:pointer;transition:.18s ease;text-align:left;font-family:'DM Sans',sans-serif;}
+.mm-game-btn:hover{border-color:var(--accent);background:rgba(91,58,247,.04);transform:translateY(-1px)}
+.mm-game-btn.selected{border-color:var(--accent);background:rgba(91,58,247,.07);box-shadow:0 0 0 3px rgba(91,58,247,.1)}
+.mm-game-btn .gicon{font-size:26px;margin-bottom:6px;}
+.mm-game-btn .gname{font-size:12px;font-weight:700;color:var(--text);}
+.mm-game-btn .gdesc{font-size:10px;color:var(--text2);margin-top:2px;}
+.mm-region{display:flex;gap:8px;flex-wrap:wrap;}
+.region-btn{flex:1;min-width:80px;border:1.5px solid var(--border);background:var(--bg2);border-radius:10px;padding:8px 10px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;color:var(--text2);text-align:center;transition:.15s ease;}
+.region-btn:hover{border-color:var(--accent2);color:var(--accent)}
+.region-btn.selected{border-color:var(--accent);background:rgba(91,58,247,.07);color:var(--accent);}
+.mm-divider{border:none;border-top:1px solid var(--border);}
+#mm-status-area{display:none;flex-direction:column;align-items:center;gap:14px;padding:10px 0;}
+.spinner{width:44px;height:44px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.mm-status-text{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--text);text-align:center;}
+.mm-sub-text{font-size:12px;color:var(--text2);text-align:center;}
+.mm-queue-info{display:flex;gap:16px;}
+.mm-qstat{text-align:center;}
+.mm-qstat-val{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--accent);}
+.mm-qstat-lbl{font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.5px;}
+.mm-btn-row{display:flex;gap:8px;}
+.mm-btn{flex:1;padding:12px;border:none;border-radius:11px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:.15s ease;}
+.mm-btn.pri{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;box-shadow:0 4px 14px rgba(91,58,247,.25);}
+.mm-btn.pri:hover{filter:brightness(1.08);transform:translateY(-1px)}
+.mm-btn.ghost{background:var(--bg2);color:var(--text2);border:1.5px solid var(--border);}
+.mm-btn.ghost:hover{border-color:var(--accent);color:var(--accent)}
+.mm-coming-note{font-size:11px;color:var(--text3);text-align:center;padding:6px 0;display:flex;align-items:center;justify-content:center;gap:6px;}
+.mm-coming-note::before,.mm-coming-note::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* MODAL (settings) */
 #modal-bg{display:none;position:fixed;inset:0;z-index:500;background:rgba(26,22,37,.4);backdrop-filter:blur(8px);align-items:center;justify-content:center;}
 #modal-bg.open{display:flex}
 .modal{background:var(--surface);border:1.5px solid var(--border);border-radius:22px;padding:28px;width:360px;display:flex;flex-direction:column;gap:18px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 80px rgba(26,22,37,.18);animation:popIn .2s ease both;}
@@ -196,6 +235,8 @@ header{display:flex;align-items:center;justify-content:space-between;margin-bott
       </div>
       <div class="icon-btn" id="settings-btn" onclick="openModal()" style="display:none" title="Settings">⚙</div>
       <a class="icon-btn" href="leaderboard.html" title="Leaderboard">🏆</a>
+      <!-- Multiplayer Matchmaking Button -->
+      <button class="icon-btn" onclick="openMM()" title="Online Matchmaking" style="font-size:13px;">🌐</button>
       <div class="badge"><div class="dot"></div>ONLINE</div>
     </div>
   </header>
@@ -207,7 +248,7 @@ header{display:flex;align-items:center;justify-content:space-between;margin-bott
   </div>
 
   <div class="stats">
-    <div class="stat-card"><div class="stat-val">1</div><div class="stat-lbl">Game Available</div></div>
+    <div class="stat-card"><div class="stat-val">2</div><div class="stat-lbl">Games Available</div></div>
     <div class="stat-card"><div class="stat-val">10</div><div class="stat-lbl">Levels to Beat</div></div>
     <div class="stat-card"><div class="stat-val">Free</div><div class="stat-lbl">Always</div></div>
     <div class="stat-card"><div class="stat-val">🏆</div><div class="stat-lbl">Live Leaderboard</div></div>
@@ -226,10 +267,11 @@ header{display:flex;align-items:center;justify-content:space-between;margin-bott
     <div>
       <div class="slabel">// Games</div>
       <div class="grid">
+        <!-- Cube Platformer — renamed to cubeplatformer.png -->
         <div class="card" id="c1"
-          onclick="openSB(this,'CUBE PLATFORMER','10 levels of precision platforming. Wall-jump, spin, and race to beat your best time — every second counts!','images/CubePlatformer/homepage.png','games/CubePlatformer/game.html',['PLATFORMER','10 LEVELS','WALL-JUMP','TIMER'])">
+          onclick="openSB(this,'CUBE PLATFORMER','10 levels of precision platforming. Wall-jump, spin, and race to beat your best time — every second counts!','images/CubePlatformer/cubeplatformer.png','games/CubePlatformer/game.html',['PLATFORMER','10 LEVELS','WALL-JUMP','TIMER'])">
           <div class="cimg">
-            <img src="images/CubePlatformer/homepage.png" alt="Cube Platformer" loading="lazy" decoding="async"
+            <img src="images/CubePlatformer/cubeplatformer.png" alt="Cube Platformer" loading="lazy" decoding="async"
                  onerror="this.style.display='none';this.parentElement.innerHTML='<div class=cimg-placeholder>🟦</div>'">
           </div>
           <div class="cbody">
@@ -242,13 +284,28 @@ header{display:flex;align-items:center;justify-content:space-between;margin-bott
             </div>
           </div>
         </div>
+
+        <!-- FloppySticks — NEW -->
+        <div class="card" id="c2"
+          onclick="openSB(this,'FLOPPYSTICKS','A wild 2D brawl set in nature. Beat the AI or challenge a friend locally — grab weapons, go ragdoll, and win 3 rounds!','images/FloppySticks/floppysticks.png','games/FloppySticks/game.html',['BRAWLER','LOCAL PVP','WEAPONS','RAGDOLL'])">
+          <div class="cimg" style="background:linear-gradient(135deg,#dcfce7,#bbf7d0)">
+            <img src="images/FloppySticks/floppysticks.png" alt="FloppySticks" loading="lazy" decoding="async"
+                 onerror="this.style.display='none';this.parentElement.innerHTML='<div class=cimg-placeholder>🥊</div>'">
+          </div>
+          <div class="cbody">
+            <div class="ctag">READY</div>
+            <div class="cname">FloppySticks 2D</div>
+            <div class="cdesc">Nature brawl with ragdoll physics. Grab weapons, smash your opponent, first to 3 wins!</div>
+            <div class="ctags">
+              <span class="cpill">Brawler</span><span class="cpill">Local PvP</span>
+              <span class="cpill">Weapons</span><span class="cpill">Ragdoll</span>
+            </div>
+          </div>
+        </div>
+
         <div class="card soon">
           <div class="cimg" style="background:linear-gradient(135deg,#f0fdf4,#dcfce7)"><div class="cimg-placeholder">🔒</div></div>
-          <div class="cbody"><div class="ctag" style="color:var(--text3)">COMING SOON</div><div class="cname" style="color:var(--text2)">Next Game</div><div class="cdesc">Something new is on the way. Stay tuned!</div></div>
-        </div>
-        <div class="card soon">
-          <div class="cimg" style="background:linear-gradient(135deg,#fefce8,#fef9c3)"><div class="cimg-placeholder">🔒</div></div>
-          <div class="cbody"><div class="ctag" style="color:var(--text3)">COMING SOON</div><div class="cname" style="color:var(--text2)">Mystery Game</div><div class="cdesc">We're cooking something fun. Check back soon.</div></div>
+          <div class="cbody"><div class="ctag" style="color:var(--text3)">COMING SOON</div><div class="cname" style="color:var(--text2)">Mystery Game</div><div class="cdesc">We're cooking something fun. Check back soon!</div></div>
         </div>
       </div>
       <div class="hint">Click a game · then press Play</div>
@@ -295,7 +352,77 @@ header{display:flex;align-items:center;justify-content:space-between;margin-bott
   <button class="sb-play" onclick="if(goHref)location.href=goHref">▶ &nbsp; PLAY NOW</button>
 </div>
 
-<!-- MODAL -->
+<!-- MULTIPLAYER MATCHMAKING MODAL -->
+<div id="mm-modal-bg" onclick="if(event.target===this)closeMM()">
+  <div class="mm-modal">
+    <div class="mm-header">
+      <h2>🌐 Online Matchmaking</h2>
+      <button class="mm-close" onclick="closeMM()">✕</button>
+    </div>
+
+    <div id="mm-setup">
+      <div style="font-size:13px;color:var(--text2);line-height:1.6;">
+        Choose a game and region, then join the queue. You'll be matched with the next available opponent.
+      </div>
+
+      <div>
+        <div class="slabel" style="margin-bottom:10px;">// Select Game</div>
+        <div class="mm-game-select">
+          <button class="mm-game-btn" onclick="selectMMGame(this,'cube')">
+            <div class="gicon">🟦</div>
+            <div class="gname">Cube Platformer</div>
+            <div class="gdesc">Race mode — fastest time wins</div>
+          </button>
+          <button class="mm-game-btn" onclick="selectMMGame(this,'floppy')">
+            <div class="gicon">🥊</div>
+            <div class="gname">FloppySticks</div>
+            <div class="gdesc">1v1 brawl — first to 3 wins</div>
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <div class="slabel" style="margin-bottom:10px;">// Region</div>
+        <div class="mm-region">
+          <button class="region-btn selected" onclick="selectRegion(this,'auto')">🌍 Auto</button>
+          <button class="region-btn" onclick="selectRegion(this,'na')">🇺🇸 NA</button>
+          <button class="region-btn" onclick="selectRegion(this,'eu')">🇪🇺 EU</button>
+          <button class="region-btn" onclick="selectRegion(this,'as')">🌏 Asia</button>
+        </div>
+      </div>
+
+      <hr class="mm-divider">
+      <div class="mm-coming-note">Multiplayer servers launching soon</div>
+
+      <div class="mm-btn-row">
+        <button class="mm-btn ghost" onclick="closeMM()">Cancel</button>
+        <button class="mm-btn pri" id="mm-join-btn" onclick="startMMQueue()">Join Queue</button>
+      </div>
+    </div>
+
+    <!-- Searching state -->
+    <div id="mm-status-area">
+      <div class="spinner"></div>
+      <div class="mm-status-text" id="mm-status-text">Searching for opponent…</div>
+      <div class="mm-sub-text" id="mm-sub-text">This usually takes under 30 seconds</div>
+      <div class="mm-queue-info">
+        <div class="mm-qstat">
+          <div class="mm-qstat-val" id="mm-time">0:00</div>
+          <div class="mm-qstat-lbl">IN QUEUE</div>
+        </div>
+        <div class="mm-qstat">
+          <div class="mm-qstat-val" id="mm-players">—</div>
+          <div class="mm-qstat-lbl">SEARCHING</div>
+        </div>
+      </div>
+      <div class="mm-btn-row" style="width:100%">
+        <button class="mm-btn ghost" onclick="cancelMMQueue()" style="width:100%">Cancel Search</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
 <div id="modal-bg" onclick="if(event.target===this)closeModal()">
   <div class="modal">
     <h2>⚙ Settings</h2>
@@ -329,8 +456,9 @@ header{display:flex;align-items:center;justify-content:space-between;margin-bott
 <script src="firebase.js"></script>
 <script>
 let activeC = null, goHref = '', userRating = 0;
+let mmGame = null, mmRegion = 'auto', mmTimer = null, mmSeconds = 0;
 
-// Stars
+// ---- Stars ----
 document.getElementById('star-row').addEventListener('mouseover', e => {
   const v = +e.target.dataset?.v; if(!v) return;
   document.querySelectorAll('.star').forEach(s => { s.style.color = +s.dataset.v <= v ? '#f59e0b' : '#d1c9e0'; });
@@ -346,7 +474,7 @@ function renderStars(v){
 }
 renderStars(0);
 
-// Sidebar
+// ---- Sidebar ----
 function openSB(el, t, d, img, href, tags){
   if(activeC) activeC.classList.remove('active');
   el.classList.add('active'); activeC = el;
@@ -366,7 +494,61 @@ function closeSB(){
   if(activeC){ activeC.classList.remove('active'); activeC = null; }
 }
 
-// Auth
+// ---- Matchmaking ----
+function openMM(){
+  document.getElementById('mm-modal-bg').classList.add('open');
+  document.getElementById('mm-setup').style.display = '';
+  document.getElementById('mm-status-area').style.display = 'none';
+}
+function closeMM(){
+  cancelMMQueue();
+  document.getElementById('mm-modal-bg').classList.remove('open');
+}
+function selectMMGame(el, game){
+  document.querySelectorAll('.mm-game-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  mmGame = game;
+}
+function selectRegion(el, region){
+  document.querySelectorAll('.region-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  mmRegion = region;
+}
+function startMMQueue(){
+  if(!mmGame){ alert('Please select a game first!'); return; }
+  document.getElementById('mm-setup').style.display = 'none';
+  document.getElementById('mm-status-area').style.display = 'flex';
+  mmSeconds = 0;
+  document.getElementById('mm-time').textContent = '0:00';
+
+  // Simulate live searching player count
+  const playersSearching = () => Math.floor(Math.random() * 8) + 1;
+  document.getElementById('mm-players').textContent = playersSearching();
+
+  mmTimer = setInterval(() => {
+    mmSeconds++;
+    const m = Math.floor(mmSeconds / 60);
+    const s = mmSeconds % 60;
+    document.getElementById('mm-time').textContent = `${m}:${s.toString().padStart(2,'0')}`;
+    // Randomly update searching count
+    if(mmSeconds % 5 === 0) document.getElementById('mm-players').textContent = playersSearching();
+    // After 8s show "no server yet" note
+    if(mmSeconds === 8){
+      document.getElementById('mm-status-text').textContent = 'Servers launching soon…';
+      document.getElementById('mm-sub-text').textContent = 'Multiplayer is under development. Stay tuned!';
+    }
+  }, 1000);
+}
+function cancelMMQueue(){
+  if(mmTimer){ clearInterval(mmTimer); mmTimer = null; }
+  mmSeconds = 0;
+  document.getElementById('mm-status-area').style.display = 'none';
+  document.getElementById('mm-setup').style.display = '';
+  document.getElementById('mm-status-text').textContent = 'Searching for opponent…';
+  document.getElementById('mm-sub-text').textContent = 'This usually takes under 30 seconds';
+}
+
+// ---- Auth ----
 async function doSignIn(){ try{ await window.FB.signInGoogle(); }catch(e){ console.error(e); } }
 async function doSignOut(){ await window.FB.signOut(); closeModal(); }
 
@@ -393,7 +575,6 @@ async function refreshUI(user){
   av.style.background=`linear-gradient(135deg,hsl(${hueFor(name)} 70% 42%),hsl(${(hueFor(name)+40)%360} 75% 55%))`;
 
   const times=await window.FB.getMyTimes(user.uid);
-  // Keys are now string numbers "1","2"..."10"
   document.getElementById('m-done').textContent=Object.keys(times).length+'/10';
   const tg=document.getElementById('times-grid');
   let html='';
