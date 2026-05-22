@@ -128,54 +128,13 @@ header{display:flex;align-items:center;justify-content:space-between;flex-wrap:w
 /* UPDATE LOG */
 .sb-log-label{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text3);margin-bottom:8px;display:flex;align-items:center;gap:6px;}
 .sb-log-label::after{content:'';flex:1;height:1px;background:var(--border);}
-.update-log{display:flex;flex-direction:column;gap:7px;margin-bottom:16px;max-height:160px;overflow-y:auto;padding-right:2px;}
-.update-log::-webkit-scrollbar{width:3px}
-.update-log::-webkit-scrollbar-track{background:transparent}
-.update-log::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.update-log{display:flex;flex-direction:column;gap:7px;margin-bottom:16px;}
 .log-entry{display:flex;gap:10px;align-items:flex-start;}
 .log-ver{font-family:'Syne',sans-serif;font-size:9px;font-weight:800;color:var(--accent);background:rgba(91,58,247,.07);border:1.5px solid rgba(91,58,247,.13);border-radius:6px;padding:2px 6px;white-space:nowrap;flex-shrink:0;margin-top:1px;}
 .log-text{font-size:11px;color:var(--text2);line-height:1.5;}
 
 .sb-play{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border:none;padding:14px;font-family:'Syne',sans-serif;font-size:14px;font-weight:800;letter-spacing:2px;border-radius:13px;cursor:pointer;margin-top:auto;flex-shrink:0;transition:filter .18s,transform .18s,box-shadow .18s;box-shadow:0 4px 18px rgba(91,58,247,.28);width:100%;}
 .sb-play:hover{filter:brightness(1.08);transform:translateY(-1px);box-shadow:0 8px 28px rgba(91,58,247,.36)}
-
-/* MULTIPLAYER MODAL */
-#mm-modal-bg{display:none;position:fixed;inset:0;z-index:600;background:rgba(26,22,37,.45);backdrop-filter:blur(8px);align-items:center;justify-content:center;}
-#mm-modal-bg.open{display:flex}
-.mm-modal{background:var(--surface);border:1.5px solid var(--border);border-radius:24px;padding:32px;width:min(420px,92vw);display:flex;flex-direction:column;gap:20px;box-shadow:0 24px 70px rgba(91,58,247,.18);animation:popIn .2s ease both;position:relative;overflow:hidden;}
-.mm-header{display:flex;align-items:center;justify-content:space-between;}
-.mm-header h2{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--text);}
-.mm-close{width:30px;height:30px;border-radius:8px;border:1.5px solid var(--border);background:transparent;cursor:pointer;color:var(--text2);font-size:12px;display:flex;align-items:center;justify-content:center;transition:.15s ease;}
-.mm-close:hover{border-color:var(--accent);color:var(--accent)}
-.mm-game-select{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-.mm-game-btn{border:1.5px solid var(--border);background:var(--bg2);border-radius:14px;padding:14px 12px;cursor:pointer;transition:.18s ease;text-align:left;font-family:'DM Sans',sans-serif;}
-.mm-game-btn:hover{border-color:var(--accent);background:rgba(91,58,247,.04);transform:translateY(-1px)}
-.mm-game-btn.selected{border-color:var(--accent);background:rgba(91,58,247,.07);box-shadow:0 0 0 3px rgba(91,58,247,.08)}
-.mm-game-btn .gicon{font-size:26px;margin-bottom:6px;}
-.mm-game-btn .gname{font-size:12px;font-weight:700;color:var(--text);}
-.mm-game-btn .gdesc{font-size:10px;color:var(--text2);margin-top:2px;}
-.mm-region{display:flex;gap:8px;flex-wrap:wrap;}
-.region-btn{flex:1;min-width:80px;border:1.5px solid var(--border);background:var(--bg2);border-radius:10px;padding:8px 10px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;color:var(--text2);text-align:center;transition:.15s ease;}
-.region-btn:hover{border-color:var(--accent2);color:var(--accent)}
-.region-btn.selected{border-color:var(--accent);background:rgba(91,58,247,.07);color:var(--accent);}
-.mm-divider{border:none;border-top:1px solid var(--border);}
-#mm-status-area{display:none;flex-direction:column;align-items:center;gap:14px;padding:10px 0;}
-.spinner{width:44px;height:44px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;}
-@keyframes spin{to{transform:rotate(360deg)}}
-.mm-status-text{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--text);text-align:center;}
-.mm-sub-text{font-size:12px;color:var(--text2);text-align:center;}
-.mm-queue-info{display:flex;gap:16px;}
-.mm-qstat{text-align:center;}
-.mm-qstat-val{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--accent);}
-.mm-qstat-lbl{font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.5px;}
-.mm-btn-row{display:flex;gap:8px;}
-.mm-btn{flex:1;padding:12px;border:none;border-radius:11px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:.15s ease;}
-.mm-btn.pri{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;box-shadow:0 4px 14px rgba(91,58,247,.22);}
-.mm-btn.pri:hover{filter:brightness(1.08);transform:translateY(-1px)}
-.mm-btn.ghost{background:var(--bg2);color:var(--text2);border:1.5px solid var(--border);}
-.mm-btn.ghost:hover{border-color:var(--accent);color:var(--accent)}
-.mm-coming-note{font-size:11px;color:var(--text3);text-align:center;padding:6px 0;display:flex;align-items:center;justify-content:center;gap:6px;}
-.mm-coming-note::before,.mm-coming-note::after{content:'';flex:1;height:1px;background:var(--border);}
 
 /* SETTINGS MODAL */
 #modal-bg{display:none;position:fixed;inset:0;z-index:500;background:rgba(26,22,37,.38);backdrop-filter:blur(7px);align-items:center;justify-content:center;}
@@ -234,7 +193,6 @@ header{display:flex;align-items:center;justify-content:space-between;flex-wrap:w
       </div>
       <div class="icon-btn" id="settings-btn" onclick="openModal()" style="display:none" title="Settings">⚙</div>
       <a class="icon-btn" href="leaderboard.html" title="Leaderboard">🏆</a>
-      <button class="icon-btn" onclick="openMM()" title="Online Matchmaking" style="font-size:13px;">🌐</button>
       <div class="badge"><div class="dot"></div>ONLINE</div>
     </div>
   </header>
@@ -261,14 +219,11 @@ header{display:flex;align-items:center;justify-content:space-between;flex-wrap:w
   </div>
 
   <div class="main-layout">
-    <!-- LEFT: Games -->
     <div>
       <div class="slabel">// Games</div>
       <div class="grid">
 
-        <!-- Cube Platformer -->
-        <div class="card" id="c1"
-          onclick="openSB(this,'CUBE PLATFORMER','5 levels of precision platforming. Wall-jump, spin, and race to beat your best time — every second counts!','images/CubePlatformer/cubeplatformer.png','games/CubePlatformer/game.html',['PLATFORMER','5 LEVELS','WALL-JUMP','TIMER'],cubeLogs)">
+        <div class="card" id="c1" onclick="openSB(this,'CUBE PLATFORMER','5 levels of precision platforming. Wall-jump, spin, and race to beat your best time — every second counts!','images/CubePlatformer/cubeplatformer.png','games/CubePlatformer/game.html',['PLATFORMER','5 LEVELS','WALL-JUMP','TIMER'],cubeLogs)">
           <div class="cimg">
             <img src="images/CubePlatformer/cubeplatformer.png" alt="Cube Platformer" loading="lazy" decoding="async"
                  onerror="this.style.display='none';this.parentElement.innerHTML='<div class=cimg-placeholder>🟦</div>'">
@@ -284,9 +239,7 @@ header{display:flex;align-items:center;justify-content:space-between;flex-wrap:w
           </div>
         </div>
 
-        <!-- FloppySticks -->
-        <div class="card" id="c2"
-          onclick="openSB(this,'FLOPPYSTICKS','A wild brawl set in nature. Beat the AI or challenge a friend locally — grab weapons, go ragdoll, and win 3 rounds!','images/FloppySticks/floppysticks.png','games/FloppySticks/game.html',['BRAWLER','LOCAL PVP','WEAPONS','RAGDOLL'],floppyLogs)">
+        <div class="card" id="c2" onclick="openSB(this,'FLOPPYSTICKS','A wild brawl set in nature. Beat the AI or challenge a friend locally — grab weapons, go ragdoll, and win 3 rounds!','images/FloppySticks/floppysticks.png','games/FloppySticks/game.html',['BRAWLER','LOCAL PVP','WEAPONS','RAGDOLL'],floppyLogs)">
           <div class="cimg" style="background:linear-gradient(135deg,#dcfce7,#bbf7d0)">
             <img src="images/FloppySticks/floppysticks.png" alt="FloppySticks" loading="lazy" decoding="async"
                  onerror="this.style.display='none';this.parentElement.innerHTML='<div class=cimg-placeholder>🥊</div>'">
@@ -304,19 +257,22 @@ header{display:flex;align-items:center;justify-content:space-between;flex-wrap:w
 
         <div class="card soon">
           <div class="cimg" style="background:linear-gradient(135deg,#f0fdf4,#dcfce7)"><div class="cimg-placeholder">🔒</div></div>
-          <div class="cbody"><div class="ctag" style="color:var(--text3)">COMING SOON</div><div class="cname" style="color:var(--text2)">Mystery Game</div><div class="cdesc">We're cooking something fun. Check back soon!</div></div>
+          <div class="cbody">
+            <div class="ctag" style="color:var(--text3)">COMING SOON</div>
+            <div class="cname" style="color:var(--text2)">Mystery Game</div>
+            <div class="cdesc">We're cooking something fun. Check back soon!</div>
+          </div>
         </div>
       </div>
       <div class="hint">Click a game · then press Play</div>
     </div>
 
-    <!-- RIGHT: YT + Discord -->
     <div class="discord-col">
-      <div class="discord-label" style="color:#ef4444;"><span class="yt-live-dot" style="margin-right:2px"></span> Content Creator Hub</div>
+      <div class="discord-label" style="color:#ef4444;"><span class="yt-live-dot" style="margin-right:2px"></span>Content Creator Hub</div>
       <div class="yt-subscriber-widget">
         <div class="yt-header"><span class="yt-live-dot"></span><span class="yt-title">LIVE SUBSCRIBERS</span></div>
         <div id="yt-count" class="yt-number">—</div>
-        <a href="https://www.youtube.com/@sortofdev0" target="_blank" rel="noopener" class="yt-btn">▶ &nbsp; SUBSCRIBE</a>
+        <a href="https://www.youtube.com/@sortofdev0" target="_blank" rel="noopener" class="yt-btn">▶ &nbsp;SUBSCRIBE</a>
       </div>
       <div class="discord-label">Discord Community</div>
       <div class="discord-card">
@@ -326,7 +282,7 @@ header{display:flex;align-items:center;justify-content:space-between;flex-wrap:w
         </iframe>
       </div>
       <a class="discord-join" href="https://discord.gg/dS4pgC9J5H" target="_blank" rel="noopener">
-        <span style="font-size:18px">💬</span> Join our Discord
+        <span style="font-size:18px">💬</span>Join our Discord
       </a>
     </div>
   </div>
@@ -342,76 +298,7 @@ header{display:flex;align-items:center;justify-content:space-between;flex-wrap:w
   <div class="sb-tags" id="sbta"></div>
   <div class="sb-log-label">Update Log</div>
   <div class="update-log" id="sb-log"></div>
-  <button class="sb-play" onclick="if(goHref)location.href=goHref">▶ &nbsp; PLAY NOW</button>
-</div>
-
-<!-- MULTIPLAYER MATCHMAKING MODAL -->
-<div id="mm-modal-bg" onclick="if(event.target===this)closeMM()">
-  <div class="mm-modal">
-    <div class="mm-header">
-      <h2>🌐 Online Matchmaking</h2>
-      <button class="mm-close" onclick="closeMM()">✕</button>
-    </div>
-
-    <div id="mm-setup">
-      <div style="font-size:13px;color:var(--text2);line-height:1.6;">
-        Choose a game and region, then join the queue. You'll be matched with the next available opponent.
-      </div>
-
-      <div>
-        <div class="slabel" style="margin-bottom:10px;">// Select Game</div>
-        <div class="mm-game-select">
-          <button class="mm-game-btn" onclick="selectMMGame(this,'cube')">
-            <div class="gicon">🟦</div>
-            <div class="gname">Cube Platformer</div>
-            <div class="gdesc">Race mode — fastest time wins</div>
-          </button>
-          <button class="mm-game-btn" onclick="selectMMGame(this,'floppy')">
-            <div class="gicon">🥊</div>
-            <div class="gname">FloppySticks</div>
-            <div class="gdesc">1v1 brawl — first to 3 wins</div>
-          </button>
-        </div>
-      </div>
-
-      <div>
-        <div class="slabel" style="margin-bottom:10px;">// Region</div>
-        <div class="mm-region">
-          <button class="region-btn selected" onclick="selectRegion(this,'auto')">🌍 Auto</button>
-          <button class="region-btn" onclick="selectRegion(this,'na')">🇺🇸 NA</button>
-          <button class="region-btn" onclick="selectRegion(this,'eu')">🇪🇺 EU</button>
-          <button class="region-btn" onclick="selectRegion(this,'as')">🌏 Asia</button>
-        </div>
-      </div>
-
-      <hr class="mm-divider">
-      <div class="mm-coming-note">Multiplayer servers launching soon</div>
-
-      <div class="mm-btn-row">
-        <button class="mm-btn ghost" onclick="closeMM()">Cancel</button>
-        <button class="mm-btn pri" id="mm-join-btn" onclick="startMMQueue()">Join Queue</button>
-      </div>
-    </div>
-
-    <div id="mm-status-area">
-      <div class="spinner"></div>
-      <div class="mm-status-text" id="mm-status-text">Searching for opponent…</div>
-      <div class="mm-sub-text" id="mm-sub-text">This usually takes under 30 seconds</div>
-      <div class="mm-queue-info">
-        <div class="mm-qstat">
-          <div class="mm-qstat-val" id="mm-time">0:00</div>
-          <div class="mm-qstat-lbl">IN QUEUE</div>
-        </div>
-        <div class="mm-qstat">
-          <div class="mm-qstat-val" id="mm-players">—</div>
-          <div class="mm-qstat-lbl">SEARCHING</div>
-        </div>
-      </div>
-      <div class="mm-btn-row" style="width:100%">
-        <button class="mm-btn ghost" onclick="cancelMMQueue()" style="width:100%">Cancel Search</button>
-      </div>
-    </div>
-  </div>
+  <button class="sb-play" onclick="if(goHref)location.href=goHref">▶ &nbsp;PLAY NOW</button>
 </div>
 
 <!-- SETTINGS MODAL -->
@@ -447,96 +334,37 @@ header{display:flex;align-items:center;justify-content:space-between;flex-wrap:w
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="firebase.js"></script>
 <script>
-// ---- Update Logs ----
 const cubeLogs = [
-  { ver: 'v1.2', text: 'Fixed wall-jump sticking on narrow ledges. Improved level 4 collision.' },
-  { ver: 'v1.1', text: 'Added per-level leaderboard. Timer now shows milliseconds.' },
-  { ver: 'v1.0', text: 'Initial release — 5 levels, wall-jump, global leaderboard.' },
+  { ver: 'v1.0', text: 'Initial release — 5 levels, wall-jump, timer, global leaderboard.' }
 ];
-
 const floppyLogs = [
-  { ver: 'v1.1', text: 'Mobile controls tuned. Weapon drop timer added to HUD.' },
-  { ver: 'v1.0', text: 'Initial release — AI opponent, ragdoll physics, 3 weapon types.' },
+  { ver: 'v1.0', text: 'Initial release — AI opponent, ragdoll physics, 3 weapon types, local PvP.' }
 ];
 
-// ---- Sidebar ----
 let activeC = null, goHref = '';
 
 function openSB(el, t, d, img, href, tags, logs) {
   if (activeC) activeC.classList.remove('active');
-  el.classList.add('active'); activeC = el;
+  el.classList.add('active');
+  activeC = el;
   document.getElementById('sbt').textContent = t;
   document.getElementById('sbd').textContent = d;
   document.getElementById('sbi').src = img;
   document.getElementById('sbta').innerHTML = tags.map(x => `<span class="pill">${x}</span>`).join('');
   goHref = href;
-
-  // Render update log
-  const logEl = document.getElementById('sb-log');
-  logEl.innerHTML = (logs || []).map(e =>
+  document.getElementById('sb-log').innerHTML = (logs || []).map(e =>
     `<div class="log-entry"><span class="log-ver">${e.ver}</span><span class="log-text">${e.text}</span></div>`
   ).join('');
-
   document.getElementById('sidebar').classList.add('open');
   document.getElementById('veil').classList.add('on');
 }
+
 function closeSB() {
   document.getElementById('sidebar').classList.remove('open');
   document.getElementById('veil').classList.remove('on');
   if (activeC) { activeC.classList.remove('active'); activeC = null; }
 }
 
-// ---- Matchmaking ----
-let mmGame = null, mmRegion = 'auto', mmTimer = null, mmSeconds = 0;
-
-function openMM() {
-  document.getElementById('mm-modal-bg').classList.add('open');
-  document.getElementById('mm-setup').style.display = '';
-  document.getElementById('mm-status-area').style.display = 'none';
-}
-function closeMM() {
-  cancelMMQueue();
-  document.getElementById('mm-modal-bg').classList.remove('open');
-}
-function selectMMGame(el, game) {
-  document.querySelectorAll('.mm-game-btn').forEach(b => b.classList.remove('selected'));
-  el.classList.add('selected');
-  mmGame = game;
-}
-function selectRegion(el, region) {
-  document.querySelectorAll('.region-btn').forEach(b => b.classList.remove('selected'));
-  el.classList.add('selected');
-  mmRegion = region;
-}
-function startMMQueue() {
-  if (!mmGame) { alert('Please select a game first!'); return; }
-  document.getElementById('mm-setup').style.display = 'none';
-  document.getElementById('mm-status-area').style.display = 'flex';
-  mmSeconds = 0;
-  document.getElementById('mm-time').textContent = '0:00';
-  document.getElementById('mm-players').textContent = Math.floor(Math.random() * 8) + 1;
-
-  mmTimer = setInterval(() => {
-    mmSeconds++;
-    const m = Math.floor(mmSeconds / 60), s = mmSeconds % 60;
-    document.getElementById('mm-time').textContent = `${m}:${s.toString().padStart(2, '0')}`;
-    if (mmSeconds % 5 === 0) document.getElementById('mm-players').textContent = Math.floor(Math.random() * 8) + 1;
-    if (mmSeconds === 8) {
-      document.getElementById('mm-status-text').textContent = 'Servers launching soon…';
-      document.getElementById('mm-sub-text').textContent = 'Multiplayer is under development. Stay tuned!';
-    }
-  }, 1000);
-}
-function cancelMMQueue() {
-  if (mmTimer) { clearInterval(mmTimer); mmTimer = null; }
-  mmSeconds = 0;
-  document.getElementById('mm-status-area').style.display = 'none';
-  document.getElementById('mm-setup').style.display = '';
-  document.getElementById('mm-status-text').textContent = 'Searching for opponent…';
-  document.getElementById('mm-sub-text').textContent = 'This usually takes under 30 seconds';
-}
-
-// ---- Auth ----
 async function doSignIn() { try { await window.FB.signInGoogle(); } catch(e) { console.error(e); } }
 async function doSignOut() { await window.FB.signOut(); closeModal(); }
 
@@ -545,7 +373,7 @@ function initials(name) {
   const p = String(name || 'Player').trim().split(/\s+/).filter(Boolean);
   return ((p[0]?.[0] || 'P') + (p[1]?.[0] || '')).toUpperCase();
 }
-function hueFor(s) { return [...String(s||'')].reduce((a,c)=>a+c.charCodeAt(0),0) % 360; }
+function hueFor(s) { return [...String(s||'')].reduce((a,c) => a + c.charCodeAt(0), 0) % 360; }
 
 async function refreshUI(user) {
   const sb = document.getElementById('sign-in-btn');
@@ -561,7 +389,6 @@ async function refreshUI(user) {
   const av = document.getElementById('u-avatar');
   av.textContent = initials(name);
   av.style.background = `linear-gradient(135deg,hsl(${hueFor(name)} 70% 42%),hsl(${(hueFor(name)+40)%360} 75% 55%))`;
-
   const times = await window.FB.getMyTimes(user.uid);
   document.getElementById('m-done').textContent = Object.keys(times).length + '/5';
   const tg = document.getElementById('times-grid');
@@ -591,7 +418,6 @@ async function saveUsername() {
   setTimeout(() => msg.textContent = '', 2000);
 }
 
-// YouTube subscriber counter
 const GOOGLE_API_KEY = "AIzaSyAmJzKU1txxHAL_Xeu-owQ2DFVeC8j8tF0";
 const YT_CHANNEL_ID  = "UC8eEGtjt9tW3jpkXucPBvvA";
 async function fetchLiveSubscribers() {
@@ -603,12 +429,11 @@ async function fetchLiveSubscribers() {
       document.getElementById('yt-count').textContent = Number(d.items[0].statistics.subscriberCount).toLocaleString();
     }
   } catch(e) {
-    console.warn('[YT]', e.message);
     document.getElementById('yt-count').textContent = 'ONLINE';
   }
 }
 fetchLiveSubscribers();
-setInterval(fetchLiveSubscribers, 120_000);
+setInterval(fetchLiveSubscribers, 120000);
 </script>
 </body>
 </html>
