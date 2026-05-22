@@ -73,284 +73,250 @@
   function resetSpawner() { spawnerTicks = Math.floor((Math.random() * 14 + 1) * 60); }
 
   // ── Stickman ──────────────────────────────────────────────────────────────
-  class Stickman {
-    constructor(x, color, isBot = false) {
-      this.startX = x; this.color = color; this.isBot = isBot;
-      this.groundY = H - 100;
-      this._init();
+class Stickman {
+  constructor(x, color, isBot = false) {
+    this.startX = x; this.color = color; this.isBot = isBot;
+    this.groundY = H - 100;
+    this._init();
+  }
+
+  _init() {
+    this.x = this.startX; this.y = this.groundY;
+    this.vx = 0; this.vy = 0; this.hp = 100;
+    this.isGrounded = false; this.animTime = 0;
+    this.facingLeft = this.isBot;
+    this.equippedWeapon = null;
+    this.jumpCount = 0; this.flipAngle = 0; this.isFlipping = false;
+    this.squashY = 1; this.attackCD = 0; this.attackSwing = 0;
+    this.isAttacking = false; this.flashFrames = 0;
+    this.isRagdoll = false; this.ragdollParts = [];
+  }
+
+  // --- OPTIMIZED PHYSICS CALCULATION ---
+  updatePhysics() {
+    if (this.isRagdoll) {
+      const fy = H - 100;
+      this.ragdollParts.forEach(p => {
+        p.vx *= 0.98; p.vy += GRAVITY;
+        p.x += p.vx; p.y += p.vy; p.angle += p.vAngle;
+        if (p.y >= fy) { p.y = fy; p.vy = -p.vy * 0.25; p.vAngle *= 0.5; }
+      });
+      return;
     }
+    this.vy += GRAVITY;
+    this.x += this.vx; this.y += this.vy;
+    const gy = H - 100;
+    if (this.y >= gy) {
+      if (!this.isGrounded) { this.squashY = 0.78; spawnFX(this.x, gy, '#6a824e', 2); }
+      this.y = gy; this.vy = 0; this.isGrounded = true; this.jumpCount = 0;
+    } else { this.isGrounded = false; }
+    this.x = Math.max(25, Math.min(W - 25, this.x));
+  }
 
-    _init() {
-      this.x = this.startX; this.y = this.groundY;
-      this.vx = 0; this.vy = 0; this.hp = 100;
-      this.isGrounded = false; this.animTime = 0;
-      this.facingLeft = this.isBot;
-      this.equippedWeapon = null;
-      this.jumpCount = 0; this.flipAngle = 0; this.isFlipping = false;
-      this.squashY = 1; this.attackCD = 0; this.attackSwing = 0;
-      this.isAttacking = false; this.flashFrames = 0;
-      this.isRagdoll = false; this.ragdollParts = [];
-    }
+  respawn() {
+    if (gameState === 'MATCH_OVER') return;
+    this._init();
+    this.startX = this.isBot ? W - 200 : 200;
+    this.x = this.startX;
+    this._updateHUD();
+  }
 
-    respawn() {
-      if (gameState === 'MATCH_OVER') return;
-      this._init();
-      this.startX = this.isBot ? W - 200 : 200;
-      this.x = this.startX;
-      this._updateHUD();
-    }
-
-    _updateHUD() {
-      if (!this.isBot) {
-        document.getElementById('player-hp').style.width = this.hp + '%';
-        document.getElementById('player-weapon-text').textContent = this.equippedWeapon || 'NONE';
-      } else {
-        document.getElementById('bot-hp').style.width = this.hp + '%';
-      }
-    }
-
-    takeDamage(amount, kbDir) {
-      if (this.isRagdoll || gameState === 'MATCH_OVER') return;
-      this.hp = Math.max(0, this.hp - amount);
-      this.flashFrames = 6;
-      this.vx += kbDir * 5.5; this.vy -= 2;
-      screenShake = 7;
-      spawnFX(this.x, this.y - 40, '#ffffff', 4);
-      spawnFX(this.x, this.y - 40, '#f1c40f', 2);
-      this._updateHUD();
-      if (this.hp <= 0) this._triggerRagdoll(kbDir);
-    }
-
-    _triggerRagdoll(force) {
-      this.isRagdoll = true;
-
-      // Score update
-      if (this.isBot) {
-        playerScore++;
-        document.getElementById('player-score-tag').textContent = playerScore + ' Wins';
-      } else {
-        botScore++;
-        document.getElementById('bot-score-tag').textContent = botScore + ' Wins';
-      }
-
-      // Ragdoll parts
-      const defs = [
-        { rx: 0,  ry: -65, size: 11, shape: 'circle' },
-        { rx: 0,  ry: -42, h: 24,    shape: 'line'   },
-        { rx: -8, ry: -48, h: 18,    shape: 'line'   },
-        { rx: 8,  ry: -48, h: 18,    shape: 'line'   },
-        { rx: -6, ry: -18, h: 20,    shape: 'line'   },
-        { rx: 6,  ry: -18, h: 20,    shape: 'line'   },
-      ];
-      defs.forEach(p => this.ragdollParts.push({
-        x: this.x + p.rx, y: this.y + p.ry,
-        vx: force * 5 + (Math.random() - 0.5) * 4,
-        vy: -3 + (Math.random() - 1.5) * 2,
-        angle: Math.random() * Math.PI,
-        vAngle: (Math.random() - 0.5) * 0.2,
-        cfg: p,
-      }));
-
-      // Sync score over network
-      if (gameState === 'ONLINE_MODE' && onlineConn?.open) {
-        netSend({
-          type: 'score',
-          hostScore:  isOnlineHost ? playerScore : botScore,
-          guestScore: isOnlineHost ? botScore    : playerScore,
-        });
-      }
-
-      if (playerScore >= MAX_POINTS || botScore >= MAX_POINTS) {
-        gameState = 'MATCH_OVER';
-        netSend({ type: 'match_over' });
-        _saveMatchResult();
-      } else {
-        setTimeout(() => {
-          this.respawn();
-          if (gameState === 'ONLINE_MODE') netSend({ type: 'respawn_opp' });
-        }, 1800);
-      }
-    }
-
-    executeAttack() {
-      if (this.attackCD > 0 || !this.equippedWeapon || this.isRagdoll) return;
-      if (gameState !== 'BOT_MODE' && gameState !== 'ONLINE_MODE') return;
-
-      this.isAttacking = true;
-      this.attackCD    = this.equippedWeapon === 'Assault Rifle' ? 14 : 22;
-      const dir        = this.facingLeft ? -1 : 1;
-
-      if (this.equippedWeapon === 'Assault Rifle') {
-        const bx = this.x + 25 * dir, by = this.y - 45;
-        activeBullets.push({ x: bx, y: by, vx: dir * 15, firedByBot: this.isBot });
-        spawnFX(bx, by, '#e67e22', 2);
-        // Sync bullet to opponent in online mode
-        if (gameState === 'ONLINE_MODE' && !this.isBot) {
-          netSend({ type: 'bullet', x: bx, y: by, vx: dir * 15 });
-        }
-      } else {
-        this.attackSwing = -Math.PI / 2.5;
-        const foe = this.isBot ? player : bot;
-        if (!foe.isRagdoll) {
-          const sep    = Math.abs(this.x - foe.x);
-          const facing = (this.facingLeft && foe.x < this.x) || (!this.facingLeft && foe.x > this.x);
-          if (sep < 125 && facing && Math.abs(this.y - foe.y) < 70) {
-            const dmg = this.equippedWeapon === 'Buster Sword' ? 24 : 35;
-            if (gameState === 'ONLINE_MODE' && !this.isBot) {
-              // In online mode: tell opponent to damage their own player
-              netSend({ type: 'hit', amount: dmg, kbDir: dir });
-            } else {
-              foe.takeDamage(dmg, dir);
-            }
-          }
-        }
-      }
-    }
-
-    update() {
-      this.groundY = H - 100;
-
-      if (this.isRagdoll) {
-        const fy = this.groundY;
-        this.ragdollParts.forEach(p => {
-          p.vx *= 0.98; p.vy += GRAVITY;
-          p.x += p.vx; p.y += p.vy; p.angle += p.vAngle;
-          if (p.y >= fy) { p.y = fy; p.vy = -p.vy * 0.25; p.vAngle *= 0.5; }
-        });
-        return;
-      }
-      if (gameState === 'MATCH_OVER') { this.vx *= 0.8; return; }
-
-      if (this.attackCD > 0) this.attackCD--;
-      if (this.isAttacking) {
-        this.attackSwing += 0.28;
-        if (this.attackSwing >= Math.PI / 2) { this.isAttacking = false; this.attackSwing = 0; }
-      }
-      if (this.isFlipping) {
-        this.flipAngle += this.facingLeft ? -0.22 : 0.22;
-        if (Math.abs(this.flipAngle) >= Math.PI * 2) { this.isFlipping = false; this.flipAngle = 0; }
-      }
-      this.squashY += (1 - this.squashY) * 0.14;
-
-      // BOT AI (local mode only)
-      if (this.isBot && gameState === 'BOT_MODE') {
-        const dist = Math.abs(this.x - player.x);
-        this.facingLeft = player.x < this.x;
-        if (!player.isRagdoll) {
-          for (const b of activeBullets) {
-            if (!b.firedByBot && Math.abs(this.x - b.x) < 140 && this.isGrounded) {
-              this.vy = -12; this.isGrounded = false; this.jumpCount = 1; break;
-            }
-          }
-          let target = player.x;
-          if (!this.equippedWeapon && activePickups.length) {
-            let best = Infinity;
-            for (const p of activePickups) {
-              const d = Math.abs(this.x - p.x);
-              if (d < best) { best = d; target = p.x; }
-            }
-          }
-          if      (this.x < target - 45) this.vx =  3.6;
-          else if (this.x > target + 45) this.vx = -3.6;
-          else                           this.vx *= 0.5;
-          if (dist < 75 || (this.equippedWeapon === 'Assault Rifle' && dist < 350)) this.executeAttack();
-        }
-      }
-
-      // Player input
-      if (!this.isBot) {
-        if (keys.a)      { this.vx = -5.5; this.facingLeft = true;  }
-        else if (keys.d) { this.vx =  5.5; this.facingLeft = false; }
-        else             { this.vx *= 0.76; }
-      }
-
-      this.vy += GRAVITY;
-      this.x  += this.vx; this.y += this.vy;
-      const gy = this.groundY;
-      if (this.y >= gy) {
-        if (!this.isGrounded) { this.squashY = 0.78; spawnFX(this.x, gy, '#6a824e', 2); }
-        this.y = gy; this.vy = 0; this.isGrounded = true; this.jumpCount = 0;
-      } else { this.isGrounded = false; }
-      this.x = Math.max(25, Math.min(W - 25, this.x));
-
-      if (Math.abs(this.vx) > 0.5 && this.isGrounded) this.animTime += 0.28;
-      else if (!this.isGrounded)                       this.animTime  = 1.1;
-      else                                             this.animTime *= 0.7;
-    }
-
-    draw() {
-      if (this.isRagdoll) {
-        ctx.lineWidth = 4; ctx.lineCap = 'round';
-        ctx.strokeStyle = this.color; ctx.fillStyle = this.color;
-        for (const p of this.ragdollParts) {
-          ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.angle);
-          ctx.beginPath();
-          if (p.cfg.shape === 'circle') { ctx.arc(0, 0, p.cfg.size, 0, Math.PI * 2); ctx.fill(); }
-          else { ctx.moveTo(0, -p.cfg.h / 2); ctx.lineTo(0, p.cfg.h / 2); }
-          ctx.stroke(); ctx.restore();
-        }
-        return;
-      }
-
-      ctx.save();
-      ctx.translate(this.x, this.y); ctx.scale(1, this.squashY); ctx.translate(-this.x, -this.y);
-      ctx.lineWidth = 4; ctx.lineCap = 'round';
-
-      let drawColor = this.color;
-      if (this.flashFrames > 0) { this.flashFrames--; if (this.flashFrames % 2 === 0) drawColor = '#ffffff'; }
-      ctx.strokeStyle = drawColor; ctx.fillStyle = drawColor;
-
-      ctx.save();
-      ctx.translate(this.x, this.y - 30);
-      if (this.isGrounded && Math.abs(this.vx) > 0.5) ctx.rotate(this.vx * 0.025);
-      if (this.isFlipping) ctx.rotate(this.flipAngle);
-      ctx.translate(-this.x, -(this.y - 30));
-
-      const bob  = (this.isGrounded && Math.abs(this.vx) <= 0.5) ? Math.sin(Date.now() * 0.005) * 1.5 : 0;
-      const neckY = this.y - 55 + bob;
-      const hipY  = this.y - 25;
-      const headY = neckY - 12;
-
-      ctx.beginPath(); ctx.arc(this.x, headY, 11, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(this.x, neckY); ctx.lineTo(this.x, hipY); ctx.stroke();
-
-      const swing = Math.sin(this.animTime) * 16;
-      const flip  = this.facingLeft ? -1 : 1;
-      ctx.beginPath(); ctx.moveTo(this.x, hipY); ctx.lineTo(this.x + swing * flip,  this.y); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(this.x, hipY); ctx.lineTo(this.x - swing * flip,  this.y); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(this.x, neckY + 4); ctx.lineTo(this.x - 14 * flip - swing * 0.1 * flip, neckY + 14 + swing); ctx.stroke();
-
-      let handX = this.x + 18 * flip;
-      let handY = neckY + 12 - swing;
-      if (this.isAttacking && this.equippedWeapon !== 'Assault Rifle') { handX = this.x + 24 * flip; handY = neckY + 4; }
-      ctx.beginPath(); ctx.moveTo(this.x, neckY + 4); ctx.lineTo(handX, handY); ctx.stroke();
-      ctx.restore();
-
-      if (this.equippedWeapon) {
-        ctx.save(); ctx.translate(handX, handY);
-        if (this.facingLeft) ctx.scale(-1, 1);
-        if (this.isAttacking) ctx.rotate(this.attackSwing);
-        switch (this.equippedWeapon) {
-          case 'Buster Sword':
-            ctx.strokeStyle = '#7f8c8d'; ctx.fillStyle = '#bdc3c7'; ctx.lineWidth = 3;
-            ctx.beginPath(); ctx.rect(0, -7, 46, 14); ctx.fill(); ctx.stroke();
-            ctx.strokeStyle = '#7a4a2a'; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-8, 0); ctx.stroke();
-            break;
-          case 'Assault Rifle':
-            ctx.fillStyle = '#2c3e50'; ctx.fillRect(0, -5, 32, 10);
-            ctx.fillStyle = '#34495e'; ctx.fillRect(10, 2, 6, 7);
-            break;
-          case 'Smasher Club':
-            ctx.strokeStyle = '#d35400'; ctx.lineWidth = 6;
-            ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(38, -3); ctx.stroke();
-            break;
-        }
-        ctx.restore();
-      }
-      ctx.restore();
+  _updateHUD() {
+    if (!this.isBot) {
+      document.getElementById('player-hp').style.width = this.hp + '%';
+      document.getElementById('player-weapon-text').textContent = this.equippedWeapon || 'NONE';
+    } else {
+      document.getElementById('bot-hp').style.width = this.hp + '%';
     }
   }
 
+  takeDamage(amount, kbDir) {
+    if (this.isRagdoll || gameState === 'MATCH_OVER') return;
+    this.hp = Math.max(0, this.hp - amount);
+    this.flashFrames = 6;
+    this.vx += kbDir * 5.5; this.vy -= 2;
+    screenShake = 7;
+    spawnFX(this.x, this.y - 40, '#ffffff', 4);
+    spawnFX(this.x, this.y - 40, '#f1c40f', 2);
+    this._updateHUD();
+    if (this.hp <= 0) this._triggerRagdoll(kbDir);
+  }
+
+  _triggerRagdoll(force) {
+    this.isRagdoll = true;
+    if (this.isBot) {
+      playerScore++;
+      document.getElementById('player-score-tag').textContent = playerScore + ' Wins';
+    } else {
+      botScore++;
+      document.getElementById('bot-score-tag').textContent = botScore + ' Wins';
+    }
+    const defs = [
+      { rx: 0, ry: -65, size: 11, shape: 'circle' },
+      { rx: 0, ry: -42, h: 24, shape: 'line' },
+      { rx: -8, ry: -48, h: 18, shape: 'line' },
+      { rx: 8, ry: -48, h: 18, shape: 'line' },
+      { rx: -6, ry: -18, h: 20, shape: 'line' },
+      { rx: 6, ry: -18, h: 20, shape: 'line' },
+    ];
+    defs.forEach(p => this.ragdollParts.push({
+      x: this.x + p.rx, y: this.y + p.ry,
+      vx: force * 5 + (Math.random() - 0.5) * 4,
+      vy: -3 + (Math.random() - 1.5) * 2,
+      angle: Math.random() * Math.PI,
+      vAngle: (Math.random() - 0.5) * 0.2,
+      cfg: p,
+    }));
+    if (gameState === 'ONLINE_MODE' && onlineConn?.open) {
+      netSend({ type: 'score', hostScore: isOnlineHost ? playerScore : botScore, guestScore: isOnlineHost ? botScore : playerScore });
+    }
+    if (playerScore >= MAX_POINTS || botScore >= MAX_POINTS) {
+      gameState = 'MATCH_OVER';
+      netSend({ type: 'match_over' });
+      _saveMatchResult();
+    } else {
+      setTimeout(() => { this.respawn(); if (gameState === 'ONLINE_MODE') netSend({ type: 'respawn_opp' }); }, 1800);
+    }
+  }
+
+  executeAttack() {
+    if (this.attackCD > 0 || !this.equippedWeapon || this.isRagdoll) return;
+    if (gameState !== 'BOT_MODE' && gameState !== 'ONLINE_MODE') return;
+    this.isAttacking = true;
+    this.attackCD = this.equippedWeapon === 'Assault Rifle' ? 14 : 22;
+    const dir = this.facingLeft ? -1 : 1;
+    if (this.equippedWeapon === 'Assault Rifle') {
+      const bx = this.x + 25 * dir, by = this.y - 45;
+      activeBullets.push({ x: bx, y: by, vx: dir * 15, firedByBot: this.isBot });
+      spawnFX(bx, by, '#e67e22', 2);
+      if (gameState === 'ONLINE_MODE' && !this.isBot) netSend({ type: 'bullet', x: bx, y: by, vx: dir * 15 });
+    } else {
+      this.attackSwing = -Math.PI / 2.5;
+      const foe = this.isBot ? player : bot;
+      if (!foe.isRagdoll) {
+        const sep = Math.abs(this.x - foe.x);
+        const facing = (this.facingLeft && foe.x < this.x) || (!this.facingLeft && foe.x > this.x);
+        if (sep < 125 && facing && Math.abs(this.y - foe.y) < 70) {
+          const dmg = this.equippedWeapon === 'Buster Sword' ? 24 : 35;
+          if (gameState === 'ONLINE_MODE' && !this.isBot) netSend({ type: 'hit', amount: dmg, kbDir: dir });
+          else foe.takeDamage(dmg, dir);
+        }
+      }
+    }
+  }
+
+  update() {
+    this.groundY = H - 100;
+    if (this.isRagdoll) { this.updatePhysics(); return; }
+    if (gameState === 'MATCH_OVER') { this.vx *= 0.8; return; }
+    if (this.attackCD > 0) this.attackCD--;
+    if (this.isAttacking) {
+      this.attackSwing += 0.28;
+      if (this.attackSwing >= Math.PI / 2) { this.isAttacking = false; this.attackSwing = 0; }
+    }
+    if (this.isFlipping) {
+      this.flipAngle += this.facingLeft ? -0.22 : 0.22;
+      if (Math.abs(this.flipAngle) >= Math.PI * 2) { this.isFlipping = false; this.flipAngle = 0; }
+    }
+    this.squashY += (1 - this.squashY) * 0.14;
+    if (this.isBot && gameState === 'BOT_MODE') {
+      const dist = Math.abs(this.x - player.x);
+      this.facingLeft = player.x < this.x;
+      if (!player.isRagdoll) {
+        for (const b of activeBullets) {
+          if (!b.firedByBot && Math.abs(this.x - b.x) < 140 && this.isGrounded) {
+            this.vy = -12; this.isGrounded = false; this.jumpCount = 1; break;
+          }
+        }
+        let target = player.x;
+        if (!this.equippedWeapon && activePickups.length) {
+          let best = Infinity;
+          for (const p of activePickups) {
+            const d = Math.abs(this.x - p.x);
+            if (d < best) { best = d; target = p.x; }
+          }
+        }
+        if (this.x < target - 45) this.vx = 3.6;
+        else if (this.x > target + 45) this.vx = -3.6;
+        else this.vx *= 0.5;
+        if (dist < 75 || (this.equippedWeapon === 'Assault Rifle' && dist < 350)) this.executeAttack();
+      }
+    }
+    if (!this.isBot) {
+      if (keys.a) { this.vx = -5.5; this.facingLeft = true; }
+      else if (keys.d) { this.vx = 5.5; this.facingLeft = false; }
+      else { this.vx *= 0.76; }
+    }
+    this.updatePhysics();
+    if (Math.abs(this.vx) > 0.5 && this.isGrounded) this.animTime += 0.28;
+    else if (!this.isGrounded) this.animTime = 1.1;
+    else this.animTime *= 0.7;
+  }
+
+  draw() {
+    if (this.isRagdoll) {
+      ctx.lineWidth = 4; ctx.lineCap = 'round';
+      ctx.strokeStyle = this.color; ctx.fillStyle = this.color;
+      for (const p of this.ragdollParts) {
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.angle);
+        ctx.beginPath();
+        if (p.cfg.shape === 'circle') { ctx.arc(0, 0, p.cfg.size, 0, Math.PI * 2); ctx.fill(); }
+        else { ctx.moveTo(0, -p.cfg.h / 2); ctx.lineTo(0, p.cfg.h / 2); }
+        ctx.stroke(); ctx.restore();
+      }
+      return;
+    }
+    ctx.save();
+    ctx.translate(this.x, this.y); ctx.scale(1, this.squashY); ctx.translate(-this.x, -this.y);
+    ctx.lineWidth = 4; ctx.lineCap = 'round';
+    let drawColor = this.color;
+    if (this.flashFrames > 0) { this.flashFrames--; if (this.flashFrames % 2 === 0) drawColor = '#ffffff'; }
+    ctx.strokeStyle = drawColor; ctx.fillStyle = drawColor;
+    ctx.save();
+    ctx.translate(this.x, this.y - 30);
+    if (this.isGrounded && Math.abs(this.vx) > 0.5) ctx.rotate(this.vx * 0.025);
+    if (this.isFlipping) ctx.rotate(this.flipAngle);
+    ctx.translate(-this.x, -(this.y - 30));
+    const bob = (this.isGrounded && Math.abs(this.vx) <= 0.5) ? Math.sin(Date.now() * 0.005) * 1.5 : 0;
+    const neckY = this.y - 55 + bob;
+    const hipY = this.y - 25;
+    const headY = neckY - 12;
+    ctx.beginPath(); ctx.arc(this.x, headY, 11, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(this.x, neckY); ctx.lineTo(this.x, hipY); ctx.stroke();
+    const swing = Math.sin(this.animTime) * 16;
+    const flip = this.facingLeft ? -1 : 1;
+    ctx.beginPath(); ctx.moveTo(this.x, hipY); ctx.lineTo(this.x + swing * flip, this.y); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(this.x, hipY); ctx.lineTo(this.x - swing * flip, this.y); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(this.x, neckY + 4); ctx.lineTo(this.x - 14 * flip - swing * 0.1 * flip, neckY + 14 + swing); ctx.stroke();
+    let handX = this.x + 18 * flip;
+    let handY = neckY + 12 - swing;
+    if (this.isAttacking && this.equippedWeapon !== 'Assault Rifle') { handX = this.x + 24 * flip; handY = neckY + 4; }
+    ctx.beginPath(); ctx.moveTo(this.x, neckY + 4); ctx.lineTo(handX, handY); ctx.stroke();
+    ctx.restore();
+    if (this.equippedWeapon) {
+      ctx.save(); ctx.translate(handX, handY);
+      if (this.facingLeft) ctx.scale(-1, 1);
+      if (this.isAttacking) ctx.rotate(this.attackSwing);
+      switch (this.equippedWeapon) {
+        case 'Buster Sword':
+          ctx.strokeStyle = '#7f8c8d'; ctx.fillStyle = '#bdc3c7'; ctx.lineWidth = 3;
+          ctx.beginPath(); ctx.rect(0, -7, 46, 14); ctx.fill(); ctx.stroke();
+          ctx.strokeStyle = '#7a4a2a'; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-8, 0); ctx.stroke();
+          break;
+        case 'Assault Rifle':
+          ctx.fillStyle = '#2c3e50'; ctx.fillRect(0, -5, 32, 10);
+          ctx.fillStyle = '#34495e'; ctx.fillRect(10, 2, 6, 7);
+          break;
+        case 'Smasher Club':
+          ctx.strokeStyle = '#d35400'; ctx.lineWidth = 6;
+          ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(38, -3); ctx.stroke();
+          break;
+      }
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+}
   // ── Entities ──────────────────────────────────────────────────────────────
   let player, bot;
   function initEntities() {
