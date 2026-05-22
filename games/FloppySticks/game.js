@@ -379,20 +379,10 @@ draw() {
   }
 
   // ── Firebase W/L save ────────────────────────────────────────────────────
-  function _saveMatchResult() {
-    if (matchSaved) return;
-    matchSaved = true;
-    const user = window.FB?.currentUser?.();
-    if (!user) return;
-    const won = playerScore >= MAX_POINTS;
-    window.FB.recordMatch(user.uid, won).catch(() => {});
-    // Refresh stat display in menu
-    window.FB.getMatchStats(user.uid).then(s => {
-      const el = document.getElementById('user-stats');
-      if (el) el.textContent = `W: ${s.w || 0}  L: ${s.l || 0}`;
-    }).catch(() => {});
+function _saveMatchResult() {
+    // Firebase connection completely removed to stop errors
+    return;
   }
-
   // ── Jump ─────────────────────────────────────────────────────────────────
   function handleJump() {
     if (player.isRagdoll) return;
@@ -673,8 +663,13 @@ function gameLoop(ts) {
     requestAnimationFrame(gameLoop);
     lastTime = ts;
 
+    // FIX GLITCH: Wipe the canvas clean every single frame to remove trails/smudges
+    ctx.fillStyle = '#87CEEB';
+    ctx.fillRect(0, 0, W, H);
+
     ctx.save();
-    // 1:1 camera follow so the player always stays perfectly centered
+    
+    // Smooth 1:1 camera tracking centered on the player
     const cameraX = -player.x + W / 2;
     ctx.translate(cameraX, 0); 
 
@@ -683,7 +678,7 @@ function gameLoop(ts) {
       screenShake *= 0.88;
       if (screenShake < 0.5) screenShake = 0;
     }
-    
+
     // Sky
     ctx.fillStyle = '#87CEEB'; ctx.fillRect(0, 0, W, H);
     const skyFade = ctx.createLinearGradient(0, H * 0.5, 0, H - 100);
