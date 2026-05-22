@@ -7,8 +7,13 @@
   'use strict';
 
   // ── Canvas ──────────────────────────────────────────────────────────────
-  const canvas = document.getElementById('gameCanvas');
-  const ctx    = canvas.getContext('2d', { alpha: false });
+const app = new PIXI.Application({ 
+  view: document.getElementById('gameCanvas'),
+  resizeTo: window,
+  backgroundColor: 0x87CEEB 
+});
+const container = new PIXI.Container();
+app.stage.addChild(container);
   let W = 0, H = 0, isMobile = false;
 
   function resize() {
@@ -253,7 +258,7 @@ class Stickman {
     else this.animTime *= 0.7;
   }
 
-  draw() {
+draw() {
     if (this.isRagdoll) {
       ctx.lineWidth = 4; ctx.lineCap = 'round';
       ctx.strokeStyle = this.color; ctx.fillStyle = this.color;
@@ -266,33 +271,41 @@ class Stickman {
       }
       return;
     }
+
     ctx.save();
     ctx.translate(this.x, this.y); ctx.scale(1, this.squashY); ctx.translate(-this.x, -this.y);
     ctx.lineWidth = 4; ctx.lineCap = 'round';
+
     let drawColor = this.color;
     if (this.flashFrames > 0) { this.flashFrames--; if (this.flashFrames % 2 === 0) drawColor = '#ffffff'; }
     ctx.strokeStyle = drawColor; ctx.fillStyle = drawColor;
+
     ctx.save();
     ctx.translate(this.x, this.y - 30);
     if (this.isGrounded && Math.abs(this.vx) > 0.5) ctx.rotate(this.vx * 0.025);
     if (this.isFlipping) ctx.rotate(this.flipAngle);
     ctx.translate(-this.x, -(this.y - 30));
+
     const bob = (this.isGrounded && Math.abs(this.vx) <= 0.5) ? Math.sin(Date.now() * 0.005) * 1.5 : 0;
     const neckY = this.y - 55 + bob;
     const hipY = this.y - 25;
     const headY = neckY - 12;
+
     ctx.beginPath(); ctx.arc(this.x, headY, 11, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(this.x, neckY); ctx.lineTo(this.x, hipY); ctx.stroke();
+
     const swing = Math.sin(this.animTime) * 16;
     const flip = this.facingLeft ? -1 : 1;
     ctx.beginPath(); ctx.moveTo(this.x, hipY); ctx.lineTo(this.x + swing * flip, this.y); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(this.x, hipY); ctx.lineTo(this.x - swing * flip, this.y); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(this.x, neckY + 4); ctx.lineTo(this.x - 14 * flip - swing * 0.1 * flip, neckY + 14 + swing); ctx.stroke();
+
     let handX = this.x + 18 * flip;
     let handY = neckY + 12 - swing;
     if (this.isAttacking && this.equippedWeapon !== 'Assault Rifle') { handX = this.x + 24 * flip; handY = neckY + 4; }
     ctx.beginPath(); ctx.moveTo(this.x, neckY + 4); ctx.lineTo(handX, handY); ctx.stroke();
     ctx.restore();
+
     if (this.equippedWeapon) {
       ctx.save(); ctx.translate(handX, handY);
       if (this.facingLeft) ctx.scale(-1, 1);
@@ -667,6 +680,8 @@ class Stickman {
     lastTime = ts;
 
     ctx.save();
+    const cameraX = -player.x + W / 2;
+    ctx.translate(cameraX * 0.5, 0); // Background moves at 50% speed (Parallax)
     if (screenShake > 0) {
       ctx.translate((Math.random() - 0.5) * screenShake, (Math.random() - 0.5) * screenShake);
       screenShake *= 0.88;
