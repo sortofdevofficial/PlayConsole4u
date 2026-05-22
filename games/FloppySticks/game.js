@@ -6,50 +6,20 @@
 (function () {
   'use strict';
 
-  // ── Initialization ──────────────────────────────────────────────────────
-  let app, container, canvas, ctx;
+  // ── Canvas ──────────────────────────────────────────────────────────────
+  const canvas = document.getElementById('gameCanvas');
+  const ctx    = canvas.getContext('2d', { alpha: false });
   let W = 0, H = 0, isMobile = false;
 
-  window.addEventListener('load', () => {
-    canvas = document.getElementById('gameCanvas');
-    
-    // Initialize PIXI
-    app = new PIXI.Application({ 
-      view: canvas,
-      resizeTo: window,
-      backgroundColor: 0x87CEEB 
-    });
-    
-    container = new PIXI.Container();
-    app.stage.addChild(container);
-
-    // Keep 2D context for your existing draw calls
-    ctx = canvas.getContext('2d', { alpha: false });
-
-    resize(); // Initial resize
-    // Start your game loop here
-    requestAnimationFrame(gameLoop);
-  });
-
   function resize() {
-    if (!canvas) return; // Prevent errors before load
     W = canvas.width  = window.innerWidth;
     H = canvas.height = window.innerHeight;
     isMobile = W < 1024 || 'ontouchstart' in window;
-    
-    if (typeof gameState !== 'undefined' && gameState !== 'MENU') {
-      const mc = document.getElementById('mobile-controls');
-      if (mc) mc.style.display = isMobile ? 'flex' : 'none';
+    if (gameState !== 'MENU') {
+      document.getElementById('mobile-controls').style.display = isMobile ? 'flex' : 'none';
     }
-    
-    if (typeof player !== 'undefined' && player) { 
-      player.groundY = H - 100; 
-      if (player.y > player.groundY) player.y = player.groundY; 
-    }
-    if (typeof bot !== 'undefined' && bot) { 
-      bot.groundY = H - 100; 
-      if (bot.y > bot.groundY) bot.y = bot.groundY; 
-    }
+    if (player) { player.groundY = H - 100; if (player.y > player.groundY) player.y = player.groundY; }
+    if (bot)    { bot.groundY    = H - 100; if (bot.y    > bot.groundY)    bot.y    = bot.groundY;    }
   }
   window.addEventListener('resize', resize);
   // ── Constants ────────────────────────────────────────────────────────────
@@ -699,19 +669,27 @@ draw() {
   // ── Main game loop ────────────────────────────────────────────────────────
   let lastTime = 0;
 
-  function gameLoop(ts) {
+function gameLoop(ts) {
     requestAnimationFrame(gameLoop);
     lastTime = ts;
 
+    // 1. Draw Sky Background FIRST while camera is static (creates infinite 3D distance look)
+    ctx.fillStyle = '#87CEEB';
+    ctx.fillRect(0, 0, W, H);
+
     ctx.save();
+
+    // 2. Camera Matrix: Focus 100% on the player position so they stay centered
     const cameraX = -player.x + W / 2;
-    ctx.translate(cameraX * 0.5, 0); // Background moves at 50% speed (Parallax)
+    ctx.translate(cameraX, 0); 
+
+    // 3. Apply Screen Shake directly on top of the camera view matrix
     if (screenShake > 0) {
       ctx.translate((Math.random() - 0.5) * screenShake, (Math.random() - 0.5) * screenShake);
       screenShake *= 0.88;
       if (screenShake < 0.5) screenShake = 0;
     }
-
+    
     // Sky
     ctx.fillStyle = '#87CEEB'; ctx.fillRect(0, 0, W, H);
     const skyFade = ctx.createLinearGradient(0, H * 0.5, 0, H - 100);
@@ -872,7 +850,7 @@ draw() {
       ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.fillRect(0, 0, W, H);
       ctx.textAlign = 'center';
       const isWin = playerScore >= MAX_POINTS;
-      ctx.font = `bold ${Math.min(60, W / 7)}px 'Segoe UI', sans-serif`;s
+      ctx.font = `bold ${Math.min(60, W / 7)}px 'Segoe UI', sans-serif`;
       ctx.fillStyle = isWin ? '#2ecc71' : '#e74c3c';
       ctx.fillText(isWin ? '🎉 YOU WIN!' : '😢 YOU LOSE!', W / 2, H / 2 - 40);
       ctx.font = `bold ${Math.min(28, W / 20)}px 'Segoe UI', sans-serif`;
