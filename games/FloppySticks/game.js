@@ -673,17 +673,11 @@ function gameLoop(ts) {
     requestAnimationFrame(gameLoop);
     lastTime = ts;
 
-    // 1. Draw Sky Background FIRST while camera is static (creates infinite 3D distance look)
-    ctx.fillStyle = '#87CEEB';
-    ctx.fillRect(0, 0, W, H);
-
     ctx.save();
-
-    // 2. Camera Matrix: Focus 100% on the player position so they stay centered
+    // 1:1 camera follow so the player always stays perfectly centered
     const cameraX = -player.x + W / 2;
     ctx.translate(cameraX, 0); 
 
-    // 3. Apply Screen Shake directly on top of the camera view matrix
     if (screenShake > 0) {
       ctx.translate((Math.random() - 0.5) * screenShake, (Math.random() - 0.5) * screenShake);
       screenShake *= 0.88;
