@@ -267,15 +267,25 @@ function spawnPickup(t,x){
 // ── Firebase W/L save — ONLINE only, never vs AI bot ─────────────────
 async function _save(){
   if(saved)return; saved=true;
-  if(!wasOnline)return; // never save W/L for bot fights
+  if(!wasOnline){
+    console.log('[game] skipping W/L save — bot fight');
+    return;
+  }
   const u=window.FB?.currentUser?.();
-  if(!u)return;
+  if(!u){
+    console.warn('[game] skipping W/L save — not signed in');
+    return;
+  }
   const won=pScore>=MAX_PTS;
+  console.log('[game] saving match result  won='+won+'  uid='+u.uid);
   try{
     await window.FB.recordMatch(u.uid,won);
+    // wait a tick for Firestore to confirm write before reading back
+    await new Promise(r=>setTimeout(r,800));
     const s=await window.FB.getMatchStats(u.uid).catch(()=>({w:0,l:0}));
+    console.log('[game] stats after save:', s);
     if(typeof showWL==='function')showWL(s.w||0,s.l||0);
-  }catch(e){console.warn('[FB] _save:',e.message);}
+  }catch(e){console.error('[game] _save error:',e);}
 }
 
 // ── Start ─────────────────────────────────────────────────────────────

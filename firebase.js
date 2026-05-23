@@ -105,21 +105,35 @@ async function unlockLevel(uid,lvl){
 }
 
 // ── FloppySticks W / L ────────────────────────────────────────────────────
+// Uses FieldValue.increment so no read needed — atomic, works even if doc missing
 async function recordMatch(uid,won){
+  cDel('fs_'+uid); // bust cache so next getMatchStats reads fresh
+  const INC=firebase.firestore.FieldValue.increment;
+  // Always enable network for the write, keep it on long enough to flush
+  _db.enableNetwork();
   try{
-    await _go(async()=>{
-      const ref=fsRef(uid),snap=await ref.get(),d=snap.exists?snap.data():{w:0,l:0};
-      const next={w:(d.w||0)+(won?1:0),l:(d.l||0)+(won?0:1)};
-      await ref.set(next,{merge:true});cSet('fs_'+uid,next,30000);
-    });
-  }catch(e){console.warn('[FB] recordMatch:',e.message);}
+    await fsRef(uid).set(
+      won ? {w:INC(1),l:INC(0)} : {w:INC(0),l:INC(1)},
+      {merge:true}
+    );
+    console.log('[FB] recordMatch saved  won='+won);
+  }catch(e){
+    console.error('[FB] recordMatch FAILED:',e.code,e.message);
+  }finally{
+    // give Firestore 3s to flush before allowing network off
+    setTimeout(()=>{ if(!_ops){_db.disableNetwork();_on=false;} },3000);
+  }
 }
 
 async function getMatchStats(uid){
-  const h=cGet('fs_'+uid);if(h)return h;
+  cDel('fs_'+uid); // always read fresh after a match
+  _db.enableNetwork();
   try{
-    return await _go(async()=>{const snap=await fsRef(uid).get();const v=snap.exists?snap.data():{w:0,l:0};cSet('fs_'+uid,v,30000);return v;});
-  }catch{return{w:0,l:0};}
+    const snap=await fsRef(uid).get();
+    const v=snap.exists?snap.data():{w:0,l:0};
+    cSet('fs_'+uid,v,10000); // short 10s cache
+    return v;
+  }catch(e){console.warn('[FB] getMatchStats:',e.message);return{w:0,l:0};}
 }
 
 // ── Leaderboard ───────────────────────────────────────────────────────────
