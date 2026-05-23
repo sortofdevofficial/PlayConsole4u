@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>YouTube Live Widget</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --surface: #ffffff;
+      --border: #e2ddd6;
+      --text: #1a1625;
+      --text2: #6b6579;
+      --youtube-red: #ef4444;
+      --shadow: 0 2px 16px rgba(91, 58, 247, 0.07);
+      --shadow-hover: 0 8px 32px rgba(239, 68, 68, 0.12);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: transparent;
+      overflow: hidden;
+      padding: 2px; /* Prevent shadow clipping */
+    }
+    
+    .yt-subscriber-widget {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 20px;
+      padding: 22px;
+      text-align: center;
+      box-shadow: var(--shadow);
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      height: 100%;
+    }
+    
+    .yt-subscriber-widget:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-hover);
+      border-color: rgba(239, 68, 68, 0.25);
+    }
+
+    .yt-header {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .yt-live-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--youtube-red);
+      border-radius: 50%;
+      animation: yt-blink 1.5s linear infinite;
+      flex-shrink: 0;
+      box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
+    }
+
+    .yt-title {
+      color: var(--text2);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+    }
+
+    .yt-number {
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      font-size: 34px;
+      font-weight: 800;
+      margin-bottom: 12px;
+      line-height: 1;
+    }
+
+    .yt-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      background: var(--youtube-red);
+      color: #fff;
+      font-family: 'Syne', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 10px 18px;
+      border-radius: 12px;
+      transition: filter 0.15s, transform 0.15s, box-shadow 0.15s;
+      width: 100%;
+      text-decoration: none;
+      box-shadow: 0 4px 14px rgba(239, 68, 68, 0.22);
+    }
+
+    .yt-btn:hover {
+      filter: brightness(1.1);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(239, 68, 68, 0.35);
+    }
+
+    @keyframes yt-blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="yt-subscriber-widget">
+    <div class="yt-header">
+      <span class="yt-live-dot"></span>
+      <span class="yt-title">LIVE SUBSCRIBERS</span>
+    </div>
+    <div id="yt-count" class="yt-number">—</div>
+    <a href="https://www.youtube.com/@sortofdev0" target="_blank" rel="noopener" class="yt-btn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
+        <path d="M21.582 6.186a2.784 2.784 0 0 0-1.956-1.964C17.9 3.75 12 3.75 12 3.75s-5.9 0-7.626.472A2.784 2.784 0 0 0 2.418 6.186C2 7.92 2 12 2 12s0 4.08.418 5.814a2.784 2.784 0 0 0 1.956 1.964C6.1 20.25 12 20.25 12 20.25s5.9 0 7.626-.472a2.784 2.784 0 0 0 1.956-1.964C22 16.08 22 12 22 12s0-4.08-.418-5.814zM9.99 15.25V8.75L15.35 12 9.99 15.25z"/>
+      </svg>
+      SUBSCRIBE
+    </a>
+  </div>
+
+  <script>
+    const GOOGLE_API_KEY = "AIzaSyAmJzKU1txxHAL_Xeu-owQ2DFVeC8j8tF0";
+    const YT_CHANNEL_ID  = "UC8eEGtjt9tW3jpkXucPBvvA";
+    
+    async function fetchLiveSubscribers() {
+      try {
+        const r = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=statistics&id=${YT_CHANNEL_ID}&key=${GOOGLE_API_KEY}`);
+        if (!r.ok) throw new Error('API error');
+        const d = await r.json();
+        if (d.items?.length) {
+          document.getElementById('yt-count').textContent = Number(d.items[0].statistics.subscriberCount).toLocaleString();
+        }
+      } catch(e) {
+        document.getElementById('yt-count').textContent = 'LIVE';
+      }
+    }
+    
+    fetchLiveSubscribers();
+    setInterval(fetchLiveSubscribers, 120000); // Refreshes every 2 minutes
+  </script>
+</body>
+</html>
