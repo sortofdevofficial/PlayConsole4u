@@ -2,10 +2,10 @@
  * FloppySticks — stickman.js v1.5
  * Stickman physics, AI, combat, and rendering.
  * Depends on globals set by game.js:
- *   W, H, GV, MXP, ptl, bul, pku, gs, P, B, keys, shk, ps, bs, MX, WPS
- *   fx(), _save(), g()
+ * W, H, GV, MXP, ptl, bul, pku, gs, P, B, keys, shk, ps, bs, MX, WPS
+ * fx(), _save(), g()
  * Depends on globals set by network.js:
- *   send(), isHost, conn
+ * send(), isHost, conn
  */
 
 class S {
@@ -241,73 +241,111 @@ class S {
       return;
     }
 
+    // ── Active Live Stickman Rendering ───────────────────────────────────
     ctx.save();
+    
+    // Apply Global Squash / Stretch scale matrix relative to ground landing points
     ctx.translate(this.x, this.y);
     ctx.scale(1, this.sq);
     ctx.translate(-this.x, -this.y);
     ctx.lineWidth = 4; ctx.lineCap = 'round';
 
-    // Flash white on hit
+    // Flash character model on damage registration
     let dc = this.c;
     if (this.ff > 0) { this.ff--; if (this.ff % 2 === 0) dc = '#fff'; }
     ctx.strokeStyle = dc; ctx.fillStyle = dc;
 
+    // Isolate torso coordinate space for directional tilt & jump-flips
     ctx.save();
     ctx.translate(this.x, this.y - 30);
     if (this.gr && Math.abs(this.vx) > .5)  ctx.rotate(this.vx * .025);
-    if (this.flp)                             ctx.rotate(this.fa);
+    if (this.flp)                           ctx.rotate(this.fa);
     ctx.translate(-this.x, -(this.y - 30));
 
-    const bob = (this.gr && Math.abs(this.vx) <= .5) ? Math.sin(Date.now() * .005) * 1.5 : 0;
+    // Dynamic procedural idle breathing loop
+    const bob = (this.gr && Math.abs(this.vx) <= .5) ? Math.sin(Date.now() * 0.005) * 1.5 : 0;
     const ny  = this.y - 55 + bob;
     const hy  = this.y - 25;
     const hy2 = ny - 12;
 
-    // Head
+    // Draw Head & Spine
     ctx.beginPath(); ctx.arc(this.x, hy2, 11, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    // Body
     ctx.beginPath(); ctx.moveTo(this.x, ny); ctx.lineTo(this.x, hy); ctx.stroke();
 
     const sw = Math.sin(this.at) * 16;
     const fl = this.fl ? -1 : 1;
 
-    // Legs
+    // Draw Legs (Running swing configurations)
     ctx.beginPath(); ctx.moveTo(this.x, hy); ctx.lineTo(this.x + sw * fl, this.y); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(this.x, hy); ctx.lineTo(this.x - sw * fl, this.y); ctx.stroke();
 
-    // Left arm
+    // Draw Left Arm
     ctx.beginPath(); ctx.moveTo(this.x, ny + 4); ctx.lineTo(this.x - 14 * fl - sw * .1 * fl, ny + 14 + sw); ctx.stroke();
 
-    // Right arm / weapon hand
+    // Calculate Right Arm / Hand weapon attachment anchor points dynamically inside the matrix
     let hx  = this.x + 18 * fl;
     let hy3 = ny + 12 - sw;
-    if (this.atk && this.wp !== 'Assault Rifle') { hx = this.x + 24 * fl; hy3 = ny + 4; }
+    
+    // Modify hand grip extensions if engaging in close combat melee frames
+    if (this.atk && this.wp !== 'Assault Rifle') { 
+      hx = this.x + 24 * fl; 
+      hy3 = ny + 4; 
+    }
+    
+    // Draw Right Arm
     ctx.beginPath(); ctx.moveTo(this.x, ny + 4); ctx.lineTo(hx, hy3); ctx.stroke();
 
-    ctx.restore();
-
-    // ── Weapon draw ───────────────────────────────────────────────────────
+    // ── Weapon draw (Nested inside the translation matrix so it tracks flips perfectly) ──
     if (this.wp) {
       ctx.save();
-      ctx.translate(hx, hy3);
-      if (this.fl) ctx.scale(-1, 1);
-      if (this.atk) ctx.rotate(this.asw);
+      ctx.translate(hx, hy3); // Translate relative to weapon hand location
+      if (this.fl) ctx.scale(-1, 1); // Face active alignment direction
+      
+      // Handle Melee / ranged weapon animation rotations smoothly
+      if (this.atk) {
+        if (this.wp === 'Assault Rifle') {
+          // Subtle firearm firing recoil animation
+          ctx.translate(-Math.random() * 3, (Math.random() - 0.5) * 1.5);
+        } else {
+          // Full rotational swinging arc for heavy melee swords and clubs
+          ctx.rotate(this.asw);
+        }
+      } else {
+        // Subtle weapon idle breathing animation sway
+        ctx.rotate(Math.sin(Date.now() * 0.003) * 0.04);
+      }
 
+      // Render graphics primitives scaled to alignment orientation
       if (this.wp === 'Buster Sword') {
         ctx.strokeStyle = '#7f8c8d'; ctx.fillStyle = '#bdc3c7'; ctx.lineWidth = 3;
         ctx.beginPath(); ctx.rect(0, -7, 46, 14); ctx.fill(); ctx.stroke();
-        ctx.strokeStyle = '#7a4a2a';
+        
+        // Handle grip extension back
+        ctx.strokeStyle = '#7a4a2a'; ctx.lineWidth = 4;
         ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-8, 0); ctx.stroke();
+        
+        // Crossguard highlight detail
+        ctx.fillStyle = '#e67e22';
+        ctx.fillRect(-1, -9, 3, 18);
       } else if (this.wp === 'Assault Rifle') {
+        // Rifle body and framing elements
         ctx.fillStyle = '#2c3e50'; ctx.fillRect(0, -5, 32, 10);
-        ctx.fillStyle = '#34495e'; ctx.fillRect(10, 2, 6, 7);
+        ctx.fillStyle = '#34495e'; ctx.fillRect(10, 2, 6, 7); // Grip handle
+        ctx.fillStyle = '#7f8c8d'; ctx.fillRect(32, -2, 6, 3);  // Barrel nozzle
       } else {
+        // Smasher Club primitives
         ctx.strokeStyle = '#d35400'; ctx.lineWidth = 6;
         ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(38, -3); ctx.stroke();
+        
+        // Spike highlights for higher visual fidelity
+        ctx.fillStyle = '#ecf0f1';
+        ctx.fillRect(26, -6, 3, 3);
+        ctx.fillRect(34, -3, 3, 3);
       }
       ctx.restore();
     }
 
-    ctx.restore();
+    ctx.restore(); // Exit localized rotation matrices securely
+    ctx.restore(); // Close parent layout configuration loop safely
   }
 }
