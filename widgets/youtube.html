@@ -2,86 +2,82 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>YouTube Pro Widget</title>
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <title>YouTube Premium Widget</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
-      --yt-red: #ef4444;
-      --bg: #1a1625; /* Dark premium background */
-      --surface: #241f31;
-      --text-main: #ffffff;
-      --text-muted: #a09ab0;
-      --border: #322d41;
+      --bg: #ffffff;
+      --surface: #f8f9fa;
+      --border: #e9ecef;
+      --text-main: #1a1d20;
+      --text-muted: #6c757d;
+      --yt-red: #ff0000;
+      --shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
     }
     
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'DM Sans', sans-serif; background: transparent; overflow: hidden; padding: 4px; }
+    body { 
+      font-family: 'Plus Jakarta Sans', sans-serif; 
+      background: transparent; 
+      padding: 4px; 
+      overflow: hidden; 
+    }
     
     .widget {
-      background: linear-gradient(145deg, var(--bg), #110e18);
-      border: 1.5px solid var(--border);
+      background: var(--bg);
+      border: 1px solid var(--border);
       border-radius: 20px;
       padding: 20px;
       display: flex;
       flex-direction: column;
       gap: 16px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-      position: relative;
-      overflow: hidden;
-      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+      box-shadow: var(--shadow);
+      transition: all 0.3s ease;
     }
 
     .widget:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 12px 32px rgba(239, 68, 68, 0.15);
-      border-color: rgba(239, 68, 68, 0.3);
+      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.08);
+      border-color: #dee2e6;
     }
 
-    /* Ambient Red Glow */
-    .widget::before {
-      content: ''; position: absolute; top: -50px; right: -50px; width: 120px; height: 120px;
-      background: var(--yt-red); filter: blur(70px); opacity: 0.15; pointer-events: none;
-    }
-
-    .header { display: flex; align-items: center; justify-content: space-between; position: relative; z-index: 2;}
-    .profile { display: flex; align-items: center; gap: 10px; }
+    .header { display: flex; align-items: center; justify-content: space-between; }
+    
+    .profile { display: flex; align-items: center; gap: 12px; }
     
     .avatar { 
-      width: 42px; height: 42px; border-radius: 50%; 
-      border: 2px solid var(--surface); object-fit: cover; background: var(--surface);
+      width: 44px; height: 44px; border-radius: 14px; 
+      object-fit: cover; background: var(--surface);
     }
     
     .info { display: flex; flex-direction: column; }
-    .name { color: var(--text-main); font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 130px; }
+    .name { color: var(--text-main); font-size: 14px; font-weight: 800; }
     .handle { color: var(--text-muted); font-size: 11px; font-weight: 600; }
     
     .live-badge {
       display: flex; align-items: center; gap: 5px;
-      background: rgba(239, 68, 68, 0.1); border: 1.5px solid rgba(239, 68, 68, 0.2);
-      padding: 4px 8px; border-radius: 999px; color: var(--yt-red); font-size: 9px; font-weight: 700; letter-spacing: 1px;
+      background: var(--surface); border: 1px solid var(--border);
+      padding: 4px 10px; border-radius: 8px; color: var(--text-main); 
+      font-size: 10px; font-weight: 800; letter-spacing: 0.5px;
     }
     
-    .dot { width: 6px; height: 6px; background: var(--yt-red); border-radius: 50%; animation: blink 1.5s infinite; box-shadow: 0 0 8px var(--yt-red); }
+    .dot { width: 6px; height: 6px; background: var(--yt-red); border-radius: 50%; box-shadow: 0 0 8px var(--yt-red); }
 
-    .stats { text-align: center; margin: 4px 0; position: relative; z-index: 2; }
-    .count { color: var(--text-main); font-family: 'Syne', sans-serif; font-size: 38px; font-weight: 800; line-height: 1; letter-spacing: -1px; }
-    .count-label { color: var(--text-muted); font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-top: 6px; }
+    .stats { text-align: center; margin: 4px 0; }
+    .count { color: var(--text-main); font-size: 40px; font-weight: 800; letter-spacing: -1px; line-height: 1; }
+    .count-label { color: var(--text-muted); font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-top: 4px; }
     
-    .progress-container { margin-top: 2px; position: relative; z-index: 2; }
-    .progress-bar { width: 100%; height: 6px; background: var(--surface); border-radius: 999px; overflow: hidden; }
-    .progress-fill { height: 100%; background: linear-gradient(90deg, #ff7b7b, var(--yt-red)); width: 0%; border-radius: 999px; transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1); }
-    .progress-labels { display: flex; justify-content: space-between; color: var(--text-muted); font-size: 10px; font-weight: 700; margin-top: 8px; }
+    .progress-container { margin-top: 4px; }
+    .progress-bar { width: 100%; height: 6px; background: var(--surface); border-radius: 999px; overflow: hidden; border: 1px solid var(--border); }
+    .progress-fill { height: 100%; background: var(--yt-red); width: 0%; border-radius: 999px; transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1); }
+    .progress-labels { display: flex; justify-content: space-between; color: var(--text-muted); font-size: 9px; font-weight: 700; margin-top: 6px; }
 
     .sub-btn {
       display: flex; align-items: center; justify-content: center; gap: 8px;
-      background: var(--text-main); color: var(--bg); font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 800; letter-spacing: 0.5px;
-      padding: 12px; border-radius: 12px; text-decoration: none; transition: all 0.2s; border: none; cursor: pointer; position: relative; z-index: 2;
+      background: var(--text-main); color: #ffffff; font-size: 13px; font-weight: 800;
+      padding: 12px; border-radius: 12px; text-decoration: none; transition: all 0.2s;
     }
     
-    .sub-btn:hover { background: var(--yt-red); color: white; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(239, 68, 68, 0.25); }
-    .sub-btn svg { width: 16px; height: 16px; fill: currentColor; }
-
-    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+    .sub-btn:hover { background: var(--yt-red); transform: translateY(-1px); }
   </style>
 </head>
 <body>
@@ -89,7 +85,7 @@
   <div class="widget">
     <div class="header">
       <div class="profile">
-        <img id="yt-avatar" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%23241f31' width='100' height='100'/></svg>" alt="Avatar" class="avatar">
+        <img id="yt-avatar" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%23f8f9fa' width='100' height='100'/></svg>" alt="Avatar" class="avatar">
         <div class="info">
           <span id="yt-name" class="name">Loading...</span>
           <span class="handle">@sortofdev0</span>
@@ -109,35 +105,25 @@
       </div>
       <div class="progress-labels">
         <span id="prog-current">0</span>
-        <span id="prog-goal">Goal: --</span>
+        <span id="prog-goal">Goal: 25</span>
       </div>
     </div>
 
     <a href="https://www.youtube.com/@sortofdev0?sub_confirmation=1" target="_blank" rel="noopener" class="sub-btn">
-      <svg viewBox="0 0 24 24"><path d="M21.582 6.186a2.784 2.784 0 0 0-1.956-1.964C17.9 3.75 12 3.75 12 3.75s-5.9 0-7.626.472A2.784 2.784 0 0 0 2.418 6.186C2 7.92 2 12 2 12s0 4.08.418 5.814a2.784 2.784 0 0 0 1.956 1.964C6.1 20.25 12 20.25 12 20.25s5.9 0 7.626-.472a2.784 2.784 0 0 0 1.956-1.964C22 16.08 22 12 22 12s0-4.08-.418-5.814zM9.99 15.25V8.75L15.35 12 9.99 15.25z"/></svg>
-      SUBSCRIBE NOW
+      SUBSCRIBE TO CHANNEL
     </a>
   </div>
 
   <script>
     const GOOGLE_API_KEY = "AIzaSyAmJzKU1txxHAL_Xeu-owQ2DFVeC8j8tF0";
     const YT_CHANNEL_ID  = "UC8eEGtjt9tW3jpkXucPBvvA";
-    
-    // Function to calculate the next clean milestone (e.g., 850 -> 1000, 1200 -> 2000)
-    function getNextMilestone(current) {
-      if (current < 100) return 100;
-      if (current < 1000) return Math.ceil(current / 100) * 100;
-      if (current < 10000) return Math.ceil(current / 1000) * 1000;
-      return Math.ceil(current / 10000) * 10000;
-    }
+    const CUSTOM_GOAL    = 25; // Updated to 25 as requested
 
-    // Number counting animation
     function animateValue(obj, start, end, duration) {
       let startTimestamp = null;
       const step = (timestamp) => {
         if (!startTimestamp) startTimestamp = timestamp;
         const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-        // easeOutQuart
         const easeProgress = 1 - Math.pow(1 - progress, 4);
         obj.innerHTML = Math.floor(easeProgress * (end - start) + start).toLocaleString();
         if (progress < 1) window.requestAnimationFrame(step);
@@ -147,43 +133,33 @@
 
     async function fetchYouTubeData() {
       try {
-        // We added "snippet" to the part request to get the avatar and name
         const r = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=statistics,snippet&id=${YT_CHANNEL_ID}&key=${GOOGLE_API_KEY}`);
         if (!r.ok) throw new Error('API error');
-        
         const d = await r.json();
         
         if (d.items?.length) {
           const channel = d.items[0];
           const subCount = Number(channel.statistics.subscriberCount);
           
-          // Update Avatar & Name
           document.getElementById('yt-avatar').src = channel.snippet.thumbnails.default.url;
           document.getElementById('yt-name').textContent = channel.snippet.title;
-
-          // Animate the big number
           animateValue(document.getElementById('yt-count'), 0, subCount, 2000);
           
-          // Calculate and set Progress Bar
-          const goal = getNextMilestone(subCount);
-          const percentage = Math.min((subCount / goal) * 100, 100);
-          
+          const percentage = Math.min((subCount / CUSTOM_GOAL) * 100, 100);
           document.getElementById('prog-current').textContent = subCount.toLocaleString();
-          document.getElementById('prog-goal').textContent = `Goal: ${goal.toLocaleString()}`;
+          document.getElementById('prog-goal').textContent = `Goal: ${CUSTOM_GOAL}`;
           
-          // Small delay so the bar fills up smoothly after load
           setTimeout(() => {
             document.getElementById('yt-progress').style.width = `${percentage}%`;
           }, 300);
         }
       } catch(e) {
-        document.getElementById('yt-count').textContent = 'LIVE';
-        document.getElementById('yt-name').textContent = 'SortOfDev';
+        document.getElementById('yt-count').textContent = '---';
       }
     }
     
     fetchYouTubeData();
-    setInterval(fetchYouTubeData, 120000); // Refreshes every 2 mins
+    setInterval(fetchYouTubeData, 120000);
   </script>
 </body>
 </html>
