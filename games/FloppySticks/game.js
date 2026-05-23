@@ -264,20 +264,18 @@ function spawnPickup(t,x){
   });
 }
 
-// ── Firebase W/L save ─────────────────────────────────────────────────
+// ── Firebase W/L save — ONLINE only, never vs AI bot ─────────────────
 async function _save(){
-  if(saved)return;saved=true;
+  if(saved)return; saved=true;
+  if(!wasOnline)return; // never save W/L for bot fights
+  const u=window.FB?.currentUser?.();
+  if(!u)return;
   const won=pScore>=MAX_PTS;
-  try{await window.FS.saveResult(won);}catch(e){console.warn('[FS]',e.message);}
-  // refresh W/L display on menu after save
-  const u=window.FS.currentUser();
-  if(u){
-    const s=await window.FS.getStats(u.uid).catch(()=>({w:0,l:0}));
-    showWLMenu(s.w||0,s.l||0);
-  }
-}
-function showWLMenu(w,l){
-  if(typeof showWL==='function')showWL(w,l);
+  try{
+    await window.FB.recordMatch(u.uid,won);
+    const s=await window.FB.getMatchStats(u.uid).catch(()=>({w:0,l:0}));
+    if(typeof showWL==='function')showWL(s.w||0,s.l||0);
+  }catch(e){console.warn('[FB] _save:',e.message);}
 }
 
 // ── Start ─────────────────────────────────────────────────────────────

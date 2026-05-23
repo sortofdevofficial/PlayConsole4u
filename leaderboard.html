@@ -23,12 +23,12 @@ body::after{content:'';position:fixed;top:-80px;right:-80px;width:420px;height:4
 .topbar{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:13px 24px;background:rgba(244,242,238,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);}
 .logo{display:flex;align-items:center;gap:9px;font-family:'Syne',sans-serif;font-size:13px;font-weight:800;letter-spacing:3px;color:var(--text);text-decoration:none;}
 .logo-box{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 3px 10px rgba(91,58,247,.28);flex-shrink:0;}
-.back-lnk{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--text2);text-decoration:none;padding:6px 12px;border-radius:9px;border:1.5px solid var(--border);background:var(--surface);transition:all .16s ease;box-shadow:var(--shadow);}
+.back-lnk{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--text2);text-decoration:none;padding:6px 12px;border-radius:9px;border:1.5px solid var(--border);background:var(--surface);transition:all .16s;box-shadow:var(--shadow);}
 .back-lnk:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-1px);box-shadow:var(--shadow2)}
 
 #signin-strip{display:none;background:linear-gradient(135deg,rgba(91,58,247,.06),rgba(139,111,255,.04));border-bottom:1px solid rgba(91,58,247,.12);padding:10px 24px;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
 #signin-strip span{font-size:12px;font-weight:600;color:var(--accent)}
-#signin-strip button{display:flex;align-items:center;gap:8px;background:var(--surface);color:var(--text);border:1.5px solid var(--border);padding:7px 14px;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;cursor:pointer;transition:all .15s ease;box-shadow:var(--shadow);white-space:nowrap;}
+#signin-strip button{display:flex;align-items:center;gap:8px;background:var(--surface);color:var(--text);border:1.5px solid var(--border);padding:7px 14px;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;box-shadow:var(--shadow);white-space:nowrap;}
 #signin-strip button:hover{border-color:var(--accent);box-shadow:var(--shadow2);transform:translateY(-1px)}
 #signin-strip button img{width:13px;height:13px}
 
@@ -37,13 +37,27 @@ body::after{content:'';position:fixed;top:-80px;right:-80px;width:420px;height:4
 h1{font-family:'Syne',sans-serif;font-size:clamp(26px,5vw,42px);font-weight:800;letter-spacing:-1px;color:var(--text);margin-bottom:7px;animation:fadeUp .4s .04s ease both;}
 .pg-sub{font-size:14px;color:var(--text2);margin-bottom:26px;animation:fadeUp .4s .08s ease both;}
 
+/* Mode switcher — CP / Floppy tabs */
+.mode-tabs{display:flex;gap:8px;margin-bottom:22px;animation:fadeUp .4s .1s ease both;}
+.mode-tab{padding:9px 20px;border-radius:999px;font-size:12px;font-weight:700;border:1.5px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;box-shadow:var(--shadow);}
+.mode-tab:hover{border-color:var(--ac);color:var(--ac)}
+.mode-tab.active{color:#fff;border-color:var(--ac);background:var(--ac);box-shadow:0 4px 14px color-mix(in srgb,var(--ac) 28%,transparent);}
+
+/* Level tabs (CP only) */
 .tabs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:18px;animation:fadeUp .4s .12s ease both;}
-.tab{padding:7px 16px;border-radius:999px;font-size:11px;font-weight:700;border:1.5px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s ease;box-shadow:var(--shadow);}
+.tab{padding:7px 16px;border-radius:999px;font-size:11px;font-weight:700;border:1.5px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;box-shadow:var(--shadow);}
 .tab:hover{border-color:var(--ac);color:var(--ac);transform:translateY(-1px)}
 .tab.active{color:#fff;border-color:var(--ac);background:var(--ac);box-shadow:0 4px 14px color-mix(in srgb,var(--ac) 28%,transparent);}
 
+/* Floppy sub-tabs (Most Wins / Most Losses) */
+.fs-tabs{display:flex;gap:7px;margin-bottom:18px;animation:fadeUp .4s .12s ease both;}
+.fs-tab{padding:7px 18px;border-radius:999px;font-size:11px;font-weight:700;border:1.5px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;box-shadow:var(--shadow);}
+.fs-tab:hover{border-color:var(--ac);color:var(--ac)}
+.fs-tab.active{color:#fff;border-color:var(--ac);background:var(--ac);box-shadow:0 4px 14px color-mix(in srgb,var(--ac) 28%,transparent);}
+
 .level-hero{display:flex;align-items:center;gap:14px;padding:16px 20px;background:var(--surface);border:1.5px solid var(--border);border-radius:16px;margin-bottom:18px;box-shadow:var(--shadow);animation:fadeUp .4s .15s ease both;}
-.level-circle{width:50px;height:50px;border-radius:14px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;border:2px solid;transition:all .2s ease;}
+.level-circle{width:50px;height:50px;border-radius:14px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;border:2px solid;transition:all .2s;}
+.lc-icon{font-size:26px;line-height:1;}
 .lc-num{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;line-height:1;}
 .lc-lbl{font-size:8px;font-weight:700;letter-spacing:1px;opacity:.7;}
 .level-meta h3{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--text)}
@@ -53,14 +67,22 @@ h1{font-family:'Syne',sans-serif;font-size:clamp(26px,5vw,42px);font-weight:800;
 .pc-lbl{font-size:10px;color:var(--text3);font-weight:600}
 
 .lb-wrap{background:var(--surface);border:1.5px solid var(--border);border-radius:20px;overflow:hidden;margin-bottom:18px;min-height:140px;box-shadow:var(--shadow2);animation:fadeUp .4s .18s ease both;}
-.lb-head{display:grid;grid-template-columns:52px 1fr 110px 80px;padding:11px 18px;background:var(--bg2);border-bottom:1.5px solid var(--border);font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text3);}
-.lb-row{display:grid;grid-template-columns:52px 1fr 110px 80px;padding:12px 18px;border-bottom:1px solid var(--border);align-items:center;transition:background .12s ease;}
-.lb-row:last-child{border-bottom:none}
-.lb-row:hover{background:rgba(91,58,247,.03)}
-.lb-row.me{background:color-mix(in srgb,var(--ac) 6%,transparent)!important;border-left:3px solid var(--ac);}
-@media(max-width:480px){
-  .lb-head,.lb-row{grid-template-columns:44px 1fr 90px}
-  .col-date,.dcell{display:none}
+
+/* CP columns: Rank / Player / Time / Date */
+.lb-head-cp{display:grid;grid-template-columns:52px 1fr 110px 80px;padding:11px 18px;background:var(--bg2);border-bottom:1.5px solid var(--border);font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text3);}
+.lb-row-cp{display:grid;grid-template-columns:52px 1fr 110px 80px;padding:12px 18px;border-bottom:1px solid var(--border);align-items:center;transition:background .12s;}
+/* FS columns: Rank / Player / Wins / Losses / Ratio */
+.lb-head-fs{display:grid;grid-template-columns:52px 1fr 70px 70px 70px;padding:11px 18px;background:var(--bg2);border-bottom:1.5px solid var(--border);font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text3);}
+.lb-row-fs{display:grid;grid-template-columns:52px 1fr 70px 70px 70px;padding:12px 18px;border-bottom:1px solid var(--border);align-items:center;transition:background .12s;}
+
+.lb-row-cp:last-child,.lb-row-fs:last-child{border-bottom:none}
+.lb-row-cp:hover,.lb-row-fs:hover{background:rgba(91,58,247,.03)}
+.lb-row-cp.me,.lb-row-fs.me{background:color-mix(in srgb,var(--ac) 6%,transparent)!important;border-left:3px solid var(--ac);}
+
+@media(max-width:520px){
+  .lb-head-cp,.lb-row-cp{grid-template-columns:44px 1fr 90px}
+  .lb-head-fs,.lb-row-fs{grid-template-columns:44px 1fr 55px 55px}
+  .col-date,.dcell,.col-ratio,.rcell{display:none}
 }
 .rank{font-family:'DM Mono',monospace;font-size:12px;font-weight:500;color:var(--text3);text-align:center;}
 .rank.top{font-size:18px}
@@ -70,13 +92,16 @@ h1{font-family:'Syne',sans-serif;font-size:clamp(26px,5vw,42px);font-weight:800;
 .you-tag{font-size:8px;font-weight:700;background:var(--ac);color:#fff;padding:2px 6px;border-radius:4px;margin-left:6px;flex-shrink:0;}
 .tcell{font-family:'DM Mono',monospace;font-size:13px;color:var(--ac);text-align:right;font-weight:500;}
 .dcell{font-size:10px;color:var(--text3);text-align:right;font-weight:500}
+.wcell{font-family:'DM Mono',monospace;font-size:13px;color:#16a34a;text-align:right;font-weight:700;}
+.lcell{font-family:'DM Mono',monospace;font-size:13px;color:#e74c3c;text-align:right;font-weight:700;}
+.rcell{font-family:'DM Mono',monospace;font-size:12px;color:#5b3af7;text-align:right;font-weight:500;}
 
 .lb-state{padding:52px 20px;text-align:center;color:var(--text3);font-size:12px;font-weight:600;letter-spacing:1.5px;display:flex;align-items:center;justify-content:center;gap:10px;}
 .spin-ring{width:16px;height:16px;border-radius:50%;border:2px solid var(--border);border-top-color:var(--accent);animation:spin .65s linear infinite;flex-shrink:0;}
 @keyframes spin{to{transform:rotate(360deg)}}
 
 .pag{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;animation:fadeUp .4s .22s ease both;}
-.pg-btn{padding:8px 18px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface);color:var(--text2);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s ease;box-shadow:var(--shadow);}
+.pg-btn{padding:8px 18px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface);color:var(--text2);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;box-shadow:var(--shadow);}
 .pg-btn:hover:not(:disabled){border-color:var(--ac);color:var(--ac);transform:translateY(-1px);box-shadow:var(--shadow2)}
 .pg-btn:disabled{opacity:.3;cursor:not-allowed}
 .pg-info{font-size:11px;font-weight:600;color:var(--text3);padding:0 4px}
@@ -84,29 +109,58 @@ h1{font-family:'Syne',sans-serif;font-size:clamp(26px,5vw,42px);font-weight:800;
 </style>
 </head>
 <body>
+
 <div class="topbar">
   <a class="logo" href="index.html"><div class="logo-box">🎮</div>PLAYCONSOLE4U</a>
   <a class="back-lnk" href="index.html">← Home</a>
 </div>
+
 <div id="signin-strip">
   <span>✦ Sign in to see your row highlighted</span>
   <button onclick="doSignIn()">
     <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="">Sign in with Google
   </button>
 </div>
+
 <div class="page">
   <div class="pg-eyebrow">🏆 Leaderboard</div>
-  <h1>Top Times</h1>
-  <p class="pg-sub">Best completion times per level — live from Firestore.</p>
-  <div class="tabs" id="tabs"></div>
-  <div class="level-hero">
-    <div class="level-circle" id="lc">
-      <div class="lc-num" id="lc-num">1</div>
-      <div class="lc-lbl" id="lc-lbl">LEVEL</div>
-    </div>
-    <div class="level-meta"><h3 id="lm-title">Level 1</h3><p>Cube Platformer · Best times</p></div>
-    <div class="player-count"><div class="pc-val" id="pc-val">—</div><div class="pc-lbl">Players</div></div>
+  <h1>Top Players</h1>
+  <p class="pg-sub" id="pg-sub">Best times and match records — live from Firestore.</p>
+
+  <!-- Mode: CP / FloppySticks -->
+  <div class="mode-tabs">
+    <button class="mode-tab active" id="mt-cp"     onclick="setMode('cp')">🟦 Cube Platformer</button>
+    <button class="mode-tab"        id="mt-floppy" onclick="setMode('floppy')">🥊 FloppySticks</button>
   </div>
+
+  <!-- CP: level tabs -->
+  <div id="cp-section">
+    <div class="tabs" id="lvl-tabs"></div>
+    <div class="level-hero">
+      <div class="level-circle" id="lc">
+        <div class="lc-num" id="lc-num">1</div>
+        <div class="lc-lbl" id="lc-lbl">LEVEL</div>
+      </div>
+      <div class="level-meta"><h3 id="lm-title">Level 1</h3><p>Cube Platformer · Best times</p></div>
+      <div class="player-count"><div class="pc-val" id="pc-val">—</div><div class="pc-lbl">Players</div></div>
+    </div>
+  </div>
+
+  <!-- FloppySticks: wins/losses tabs -->
+  <div id="fs-section" style="display:none">
+    <div class="fs-tabs">
+      <button class="fs-tab active" id="ft-wins"   onclick="setFsTab('wins')">🏆 Most Wins</button>
+      <button class="fs-tab"        id="ft-losses" onclick="setFsTab('losses')">💀 Most Losses</button>
+    </div>
+    <div class="level-hero">
+      <div class="level-circle" id="fs-lc" style="background:rgba(46,204,113,.1);border-color:rgba(46,204,113,.25)">
+        <div class="lc-icon" id="fs-icon">🏆</div>
+      </div>
+      <div class="level-meta"><h3 id="fs-title">Most Wins</h3><p id="fs-meta">FloppySticks Online · Top 100</p></div>
+      <div class="player-count"><div class="pc-val" id="fs-pc">—</div><div class="pc-lbl">Players</div></div>
+    </div>
+  </div>
+
   <div class="lb-wrap" id="lb-box"><div class="lb-state"><div class="spin-ring"></div>LOADING</div></div>
   <div class="pag" id="pag"></div>
 </div>
@@ -119,7 +173,9 @@ h1{font-family:'Syne',sans-serif;font-size:clamp(26px,5vw,42px);font-weight:800;
 const ACCENTS={1:'#f97316',2:'#22c55e',3:'#f43f5e',4:'#06b6d4',5:'#a855f7'};
 const LVL_NAMES={1:'The Beginning',2:'Green Rush',3:'Red Zone',4:'Cyan Surge',5:'Purple Haze'};
 const PER=10;
-let currentLvl=1,rows=[],page=1,currentUid=null;
+let mode='cp';         // 'cp' | 'floppy'
+let fsTab='wins';      // 'wins' | 'losses'
+let currentLvl=1, rows=[], page=1, currentUid=null;
 
 function setAc(ac){document.documentElement.style.setProperty('--ac',ac);}
 function fmt(s){if(s==null)return'—';return s<60?s.toFixed(3)+'s':`${Math.floor(s/60)}m ${(s%60).toFixed(3)}s`;}
@@ -141,28 +197,126 @@ function avatarHtml(name){
   return`<div class="av" style="background:hsl(${hue},62%,44%)">${esc(initials(name))}</div>`;
 }
 
-function updateHero(){
+// ── Mode switching ─────────────────────────────────────────────────────
+function setMode(m){
+  mode=m;
+  document.getElementById('mt-cp').classList.toggle('active',m==='cp');
+  document.getElementById('mt-floppy').classList.toggle('active',m==='floppy');
+  document.getElementById('cp-section').style.display=m==='cp'?'':'none';
+  document.getElementById('fs-section').style.display=m==='floppy'?'':'none';
+  if(m==='cp'){setAc(ACCENTS[currentLvl]);loadCpLevel(currentLvl);}
+  else{setAc('#2ecc71');loadFloppy(fsTab);}
+}
+
+// ── CP ─────────────────────────────────────────────────────────────────
+function buildLvlTabs(){
+  const el=document.getElementById('lvl-tabs');el.innerHTML='';
+  for(let i=1;i<=5;i++){
+    const b=document.createElement('button');
+    b.className='tab'+(i===currentLvl?' active':'');
+    b.textContent='LV '+i;b.onclick=()=>loadCpLevel(i);
+    el.appendChild(b);
+  }
+}
+
+function updateCpHero(){
   const ac=ACCENTS[currentLvl];
-  const lc=document.getElementById('lc');
   document.getElementById('lc-num').textContent=currentLvl;
   document.getElementById('lc-num').style.color=ac;
   document.getElementById('lc-lbl').style.color=ac;
   document.getElementById('lm-title').textContent='Level '+currentLvl+' — '+(LVL_NAMES[currentLvl]||'');
   document.getElementById('pc-val').textContent=rows.length||'0';
+  const lc=document.getElementById('lc');
   lc.style.background=`color-mix(in srgb,${ac} 10%,transparent)`;
   lc.style.borderColor=`color-mix(in srgb,${ac} 22%,transparent)`;
 }
 
-function buildTabs(){
-  const el=document.getElementById('tabs');el.innerHTML='';
-  for(let i=1;i<=5;i++){
-    const b=document.createElement('button');
-    b.className='tab'+(i===currentLvl?' active':'');
-    b.textContent='LV '+i;
-    b.onclick=()=>loadLevel(i);
-    el.appendChild(b);
-  }
+async function loadCpLevel(n){
+  currentLvl=n;page=1;setAc(ACCENTS[n]);buildLvlTabs();
+  document.getElementById('lb-box').innerHTML='<div class="lb-state"><div class="spin-ring"></div>LOADING</div>';
+  document.getElementById('pag').innerHTML='';
+  try{rows=await window.FB.getLeaderboard(n);renderCpPage();}
+  catch(e){document.getElementById('lb-box').innerHTML='<div class="lb-state">Failed to load.</div>';}
 }
+
+function renderCpPage(){
+  updateCpHero();
+  const box=document.getElementById('lb-box');
+  if(!rows.length){box.innerHTML='<div class="lb-state">No times yet — be the first!</div>';document.getElementById('pag').innerHTML='';return;}
+  const start=(page-1)*PER,slice=rows.slice(start,start+PER);
+  let html=`<div class="lb-head-cp"><div>Rank</div><div>Player</div><div style="text-align:right">Time</div><div class="col-date" style="text-align:right">Date</div></div>`;
+  slice.forEach((r,idx)=>{
+    const gi=start+idx,isMe=r.uid===currentUid;
+    html+=`<div class="lb-row-cp${isMe?' me':''}">
+      ${rankHtml(gi)}
+      <div class="player">${avatarHtml(r.name)}<span class="pname">${esc(r.name)}${isMe?'<span class="you-tag">YOU</span>':''}</span></div>
+      <div class="tcell">${fmt(r.t)}</div>
+      <div class="dcell">${fmtDate(r.ts)}</div>
+    </div>`;
+  });
+  box.innerHTML=html;renderPag();
+}
+
+// ── FloppySticks W/L ───────────────────────────────────────────────────
+function setFsTab(t){
+  fsTab=t;
+  document.getElementById('ft-wins').classList.toggle('active',t==='wins');
+  document.getElementById('ft-losses').classList.toggle('active',t==='losses');
+  const isWins=t==='wins';
+  document.getElementById('fs-icon').textContent=isWins?'🏆':'💀';
+  document.getElementById('fs-title').textContent=isWins?'Most Wins':'Most Losses';
+  document.getElementById('fs-lc').style.background=isWins?'rgba(46,204,113,.1)':'rgba(231,76,60,.1)';
+  document.getElementById('fs-lc').style.borderColor=isWins?'rgba(46,204,113,.25)':'rgba(231,76,60,.25)';
+  setAc(isWins?'#16a34a':'#e74c3c');
+  loadFloppy(t);
+}
+
+async function loadFloppy(sortBy){
+  page=1;
+  document.getElementById('lb-box').innerHTML='<div class="lb-state"><div class="spin-ring"></div>LOADING</div>';
+  document.getElementById('pag').innerHTML='';
+  try{
+    // Fetch all users then read their G/FS doc
+    const db=firebase.firestore();
+    const users=await db.collection('users').get();
+    const raw=[];
+    await Promise.all(users.docs.map(ud=>
+      db.collection('users').doc(ud.id).collection('G').doc('FS').get()
+        .then(snap=>{
+          if(snap.exists){
+            const d=snap.data();
+            const w=d.w||0,l=d.l||0;
+            if(w>0||l>0) raw.push({uid:ud.id,name:ud.data().n||'Anonymous',w,l});
+          }
+        }).catch(()=>{})
+    ));
+    if(sortBy==='wins') rows=raw.sort((a,b)=>b.w-a.w||a.l-b.l).slice(0,100);
+    else                rows=raw.sort((a,b)=>b.l-a.l||a.w-b.w).slice(0,100);
+    document.getElementById('fs-pc').textContent=rows.length||'0';
+    renderFsPage();
+  }catch(e){document.getElementById('lb-box').innerHTML='<div class="lb-state">Failed to load.</div>';}
+}
+
+function renderFsPage(){
+  const box=document.getElementById('lb-box');
+  if(!rows.length){box.innerHTML='<div class="lb-state">No matches recorded yet!</div>';document.getElementById('pag').innerHTML='';return;}
+  const start=(page-1)*PER,slice=rows.slice(start,start+PER);
+  let html=`<div class="lb-head-fs"><div>Rank</div><div>Player</div><div style="text-align:right">Wins</div><div style="text-align:right">Losses</div><div class="col-ratio" style="text-align:right">Ratio</div></div>`;
+  slice.forEach((r,idx)=>{
+    const gi=start+idx,isMe=r.uid===currentUid;
+    const ratio=r.l>0?(r.w/r.l).toFixed(2):(r.w>0?'∞':'—');
+    html+=`<div class="lb-row-fs${isMe?' me':''}">
+      ${rankHtml(gi)}
+      <div class="player">${avatarHtml(r.name)}<span class="pname">${esc(r.name)}${isMe?'<span class="you-tag">YOU</span>':''}</span></div>
+      <div class="wcell">${r.w}</div>
+      <div class="lcell">${r.l}</div>
+      <div class="rcell col-ratio">${ratio}</div>
+    </div>`;
+  });
+  box.innerHTML=html;renderPag();
+}
+
+// ── Pagination ─────────────────────────────────────────────────────────
 function renderPag(){
   const total=Math.ceil(rows.length/PER);
   const el=document.getElementById('pag');
@@ -175,46 +329,26 @@ function renderPag(){
 function goPage(p){
   const total=Math.ceil(rows.length/PER);
   if(p<1||p>total)return;
-  page=p;renderPage();window.scrollTo({top:0,behavior:'smooth'});
-}
-function renderPage(){
-  const box=document.getElementById('lb-box');
-  updateHero();
-  if(!rows.length){
-    box.innerHTML='<div class="lb-state">No times yet — be the first!</div>';
-    document.getElementById('pag').innerHTML='';return;
-  }
-  const start=(page-1)*PER,slice=rows.slice(start,start+PER);
-  let html=`<div class="lb-head"><div>Rank</div><div>Player</div><div style="text-align:right">Time</div><div class="col-date" style="text-align:right">Date</div></div>`;
-  slice.forEach((r,idx)=>{
-    const gi=start+idx,isMe=r.uid===currentUid;
-    html+=`<div class="lb-row${isMe?' me':''}">
-      ${rankHtml(gi)}
-      <div class="player">${avatarHtml(r.name)}<span class="pname">${esc(r.name)}${isMe?'<span class="you-tag">YOU</span>':''}</span></div>
-      <div class="tcell">${fmt(r.t)}</div>
-      <div class="dcell">${fmtDate(r.ts)}</div>
-    </div>`;
-  });
-  box.innerHTML=html;renderPag();
-}
-
-async function loadLevel(n){
-  currentLvl=n;page=1;setAc(ACCENTS[n]);buildTabs();
-  document.getElementById('lb-box').innerHTML='<div class="lb-state"><div class="spin-ring"></div>LOADING</div>';
-  document.getElementById('pag').innerHTML='';
-  try{rows=await window.FB.getLeaderboard(n);renderPage();}
-  catch(e){document.getElementById('lb-box').innerHTML='<div class="lb-state">Failed to load.</div>';}
+  page=p;
+  if(mode==='cp')renderCpPage();else renderFsPage();
+  window.scrollTo({top:0,behavior:'smooth'});
 }
 
 async function doSignIn(){try{await window.FB.signInGoogle();}catch(e){}}
 
+// ── Auth init ──────────────────────────────────────────────────────────
 window.FB.onAuthChange(user=>{
   currentUid=user?user.uid:null;
   document.getElementById('signin-strip').style.display=user?'none':'flex';
-  loadLevel(currentLvl);
+  // Reload current view to highlight user row
+  if(mode==='cp')loadCpLevel(currentLvl);
+  else loadFloppy(fsTab);
 });
 
-setAc(ACCENTS[1]);buildTabs();
+// Boot
+setAc(ACCENTS[1]);
+buildLvlTabs();
+// Initial load triggered by onAuthChange
 </script>
 </body>
 </html>
