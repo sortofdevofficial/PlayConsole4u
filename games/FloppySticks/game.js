@@ -6,7 +6,7 @@
  * NO IIFE wrapper — variables must be global so stickman.js and network.js
  * can read/write gs, P, B, W, H, bul, pku, ptl, keys, shk, ps, bs, etc.
  *
- * Load order in HTML: stickman.js → network.js → game.js
+ * Load order in HTML: stickman.js → network.js → draw.js → game.js
  */
 
 'use strict';
@@ -224,52 +224,10 @@ var _nt = 0;  // frame counter for state throttle
 function loop() {
   requestAnimationFrame(loop);
 
-  ctx.fillStyle = '#87CEEB';
-  ctx.fillRect(0, 0, W, H);
-  ctx.save();
+  // 1. Process Environmental Layout & Background (Called from draw.js)
+  drawBackground();
 
-  // Screen shake
-  if (shk > 0) {
-    ctx.translate((Math.random() - .5) * shk, (Math.random() - .5) * shk);
-    shk *= .88;
-    if (shk < .5) shk = 0;
-  }
-
-  // Sky gradient overlay
-  var sg = ctx.createLinearGradient(0, H * .5, 0, H - 100);
-  sg.addColorStop(0, 'rgba(224,244,255,0)');
-  sg.addColorStop(1, 'rgba(224,244,255,.6)');
-  ctx.fillStyle = sg;
-  ctx.fillRect(0, H * .5, W, H);
-
-  // Clouds
-  ctx.fillStyle = 'rgba(255,255,255,.75)';
-  for (var ci = 0; ci < clouds.length; ci++) {
-    var c = clouds[ci];
-    c.x += c.sp;
-    if (c.x - c.sz > W) c.x = -c.sz;
-    ctx.beginPath();
-    ctx.arc(c.x,           c.y,           c.sz,       0, Math.PI * 2);
-    ctx.arc(c.x + c.sz*.6, c.y - c.sz*.2, c.sz * .75, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  // Background hills
-  ctx.fillStyle = '#9dc183';
-  ctx.beginPath(); ctx.moveTo(0, H);
-  for (var x = 0; x <= W; x += 40) ctx.lineTo(x, (H - 220) + Math.sin(x * .003) * 35);
-  ctx.lineTo(W, H); ctx.fill();
-
-  ctx.fillStyle = '#7da061';
-  ctx.beginPath(); ctx.moveTo(0, H);
-  for (var x = 0; x <= W; x += 35) ctx.lineTo(x, (H - 160) + Math.cos(x * .005) * 20);
-  ctx.lineTo(W, H); ctx.fill();
-
-  // Ground
-  ctx.fillStyle = '#27ae60'; ctx.fillRect(0, H - 100, W, 14);
-  ctx.fillStyle = '#795548'; ctx.fillRect(0, H -  86, W, 86);
-
-  // ── Active gameplay ─────────────────────────────────────────────────────
+  // ── Active gameplay calculations & updates ───────────────────────────────
   if (gs === 'BOT_MODE' || gs === 'ONLINE_MODE' || gs === 'MATCH_OVER') {
 
     // Drop timer tick
@@ -292,42 +250,35 @@ function loop() {
     if (gs === 'BOT_MODE') {
       B.update();
     } else if (!B.rd) {
-      // Interpolate remote opponent.
-      // B.nx / B.ny are set in screen-local space by network.js (yRel fix).
       if (B.nx !== null) {
         var dx = B.nx - B.x;
         B.x += Math.abs(dx) < 1 ? dx : dx * .4;
       }
       if (B.ny !== null) {
         if (Math.abs(B.ny - B.gy) < 3) {
-          B.y = B.gy;            // snap to ground — prevents micro-float
+          B.y = B.gy;
         } else {
           var dy = B.ny - B.y;
           B.y += Math.abs(dy) < 1 ? dy : dy * .4;
         }
       }
     } else {
-      B.update();   // ragdoll pieces still need physics
+      B.update();
     }
 
-    // Particles
+    // Process Particle Lifecycles
     for (var pi = ptl.length - 1; pi >= 0; pi--) {
       var p = ptl[pi];
       p.x += p.vx; p.y += p.vy; p.vy += .05; p.lf--;
-      if (p.lf <= 0 || p.x < -10 || p.x > W + 10 || p.y > H + 10) { ptl.splice(pi, 1); continue; }
-      ctx.globalAlpha = p.lf / p.mx;
-      ctx.fillStyle   = p.c;
-      ctx.beginPath(); ctx.arc(p.x, p.y, p.sz, 0, Math.PI * 2); ctx.fill();
+      if (p.lf <= 0 || p.x < -10 || p.x > W + 10 || p.y > H + 10) { ptl.splice(pi, 1); }
     }
-    ctx.globalAlpha = 1;
 
-    // Bullets
+    // Process Bullet Logic & Collision
     for (var bi = bul.length - 1; bi >= 0; bi--) {
       var b = bul[bi];
       b.x += b.vx;
       if (b.x < -20 || b.x > W + 20) { bul.splice(bi, 1); continue; }
-      ctx.fillStyle = '#e67e22';
-      ctx.beginPath(); ctx.arc(b.x, b.y, 3, 0, Math.PI * 2); ctx.fill();
+      
       var tgt = b.bot ? P : B;
       if (!tgt.rd && b.x > tgt.x - 28 && b.x < tgt.x + 28 && b.y < tgt.y && b.y > tgt.y - 65) {
         var dmg = 12, kb = b.vx > 0 ? 1 : -1;
@@ -337,20 +288,10 @@ function loop() {
       }
     }
 
-    // Pickups
+    // Process Pickups Logic & Collision
     for (var qi = pku.length - 1; qi >= 0; qi--) {
       var pk = pku[qi];
       pk.bob += .06;
-      var by = pk.y + Math.sin(pk.bob) * 5;
-      ctx.strokeStyle = 'rgba(0,0,0,.12)'; ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.ellipse(pk.x, pk.y + 12, 14, 3, 0, 0, Math.PI * 2); ctx.stroke();
-      ctx.fillStyle   = '#e8b84b'; ctx.fillRect(pk.x - 12, by - 12, 24, 24);
-      ctx.strokeStyle = '#c49a2a'; ctx.lineWidth = 2; ctx.strokeRect(pk.x - 12, by - 12, 24, 24);
-      ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.moveTo(pk.x - 12, by); ctx.lineTo(pk.x + 12, by); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(pk.x, by - 12); ctx.lineTo(pk.x, by + 12); ctx.stroke();
-      ctx.fillStyle = '#2c3e50'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText(pk.type.toUpperCase(), pk.x, by - 15);
       var picked = false;
       for (var ji = 0; ji < 2; ji++) {
         var ent = ji === 0 ? P : B, isB = ji === 1;
@@ -364,15 +305,20 @@ function loop() {
       if (picked) continue;
     }
 
-    P.draw(); B.draw();
+    // 2. Render Projectiles, Weapons & Item boxes (Called from draw.js)
+    drawActiveGameplayElements();
 
-    // Send state to opponent (every 2 frames)
+    // 3. Render Stickmen models (Methods are native inside stickman.js)
+    P.draw(); 
+    B.draw();
+
+    // Send status via network connection (Throttle handling)
     if (gs === 'ONLINE_MODE' && conn && conn.open && ++_nt >= 2) {
       _nt = 0;
       var m = {
         type: 'state',
         x:    P.x,
-        yRel: P.y - P.gy,   // normalised: 0 = on ground, negative = airborne
+        yRel: P.y - P.gy,
         vx:   P.vx, vy: P.vy,
         fl:   P.fl, at: P.at, gr: P.gr, sy: P.sq,
         ia:   P.atk, as: P.asw, 'if': P.flp, fa: P.fa,
@@ -386,22 +332,8 @@ function loop() {
     }
   }
 
-  // ── Match over overlay ──────────────────────────────────────────────────
-  if (gs === 'MATCH_OVER') {
-    ctx.fillStyle = 'rgba(0,0,0,.48)';
-    ctx.fillRect(0, 0, W, H);
-    ctx.textAlign = 'center';
-    var win = ps >= MX;
-    ctx.font      = 'bold ' + Math.min(58, W / 7) + "px 'Segoe UI',sans-serif";
-    ctx.fillStyle = win ? '#2ecc71' : '#e74c3c';
-    ctx.fillText(win ? '🎉 YOU WIN!' : '😢 YOU LOSE!', W / 2, H / 2 - 36);
-    ctx.font      = 'bold ' + Math.min(26, W / 20) + "px 'Segoe UI',sans-serif";
-    ctx.fillStyle = '#fff';
-    ctx.fillText('You: ' + ps + '  —  ' + (wasOnline ? 'Opponent' : 'AI') + ': ' + bs, W / 2, H / 2 + 12);
-    ctx.font      = Math.min(15, W / 30) + "px 'Segoe UI',sans-serif";
-    ctx.fillStyle = 'rgba(255,255,255,.65)';
-    ctx.fillText(mob ? 'Tap to return' : 'Press [ENTER] to return', W / 2, H / 2 + 50);
-  }
+  // 4. Draw Match Over Text Overlays if triggered (Called from draw.js)
+  drawMatchOverOverlay();
 
   ctx.restore();
 }
