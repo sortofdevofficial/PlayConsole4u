@@ -65,6 +65,7 @@ header{display:flex;align-items:center;justify-content:space-between;flex-wrap:w
 .cimg img{width:100%;height:100%;object-fit:cover;transition:transform .28s ease;}
 .card:hover .cimg img{transform:scale(1.04)}
 .cimg-placeholder{width:100%;height:100%;min-height:120px;display:flex;align-items:center;justify-content:center;font-size:40px;}
+.cimg-placeholder-fs{width:100%;height:100%;min-height:120px;display:flex;align-items:center;justify-content:center;font-size:40px;}
 .cbody{padding:18px 20px;flex:1;display:flex;flex-direction:column;justify-content:center;}
 .ctag{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--green);margin-bottom:5px;display:flex;align-items:center;gap:5px;}
 .ctag::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--green);display:inline-block;}
@@ -84,8 +85,66 @@ header{display:flex;align-items:center;justify-content:space-between;flex-wrap:w
 .discord-col{display:flex;flex-direction:column;gap:14px;position:sticky;top:20px;}
 .discord-label{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--text3);}
 .discord-label::before{content:'';width:8px;height:8px;border-radius:50%;background:#5865f2;flex-shrink:0;box-shadow:0 0 0 3px rgba(88,101,242,.18);}
-.discord-card{background:var(--surface);border:1.5px solid var(--border);border-radius:20px;overflow:hidden;box-shadow:var(--shadow2);}
-.discord-card iframe{display:block;width:100%;height:415px;border:none;}
+
+/* Sleek Procedural Styles for custom internal widget UI */
+.custom-discord-widget {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 20px;
+  padding: 20px;
+  box-shadow: var(--shadow2);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.wd-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.wd-name {
+  font-family: 'Syne', sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text);
+}
+.wd-status {
+  background: rgba(22, 163, 74, 0.1);
+  color: var(--green);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(22, 163, 74, 0.2);
+}
+.wd-list {
+  max-height: 220px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-right: 4px;
+}
+.wd-list::-webkit-scrollbar { width: 4px; }
+.wd-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 999px; }
+.wd-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0;
+}
+.wd-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1.5px solid rgba(22, 163, 74, 0.5);
+}
+.wd-username {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text2);
+}
 .discord-join{background:linear-gradient(135deg,#5865f2,#7289da);color:#fff;border:none;width:100%;padding:13px;border-radius:13px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;cursor:pointer;transition:filter .18s,transform .18s,box-shadow .18s;box-shadow:0 4px 18px rgba(88,101,242,.28);display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;}
 .discord-join:hover{filter:brightness(1.08);transform:translateY(-2px);box-shadow:0 8px 28px rgba(88,101,242,.35)}
 
@@ -243,7 +302,7 @@ header{display:flex;align-items:center;justify-content:space-between;flex-wrap:w
           onclick="openSB(this,'FLOPPYSTICKS','A wild brawl set in nature. Beat the AI or challenge a friend locally — grab weapons, go ragdoll, and win 3 rounds!','images/FloppySticks/floppysticks.png','games/FloppySticks/game.html',['BRAWLER','LOCAL PVP','WEAPONS','RAGDOLL'],floppyLogs)">
           <div class="cimg" style="background:linear-gradient(135deg,#dcfce7,#bbf7d0)">
             <img src="images/FloppySticks/floppysticks.png" alt="FloppySticks" loading="lazy" decoding="async"
-                 onerror="this.style.display='none';this.parentElement.innerHTML='<div class=cimg-placeholder>🥊</div>'">
+                 onerror="this.style.display='none';this.parentElement.innerHTML='<div class=cimg-placeholder-fs>🥊</div>'">
           </div>
           <div class="cbody">
             <div class="ctag">READY</div>
@@ -271,21 +330,17 @@ header{display:flex;align-items:center;justify-content:space-between;flex-wrap:w
         <div id="yt-count" class="yt-number">—</div>
         <a href="https://www.youtube.com/@sortofdev0" target="_blank" rel="noopener" class="yt-btn">▶ &nbsp; SUBSCRIBE</a>
       </div>
-      <div class="discord-label">Discord Community</div>
+      
+<div class="discord-label">Discord Community</div>
       <div class="discord-card">
-        <iframe src="https://discord.com/widget?id=1503297362246897694&theme=dark"
-          width="100%" height="415" allowtransparency="true" frameborder="0"
-          sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts">
-        </iframe>
+        <iframe src="widgets/discord.html" style="display:block; width:100%; height:415px; border:none; background:transparent;"></iframe>
       </div>
-      <a class="discord-join" href="https://discord.gg/dS4pgC9J5H" target="_blank" rel="noopener">
-        <span style="font-size:18px">💬</span> Join our Discord
-      </a>
+      </div>
+
     </div>
   </div>
 </div>
 
-<!-- SIDEBAR -->
 <div id="veil" onclick="closeSB()"></div>
 <div id="sidebar">
   <button class="sb-x" onclick="closeSB()">✕</button>
@@ -298,7 +353,6 @@ header{display:flex;align-items:center;justify-content:space-between;flex-wrap:w
   <button class="sb-play" onclick="if(goHref)location.href=goHref">▶ &nbsp; PLAY NOW</button>
 </div>
 
-<!-- SETTINGS MODAL -->
 <div id="modal-bg" onclick="if(event.target===this)closeModal()">
   <div class="modal">
     <h2>⚙ Settings</h2>
@@ -348,6 +402,7 @@ header{display:flex;align-items:center;justify-content:space-between;flex-wrap:w
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="firebase.js"></script>
+<script src="widgets/discord.js"></script>
 <script>
 const cubeLogs = [
   { ver: 'v1.2', text: 'Fixed wall-jump sticking on narrow ledges. Improved level 4 collision.' },

@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    /* Custom CSS Theme Embedded Directly Inside the File */
+    :root {
+      --bg: #ffffff;
+      --border: #e2ddd6;
+      --text: #1a1625;
+      --text2: #6b6579;
+      --green: #16a34a;
+      --accent: #5b3af7;
+      --shadow2: 0 8px 32px rgba(91,58,247,.12);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      font-family: 'DM Sans', 'Segoe UI', sans-serif;
+      background: transparent;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .custom-discord-widget {
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: var(--shadow2);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      height: 415px; /* Matches exact height of your sidebar space */
+    }
+
+    .wd-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .wd-name {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: 0.5px;
+    }
+
+    .wd-status {
+      background: rgba(22, 163, 74, 0.1);
+      color: var(--green);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1.5px solid rgba(22, 163, 74, 0.2);
+    }
+
+    .wd-list {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding-right: 4px;
+    }
+
+    .wd-list::-webkit-scrollbar { width: 4px; }
+    .wd-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 999px; }
+
+    .wd-user {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 4px 0;
+    }
+
+    .wd-avatar {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 1.5px solid rgba(22, 163, 74, 0.5);
+    }
+
+    .wd-username {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text2);
+    }
+
+    .discord-join {
+      background: linear-gradient(135deg,#5865f2,#7289da);
+      color: #fff;
+      border: none;
+      width: 100%;
+      padding: 13px;
+      border-radius: 13px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      text-decoration: none;
+      flex-shrink: 0;
+      box-shadow: 0 4px 18px rgba(88,101,242,.28);
+      transition: transform .18s;
+    }
+    
+    .discord-join:hover {
+      transform: translateY(-2px);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="custom-discord-widget">
+    <div class="wd-header">
+      <span class="wd-name" id="discord-wd-name">Loading Server...</span>
+      <span class="wd-status" id="discord-wd-count">0 ONLINE</span>
+    </div>
+    <div class="wd-list" id="discord-wd-list">
+      </div>
+    <a class="discord-join" id="discord-wd-btn" href="https://discord.gg/dS4pgC9J5H" target="_blank" rel="noopener">
+      <span style="font-size:18px">💬</span> Join our Discord
+    </a>
+  </div>
+
+  <script>
+    const DISCORD_SERVER_ID = "1503297362246897694";
+    const WIDGET_JSON_FEED = `https://discord.com/api/guilds/${DISCORD_SERVER_ID}/widget.json`;
+
+    async function renderWidgetMetrics() {
+      try {
+        const fetchRequest = await fetch(WIDGET_JSON_FEED);
+        if (!fetchRequest.ok) throw new Error("Data cluster unreachable");
+        
+        const payload = await fetchRequest.json();
+
+        const nameNode = document.getElementById("discord-wd-name");
+        const countNode = document.getElementById("discord-wd-count");
+        const buttonNode = document.getElementById("discord-wd-btn");
+        
+        if (nameNode) nameNode.textContent = payload.name;
+        if (countNode) countNode.textContent = `${payload.presence_count} ONLINE`;
+        if (buttonNode && payload.instant_invite) buttonNode.href = payload.instant_invite;
+
+        const activeListContainer = document.getElementById("discord-wd-list");
+        if (!activeListContainer) return;
+        
+        activeListContainer.innerHTML = ""; 
+
+        const communityMembers = payload.members || [];
+        if (communityMembers.length === 0) {
+          activeListContainer.innerHTML = `<div class="wd-username" style="text-align:center; padding: 10px; font-size:11px;">No users active</div>`;
+          return;
+        }
+
+        communityMembers.slice(0, 12).forEach(member => {
+          const userRow = document.createElement("div");
+          userRow.className = "wd-user";
+
+          const avatarImg = document.createElement("img");
+          avatarImg.className = "wd-avatar";
+          avatarImg.src = member.avatar_url;
+          avatarImg.alt = member.username;
+
+          const nameLabel = document.createElement("span");
+          nameLabel.className = "wd-username";
+          nameLabel.textContent = member.username;
+
+          userRow.appendChild(avatarImg);
+          userRow.appendChild(nameLabel);
+          activeListContainer.appendChild(userRow);
+        });
+
+      } catch (fault) {
+        console.warn("[Widget System Interface Trace]:", fault.message);
+        const nameNode = document.getElementById("discord-wd-name");
+        if (nameNode) nameNode.textContent = "Community Hub";
+      }
+    }
+
+    renderWidgetMetrics();
+    setInterval(renderWidgetMetrics, 45000);
+  </script>
+</body>
+</html>
