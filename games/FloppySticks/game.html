@@ -5,160 +5,40 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <link rel="icon" type="image/png" href="../../favicon.png">
   <title>FloppySticks — Nature Brawl</title>
-  <style>
-    *{margin:0;padding:0;box-sizing:border-box}
-    html,body{width:100%;height:100%;overflow:hidden;max-width:100vw;max-height:100vh;
-      background:#87CEEB;font-family:'Segoe UI',sans-serif;
-      user-select:none;-webkit-user-select:none;touch-action:none}
-    canvas{display:block;width:100vw;height:100vh;position:fixed;top:0;left:0}
-
-    /* MENU */
-    #menu{position:fixed;inset:0;background:linear-gradient(180deg,rgba(135,206,235,.90),rgba(240,253,255,.97));
-      display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10;transition:opacity .4s}
-    h1{color:#2c3e50;font-size:clamp(34px,8vw,54px);font-weight:800;letter-spacing:1px;
-      text-shadow:0 4px 10px rgba(0,0,0,.1);text-align:center;margin-bottom:3px}
-    .sub{color:#7f8c8d;font-size:clamp(10px,2vw,13px);letter-spacing:3px;text-transform:uppercase;
-      font-weight:700;margin-bottom:24px}
-
-    /* W/L card */
-    #wl-card{display:none;flex-direction:row;gap:10px;margin-bottom:18px;
-      background:rgba(255,255,255,.85);border-radius:16px;padding:12px 20px;
-      box-shadow:0 4px 14px rgba(0,0,0,.07)}
-    .wl-stat{text-align:center}
-    .wl-val{font-size:22px;font-weight:800;font-family:'Segoe UI',sans-serif}
-    .wl-lbl{font-size:10px;font-weight:700;color:#7f8c8d;letter-spacing:.5px;margin-top:1px}
-    #wl-wins{color:#2ecc71}
-    #wl-losses{color:#e74c3c}
-    #wl-ratio{color:#3498db}
-    .wl-div{width:1px;background:#e0e0e0;align-self:stretch;margin:0 4px}
-
-    /* Sign-in strip */
-    #auth-strip{display:flex;flex-direction:column;align-items:center;gap:6px;margin-bottom:14px}
-    #btn-signin{background:#4285f4;color:#fff;border:none;border-radius:20px;
-      padding:8px 18px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;
-      letter-spacing:.5px;transition:.2s;box-shadow:0 2px 8px rgba(66,133,244,.3)}
-    #btn-signin:hover{background:#3367d6;transform:translateY(-1px)}
-    #signed-in{display:none;align-items:center;gap:8px;background:rgba(255,255,255,.85);
-      border-radius:20px;padding:6px 12px 6px 6px;box-shadow:0 2px 8px rgba(0,0,0,.07)}
-    #u-avatar{width:28px;height:28px;border-radius:50%;object-fit:cover}
-    #u-name{font-size:12px;font-weight:700;color:#2c3e50}
-    #btn-signout{background:none;border:1px solid #ddd;border-radius:8px;padding:3px 8px;
-      font-size:10px;color:#7f8c8d;cursor:pointer;font-family:inherit;transition:.15s}
-    #btn-signout:hover{background:#fdf0f0;border-color:#e74c3c;color:#e74c3c}
-
-    .mbtn{width:min(280px,80vw);padding:14px;margin:5px;font-size:clamp(12px,3vw,14px);
-      font-weight:bold;text-transform:uppercase;letter-spacing:1px;border:none;
-      border-radius:30px;cursor:pointer;transition:all .2s;font-family:inherit;
-      box-shadow:0 4px 12px rgba(0,0,0,.08)}
-    .green{background:#2ecc71;color:#fff}
-    .green:hover{background:#27ae60;transform:translateY(-2px);box-shadow:0 6px 18px rgba(46,204,113,.35)}
-    .blue{background:#3498db;color:#fff}
-    .blue:hover{background:#2980b9;transform:translateY(-2px);box-shadow:0 6px 18px rgba(52,152,219,.35)}
-    .grey{background:#ecf0f1;color:#7f8c8d;font-size:11px!important;margin-top:2px}
-    .grey:hover{background:#dfe6e9}
-
-    /* ONLINE MODAL */
-    #online-modal{display:none;position:fixed;inset:0;z-index:20;
-      background:rgba(0,0,0,.45);backdrop-filter:blur(6px);align-items:center;justify-content:center}
-    #online-modal.open{display:flex}
-    .om-box{background:#fff;border-radius:20px;padding:28px;width:min(380px,92vw);
-      display:flex;flex-direction:column;gap:14px;
-      box-shadow:0 24px 60px rgba(0,0,0,.2);animation:popIn .2s ease both}
-    @keyframes popIn{from{opacity:0;transform:scale(.95) translateY(8px)}}
-    .om-title{font-size:19px;font-weight:800;color:#2c3e50;text-align:center}
-    .om-sub{font-size:12px;color:#7f8c8d;text-align:center;line-height:1.5}
-    .om-tabs{display:flex;gap:8px}
-    .om-tab{flex:1;padding:10px;border:2px solid #e0e0e0;background:#f8f9fa;
-      border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;transition:.15s;
-      color:#7f8c8d;font-family:inherit}
-    .om-tab.active{border-color:#3498db;background:#ebf5fb;color:#2980b9}
-    .om-panel{display:none;flex-direction:column;gap:10px}
-    .om-panel.active{display:flex}
-    .om-code-box{background:#f0f9ff;border:2px dashed #3498db;border-radius:12px;
-      padding:14px;text-align:center}
-    .code-val{font-size:44px;font-weight:800;color:#2980b9;letter-spacing:10px}
-    .code-hint{font-size:11px;color:#7f8c8d;margin-top:3px}
-    .om-input{width:100%;padding:13px;border:2px solid #e0e0e0;border-radius:12px;
-      font-size:24px;font-weight:800;letter-spacing:6px;text-align:center;
-      text-transform:uppercase;outline:none;font-family:inherit;transition:border-color .15s}
-    .om-input:focus{border-color:#3498db}
-    .om-btn{padding:12px;border:none;border-radius:12px;font-size:13px;font-weight:800;
-      cursor:pointer;transition:.18s;letter-spacing:1px;font-family:inherit}
-    .om-btn.blue{background:#3498db;color:#fff}
-    .om-btn.blue:hover{background:#2980b9;transform:translateY(-1px)}
-    .om-btn.grey{background:#ecf0f1;color:#7f8c8d}
-    .om-btn.grey:hover{background:#dfe6e9}
-    .om-status{font-size:13px;font-weight:700;text-align:center;
-      min-height:20px;padding:8px;border-radius:8px}
-    .om-status.waiting{color:#e67e22;background:#fef9f0}
-    .om-status.connecting{color:#3498db;background:#ebf5fb}
-    .om-status.connected{color:#27ae60;background:#eafaf1}
-    .om-status.error{color:#e74c3c;background:#fdedec}
-    .spin{display:inline-block;width:11px;height:11px;border:2px solid currentColor;
-      border-top-color:transparent;border-radius:50%;animation:sp .7s linear infinite;
-      margin-right:5px;vertical-align:middle}
-    @keyframes sp{to{transform:rotate(360deg)}}
-
-    /* HUD */
-    #hud{position:fixed;top:0;left:0;width:100%;padding:clamp(8px,2vw,14px);
-      display:none;justify-content:space-between;align-items:flex-start;
-      pointer-events:none;z-index:5;box-sizing:border-box}
-    .hp{background:rgba(255,255,255,.92);padding:clamp(5px,1.5vw,9px) clamp(7px,2vw,11px);
-      border-radius:12px;width:clamp(130px,21vw,210px);
-      box-shadow:0 4px 16px rgba(0,0,0,.06);border:1px solid rgba(0,0,0,.04)}
-    .hp-title{color:#2c3e50;font-size:clamp(8px,1.4vw,11px);font-weight:bold;
-      letter-spacing:1px;margin-bottom:4px;display:flex;justify-content:space-between}
-    .hp-badge{background:#34495e;color:#fff;padding:1px 5px;border-radius:7px;
-      font-size:clamp(8px,1.1vw,10px)}
-    .hp-bar-bg{width:100%;height:8px;background:#eaeded;border-radius:5px;overflow:hidden}
-    .hp-bar{height:100%;width:100%;transition:width .1s}
-    #p-hp{background:#2ecc71}
-    #b-hp{background:#e74c3c}
-    .wp-tag{margin-top:4px;color:#7f8c8d;font-size:clamp(7px,1.1vw,10px);font-weight:600}
-    #drop-timer{background:rgba(44,62,80,.9);color:#fff;padding:7px 14px;border-radius:18px;
-      font-size:clamp(9px,1.4vw,11px);font-weight:bold;letter-spacing:1px;
-      box-shadow:0 3px 10px rgba(0,0,0,.14);text-align:center;min-width:95px;
-      white-space:nowrap;align-self:center}
-    #mode-badge{background:rgba(52,152,219,.9);color:#fff;padding:4px 10px;
-      border-radius:9px;font-size:10px;font-weight:800;letter-spacing:1px;
-      margin-top:4px;text-align:center}
-
-    /* MOBILE */
-    #mob-ctrl{position:fixed;bottom:max(14px,env(safe-area-inset-bottom,14px));
-      left:0;width:100%;display:none;justify-content:space-between;
-      padding:0 18px;pointer-events:none;z-index:6}
-    .btn-grp{display:flex;gap:clamp(7px,3vw,14px);pointer-events:none}
-    .touch{width:clamp(50px,14vw,63px);height:clamp(50px,14vw,63px);
-      background:rgba(255,255,255,.55);border-radius:50%;display:flex;
-      align-items:center;justify-content:center;font-weight:bold;color:#2c3e50;
-      font-size:clamp(15px,5vw,21px);border:2px solid rgba(0,0,0,.15);
-      pointer-events:auto;box-shadow:0 3px 9px rgba(0,0,0,.1);
-      -webkit-tap-highlight-color:transparent}
-    .touch:active{background:rgba(255,255,255,.85);transform:scale(.92)}
-    #ver{position:fixed;bottom:7px;right:10px;color:rgba(0,0,0,.22);
-      font-size:9px;font-weight:bold;pointer-events:none;z-index:8}
-  </style>
+  <link rel="stylesheet" href="game.css">
 </head>
 <body>
-<div id="ver">v1.3</div>
 
-<!-- MENU -->
+<div id="ver">v1.5</div>
+
+<!-- ── MENU ──────────────────────────────────────────────────────────────── -->
 <div id="menu">
   <h1>FloppySticks</h1>
   <div class="sub">Nature Brawl</div>
 
-  <!-- W/L display -->
+  <!-- W/L display (shown when signed in) -->
   <div id="wl-card">
-    <div class="wl-stat"><div class="wl-val" id="wl-wins">0</div><div class="wl-lbl">WINS</div></div>
+    <div class="wl-stat">
+      <div class="wl-val" id="wl-wins">0</div>
+      <div class="wl-lbl">WINS</div>
+    </div>
     <div class="wl-div"></div>
-    <div class="wl-stat"><div class="wl-val" id="wl-losses">0</div><div class="wl-lbl">LOSSES</div></div>
+    <div class="wl-stat">
+      <div class="wl-val" id="wl-losses">0</div>
+      <div class="wl-lbl">LOSSES</div>
+    </div>
     <div class="wl-div"></div>
-    <div class="wl-stat"><div class="wl-val" id="wl-ratio">—</div><div class="wl-lbl">W/L RATIO</div></div>
+    <div class="wl-stat">
+      <div class="wl-val" id="wl-ratio">—</div>
+      <div class="wl-lbl">W/L RATIO</div>
+    </div>
   </div>
 
-  <!-- Auth -->
+  <!-- Auth strip -->
   <div id="auth-strip">
-    <div id="auth-out"><button class="mbtn blue" id="btn-signin">🔑 Sign in to save W/L</button></div>
+    <div id="auth-out">
+      <button class="mbtn blue" id="btn-signin">🔑 Sign in to save W/L</button>
+    </div>
     <div id="signed-in">
       <img id="u-avatar" src="" alt="">
       <span id="u-name">—</span>
@@ -171,7 +51,7 @@
   <button class="mbtn grey"  onclick="history.back()">← Back to Menu</button>
 </div>
 
-<!-- ONLINE MODAL -->
+<!-- ── ONLINE MODAL ───────────────────────────────────────────────────────── -->
 <div id="online-modal">
   <div class="om-box">
     <div class="om-title">🌐 Online Match</div>
@@ -180,11 +60,19 @@
       <button class="om-tab active" id="tab-host" onclick="switchTab('host')">🏠 Host</button>
       <button class="om-tab"        id="tab-join" onclick="switchTab('join')">🔗 Join</button>
     </div>
+
+    <!-- Host panel -->
     <div class="om-panel active" id="panel-host">
-      <div class="om-code-box" id="host-code-box"><div style="font-size:13px;color:#7f8c8d">Generating…</div></div>
-      <div class="om-status waiting" id="host-status"><span class="spin"></span>Waiting for opponent…</div>
+      <div class="om-code-box" id="host-code-box">
+        <div style="font-size:13px;color:#7f8c8d">Generating…</div>
+      </div>
+      <div class="om-status waiting" id="host-status">
+        <span class="spin"></span>Waiting for opponent…
+      </div>
       <button class="om-btn grey" onclick="closeOnlineModal()">Cancel</button>
     </div>
+
+    <!-- Join panel -->
     <div class="om-panel" id="panel-join">
       <input class="om-input" id="join-input" type="text" maxlength="4"
              placeholder="ABCD" autocomplete="off" spellcheck="false"
@@ -196,8 +84,9 @@
   </div>
 </div>
 
-<!-- HUD -->
+<!-- ── HUD ────────────────────────────────────────────────────────────────── -->
 <div id="hud">
+  <!-- Player -->
   <div class="hp">
     <div class="hp-title">
       <span id="p-label">YOU</span>
@@ -206,21 +95,27 @@
     <div class="hp-bar-bg"><div class="hp-bar" id="p-hp"></div></div>
     <div class="wp-tag">WEAPON: <span id="p-weapon" style="color:#2c3e50">NONE</span></div>
   </div>
+
+  <!-- Centre info -->
   <div style="display:flex;flex-direction:column;align-items:center">
     <div id="drop-timer">DROP: --</div>
     <div id="mode-badge" style="display:none">ONLINE</div>
   </div>
+
+  <!-- Opponent -->
   <div class="hp" style="text-align:right">
     <div class="hp-title" style="flex-direction:row-reverse">
       <span id="o-label">AI</span>
       <span id="o-score" class="hp-badge">0 pts</span>
     </div>
-    <div class="hp-bar-bg"><div class="hp-bar" id="b-hp" style="margin-left:auto"></div></div>
+    <div class="hp-bar-bg">
+      <div class="hp-bar" id="b-hp" style="margin-left:auto"></div>
+    </div>
     <div class="wp-tag">WEAPON: <span id="b-weapon" style="color:#962d22">NONE</span></div>
   </div>
 </div>
 
-<!-- MOBILE CONTROLS -->
+<!-- ── MOBILE CONTROLS ────────────────────────────────────────────────────── -->
 <div id="mob-ctrl">
   <div class="btn-grp">
     <div class="touch" id="btn-left">←</div>
@@ -234,46 +129,48 @@
 
 <canvas id="gameCanvas"></canvas>
 
-<!-- Firebase SDK -->
+<!-- ── Firebase SDK ───────────────────────────────────────────────────────── -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="../../firebase.js"></script>
-<!-- PeerJS -->
+
+<!-- ── PeerJS ─────────────────────────────────────────────────────────────── -->
 <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-<script src="game.js"></script>
 
+<!-- ── Game modules (order matters) ──────────────────────────────────────── -->
+<script src="stickman.js"></script>   <!-- S class — depends on game.js globals at runtime -->
+<script src="network.js"></script>    <!-- PeerJS networking — exposes send(), isHost, conn -->
+<script src="game.js"></script>       <!-- Main engine — sets all globals, starts loop -->
+
+<!-- ── Auth UI + W/L display ─────────────────────────────────────────────── -->
 <script>
-// ── Auth UI + W/L display ─────────────────────────────────────────────────
-// window.FB is provided by firebase-core.js + firebase-game.js
-// game.js uses window.FB.recordMatch / getMatchStats / currentUser
-
-function showWL(w=0,l=0){
-  document.getElementById('wl-wins').textContent   = w;
-  document.getElementById('wl-losses').textContent = l;
-  document.getElementById('wl-ratio').textContent  = l>0?(w/l).toFixed(2):(w>0?'∞':'—');
-  document.getElementById('wl-card').style.display = 'flex';
-}
-
-window.FB.onAuthChange(async user=>{
-  document.getElementById('auth-out').style.display  = user?'none':'block';
-  document.getElementById('signed-in').style.display = user?'flex':'none';
-  if(user){
-    document.getElementById('u-name').textContent        = user.displayName||'Player';
-    document.getElementById('u-avatar').src              = user.photoURL||'';
-    document.getElementById('u-avatar').style.display    = user.photoURL?'block':'none';
-    const s = await window.FB.getMatchStats(user.uid).catch(()=>({w:0,l:0}));
-    showWL(s.w||0,s.l||0);
-  }else{
-    document.getElementById('wl-card').style.display='none';
+  function showWL(w = 0, l = 0) {
+    document.getElementById('wl-wins').textContent   = w;
+    document.getElementById('wl-losses').textContent = l;
+    document.getElementById('wl-ratio').textContent  = l > 0 ? (w / l).toFixed(2) : (w > 0 ? '∞' : '—');
+    document.getElementById('wl-card').style.display = 'flex';
   }
-});
 
-document.getElementById('btn-signin').onclick  = ()=>window.FB.signInGoogle().catch(()=>{});
-document.getElementById('btn-signout').onclick = ()=>window.FB.signOut();
+  window.FB.onAuthChange(async user => {
+    document.getElementById('auth-out').style.display  = user ? 'none'  : 'block';
+    document.getElementById('signed-in').style.display = user ? 'flex'  : 'none';
+    if (user) {
+      document.getElementById('u-name').textContent     = user.displayName || 'Player';
+      document.getElementById('u-avatar').src           = user.photoURL    || '';
+      document.getElementById('u-avatar').style.display = user.photoURL    ? 'block' : 'none';
+      const s = await window.FB.getMatchStats(user.uid).catch(() => ({ w: 0, l: 0 }));
+      showWL(s.w || 0, s.l || 0);
+    } else {
+      document.getElementById('wl-card').style.display = 'none';
+    }
+  });
 
-// Expose showWL so game.js can refresh after match save
-window.showWL = showWL;
+  document.getElementById('btn-signin').onclick  = () => window.FB.signInGoogle().catch(() => {});
+  document.getElementById('btn-signout').onclick = () => window.FB.signOut();
+
+  window.showWL = showWL;
 </script>
+
 </body>
 </html>
