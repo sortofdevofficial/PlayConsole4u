@@ -418,17 +418,14 @@ async function refreshUI(user) {
   }
   tg.innerHTML = html;
 
-  // FloppySticks W/L — field names are w / l (not wins/losses)
+  // FloppySticks W/L
   try {
-    const db = firebase.firestore();
-    const snap = await db.collection('users').doc(user.uid).collection('G').doc('FS').get();
-    const fs = snap.exists ? snap.data() : {};
-    const fw = fs.w ?? 0, fl2 = fs.l ?? 0;
+    const fs = await window.FB.getMatchStats(user.uid);
+    const fw = fs.w??0, fl2 = fs.l??0;
     document.getElementById('fs-wins').textContent   = fw;
     document.getElementById('fs-losses').textContent = fl2;
-    // W/L ratio
     const fsRatioEl = document.getElementById('fs-ratio');
-    if (fsRatioEl) fsRatioEl.textContent = fl2 > 0 ? (fw/fl2).toFixed(2) : (fw > 0 ? '∞' : '—');
+    if(fsRatioEl) fsRatioEl.textContent = fl2>0?(fw/fl2).toFixed(2):(fw>0?'∞':'—');
   } catch(e) { console.warn('[FS W/L]', e.message); }
 }
 

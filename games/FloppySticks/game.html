@@ -234,69 +234,46 @@
 
 <canvas id="gameCanvas"></canvas>
 
-<!-- Firebase (compat) -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="../../firebase.js"></script>
 <!-- PeerJS -->
 <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 <script src="game.js"></script>
 
 <script>
-// ── Firebase config + auth UI ────────────────────────────────────────────
-firebase.initializeApp({
-  apiKey:'AIzaSyCZPK5A0UQSFB2D_zNj3wjZ5-Tbyb1VYn8',
-  authDomain:'playconsole4u-53a6a.firebaseapp.com',
-  projectId:'playconsole4u-53a6a',
-  storageBucket:'playconsole4u-53a6a.firebasestorage.app',
-  messagingSenderId:'306379034842',
-  appId:'1:306379034842:web:1b891d0ef20cdacb0a55e3'
-});
-const fbAuth = firebase.auth();
-const fbDb   = firebase.firestore();
+// ── Auth UI + W/L display ─────────────────────────────────────────────────
+// window.FB is provided by firebase-core.js + firebase-game.js
+// game.js uses window.FB.recordMatch / getMatchStats / currentUser
 
-// Expose to game.js
-window.FS = {
-  currentUser: () => fbAuth.currentUser,
-  async saveResult(won) {
-    const u = fbAuth.currentUser;
-    if (!u) return;
-    const ref = fbDb.collection('users').doc(u.uid).collection('G').doc('FS');
-    const INC = firebase.firestore.FieldValue.increment;
-    await ref.set(won ? {w:INC(1),l:INC(0)} : {w:INC(0),l:INC(1)}, {merge:true});
-  },
-  async getStats(uid) {
-    try {
-      const snap = await fbDb.collection('users').doc(uid).collection('G').doc('FS').get();
-      return snap.exists ? snap.data() : {w:0,l:0};
-    } catch { return {w:0,l:0}; }
-  }
-};
-
-function showWL(w=0, l=0) {
+function showWL(w=0,l=0){
   document.getElementById('wl-wins').textContent   = w;
   document.getElementById('wl-losses').textContent = l;
-  const ratio = l>0 ? (w/l).toFixed(2) : (w>0?'∞':'—');
-  document.getElementById('wl-ratio').textContent  = ratio;
+  document.getElementById('wl-ratio').textContent  = l>0?(w/l).toFixed(2):(w>0?'∞':'—');
   document.getElementById('wl-card').style.display = 'flex';
 }
 
-fbAuth.onAuthStateChanged(async user => {
-  document.getElementById('auth-out').style.display   = user ? 'none'  : 'block';
-  document.getElementById('signed-in').style.display  = user ? 'flex'  : 'none';
-  if (user) {
-    document.getElementById('u-name').textContent   = user.displayName || 'Player';
-    document.getElementById('u-avatar').src         = user.photoURL || '';
-    document.getElementById('u-avatar').style.display = user.photoURL ? 'block' : 'none';
-    const s = await FS.getStats(user.uid);
-    showWL(s.w||0, s.l||0);
-  } else {
-    document.getElementById('wl-card').style.display = 'none';
+window.FB.onAuthChange(async user=>{
+  document.getElementById('auth-out').style.display  = user?'none':'block';
+  document.getElementById('signed-in').style.display = user?'flex':'none';
+  if(user){
+    document.getElementById('u-name').textContent        = user.displayName||'Player';
+    document.getElementById('u-avatar').src              = user.photoURL||'';
+    document.getElementById('u-avatar').style.display    = user.photoURL?'block':'none';
+    const s = await window.FB.getMatchStats(user.uid).catch(()=>({w:0,l:0}));
+    showWL(s.w||0,s.l||0);
+  }else{
+    document.getElementById('wl-card').style.display='none';
   }
 });
 
-document.getElementById('btn-signin').onclick  = () => fbAuth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(()=>{});
-document.getElementById('btn-signout').onclick = () => fbAuth.signOut();
+document.getElementById('btn-signin').onclick  = ()=>window.FB.signInGoogle().catch(()=>{});
+document.getElementById('btn-signout').onclick = ()=>window.FB.signOut();
+
+// Expose showWL so game.js can refresh after match save
+window.showWL = showWL;
 </script>
 </body>
 </html>
