@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Discord Widget</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="discord.css">
+</head>
+<body>
+<div class="widget">
+  <div class="rfbar"><div class="rffill" id="rfill"></div></div>
+
+  <div class="hdr">
+    <div class="hdr-banner"></div>
+    <div class="hdr-body">
+      <img class="sv-icon" id="sv-icon" src="" alt="">
+      <div style="flex:1;min-width:0">
+        <div class="sv-name-row">
+          <span class="sv-name" id="sv-name">Loading…</span>
+          <span class="boost-pill" id="bpill" style="display:none">⚡ <span id="bpill-t">Level 0</span></span>
+        </div>
+        <div class="sv-desc" id="sv-desc">Fetching server info…</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="srow">
+    <div class="sp"><div class="sp-n" id="s-tot">—</div><div class="sp-l">Total</div></div>
+    <div class="sp on"><div class="sp-n" id="s-onl">—</div><div class="sp-l">Online</div></div>
+    <div class="sp"><div class="sp-n" id="s-off">—</div><div class="sp-l">Offline</div></div>
+    <div class="sp vc"><div class="sp-n" id="s-voc">—</div><div class="sp-l">In Voice</div></div>
+    <div class="sp bk"><div class="sp-n" id="s-bst">—</div><div class="sp-l">Boosts</div></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab on" onclick="switchTab('ov')">Overview</button>
+    <button class="tab" onclick="switchTab('mb')">Members</button>
+    <button class="tab" onclick="switchTab('vc')">Voice</button>
+    <button class="tab" onclick="switchTab('ac')">Activity</button>
+  </div>
+
+  <div class="panels">
+    <div class="panel on" id="p-ov"><div class="scroll" id="ov-c"><div class="empty"><div class="eico">⏳</div>Loading…</div></div></div>
+
+    <div class="panel" id="p-mb">
+      <div class="mctrl" id="m-ctrl" style="display:none">
+        <input class="msrch" id="m-srch" placeholder="🔍 Search members…" oninput="renderMb()">
+        <div class="fltrs">
+          <button class="fb on" id="f-all" onclick="setF('all')">All <span id="fc-a" style="font-family:'JetBrains Mono',monospace;font-size:9px"></span></button>
+          <button class="fb" id="f-o" onclick="setF('online')"><span class="fdot o"></span>Online <span id="fc-o" style="font-family:'JetBrains Mono',monospace;font-size:9px"></span></button>
+          <button class="fb" id="f-i" onclick="setF('idle')"><span class="fdot i"></span>Idle <span id="fc-i" style="font-family:'JetBrains Mono',monospace;font-size:9px"></span></button>
+          <button class="fb" id="f-d" onclick="setF('dnd')"><span class="fdot d"></span>DND <span id="fc-d" style="font-family:'JetBrains Mono',monospace;font-size:9px"></span></button>
+        </div>
+      </div>
+      <div class="scroll" id="m-list"><div class="empty"><div class="eico">⏳</div>Loading…</div></div>
+    </div>
+
+    <div class="panel" id="p-vc"><div class="scroll" id="vc-l"><div class="empty"><div class="eico">⏳</div>Loading…</div></div></div>
+
+    <div class="panel" id="p-ac">
+      <div class="ach">
+        <span class="act">Online Trend</span>
+        <span class="alv"><span class="ldv"></span><span id="ac-live">— online</span></span>
+      </div>
+      <div class="acw"><canvas id="actChart" height="110"></canvas></div>
+      <div class="asts">
+        <div class="ast"><div class="asn" id="ac-pk">—</div><div class="asl">Peak</div></div>
+        <div class="ast"><div class="asn" id="ac-av">—</div><div class="asl">Average</div></div>
+        <div class="ast"><div class="asn" id="ac-pt">—</div><div class="asl">Data Pts</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ftr">
+    <a class="jbtn" id="jbtn" href="https://discord.gg/dS4pgC9J5H" target="_blank" rel="noopener">🚀 Join Server</a>
+    <div class="frow">
+      <button class="sbtn" onclick="copyInv()">📋 Copy Invite</button>
+      <a class="sbtn" href="https://sortofdevofficial.github.io/PlayConsole4u/widgets/discord.html" target="_blank" rel="noopener">⛶ Dashboard</a>
+    </div>
+  </div>
+
+  <div class="toast" id="toast">✓ Invite copied!</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+const GID='1503297362246897694', CODE='dS4pgC9J5H', HK=`dcw_${GID}`;
+const VL=['None','Low','Medium','High','Very High'];
+const BT={0:'No Level',1:'Level 1',2:'Level 2',3:'Level 3'};
+const BR=[0,2,7,14];
+const FM={
+  COMMUNITY:['🏘','Community'],VERIFIED:['✅','Verified'],PARTNERED:['🤝','Partner'],
+  ANIMATED_ICON:['✨','Animated Icon'],BANNER:['🎨','Banner'],
+  DISCOVERABLE:['🔍','Discoverable'],VANITY_URL:['🔗','Vanity URL'],
+  NEWS:['📰','News Channels'],MORE_STICKERS:['🎭','More Stickers'],
+  THREADS_ENABLED:['🧵','Threads'],MONETIZATION_ENABLED:['💰','Monetization']
+};
+let W=null,I=null,chart=null,flt='all';
+
+async function load(){
+  try{
+    const[wr,ir]=await Promise.all([
+      fetch(`https://discord.com/api/guilds/${GID}/widget.json`),
+      fetch(`https://discord.com/api/v9/invites/${CODE}?with_counts=true`)
+    ]);
+    if(!wr.ok) throw new Error('Widget API unreachable. Enable it in Server Settings → Widget.');
+    W=await wr.json(); I=ir.ok?await ir.json():null;
+    saveH(W.presence_count||0);
+    render(); resetBar();
+  }catch(e){ showErr(e.message); }
+}
+
+function resetBar(){const e=document.getElementById('rfill');e.style.animation='none';void e.offsetWidth;e.style.animation='rfa 35s linear forwards';}
+
+function saveH(c){try{const a=JSON.parse(localStorage.getItem(HK)||'[]');a.push({t:Date.now(),c});while(a.length>80)a.shift();localStorage.setItem(HK,JSON.stringify(a));}catch(e){}}
+function getH(){try{return JSON.parse(localStorage.getItem(HK)||'[]');}catch(e){return[];}}
+
+function render(){
+  if(!W)return;
+  const g=I?.guild||{};
+  const ico=g.icon
+    ?`https://cdn.discordapp.com/icons/${GID}/${g.icon}.webp?size=128`
+    :`https://ui-avatars.com/api/?name=${encodeURIComponent(W.name)}&background=5865f2&color=fff&bold=true&font-size=0.35&rounded=false`;
+  document.getElementById('sv-icon').src=ico;
+  document.getElementById('sv-name').textContent=W.name;
+  document.getElementById('sv-desc').textContent=g.description||'A Discord community — join us!';
+  const tier=g.premium_tier||0,bc=g.premium_subscription_count||0;
+  if(tier>0||bc>0){document.getElementById('bpill-t').textContent=BT[tier];document.getElementById('bpill').style.display='';}
+  const total=I?.approximate_member_count||0,online=W.presence_count||0;
+  const mbs=W.members||[],chs=W.channels||[];
+  const vinV=chs.reduce((s,c)=>s+mbs.filter(m=>m.channel_id===c.id).length,0);
+  cnt('s-tot',total);cnt('s-onl',online);cnt('s-off',total?total-online:0);
+  document.getElementById('s-voc').textContent=vinV;
+  document.getElementById('s-bst').textContent=bc;
+  if(W.instant_invite)document.getElementById('jbtn').href=W.instant_invite;
+  renderOv(mbs,total,online,tier,bc,g);
+  renderMb(); renderVc(mbs,chs); renderAc(online);
+}
+
+function cnt(id,v){
+  const e=document.getElementById(id);
+  if(typeof v!=='number'||v<=0){e.textContent=v||'—';return;}
+  let s=performance.now();
+  (function step(n){const p=Math.min((n-s)/600,1),ease=1-Math.pow(1-p,3);
+    e.textContent=Math.round(v*ease).toLocaleString();if(p<1)requestAnimationFrame(step);
+  })(s);
+}
+
+function renderOv(mbs,total,online,tier,bc,g){
+  const o=mbs.filter(m=>m.status==='online').length;
+  const id=mbs.filter(m=>m.status==='idle').length;
+  const dn=mbs.filter(m=>m.status==='dnd').length;
+  const tot=mbs.length||1;
+  const p=n=>((n/tot)*100).toFixed(1);
+  const bn=BR[Math.min(tier+1,3)]||BR[3];
+  const bp=bn?Math.min((bc/bn)*100,100):100;
+  const feats=(g.features||[]).filter(f=>FM[f]).slice(0,8);
+  let h=`
+  <div class="sec">Status Breakdown</div>
+  <div class="sbb"><div class="sbb-s o" style="width:${p(o)}%"></div><div class="sbb-s i" style="width:${p(id)}%"></div><div class="sbb-s d" style="width:${p(dn)}%"></div></div>
+  <div class="leg">
+    <span class="leg-i"><span class="ldot" style="background:var(--green)"></span>Online <span class="lcnt">${o}</span></span>
+    <span class="leg-i"><span class="ldot" style="background:var(--yellow)"></span>Idle <span class="lcnt">${id}</span></span>
+    <span class="leg-i"><span class="ldot" style="background:var(--red)"></span>DND <span class="lcnt">${dn}</span></span>
+  </div>
+  <div class="sec" style="margin-top:10px">Server Info</div>
+  <div class="irow"><span class="ilbl">🛡 Verification</span><span class="ival">${VL[g.verification_level||0]}</span></div>
+  <div class="irow"><span class="ilbl">👥 Members</span><span class="ival">${total?total.toLocaleString():'—'}</span></div>
+  <div class="sec" style="margin-top:10px">Boost Status</div>
+  <div class="bcard">
+    <div class="brow"><span class="bnm">⚡ ${BT[tier]}</span><span class="bsub">${bc} boost${bc!==1?'s':''} · next at ${bn}</span></div>
+    <div class="btrack"><div class="bfill" style="width:${bp}%"></div></div>
+  </div>`;
+  if(feats.length){
+    h+=`<div class="sec">Features</div><div class="igrid">`;
+    feats.forEach(f=>{const[ic,lb]=FM[f];h+=`<div class="icell"><span class="iico">${ic}</span>${lb}</div>`;});
+    h+=`</div>`;
+  }
+  document.getElementById('ov-c').innerHTML=h;
+}
+
+function renderMb(){
+  if(!W)return;
+  const mbs=W.members||[];
+  const q=(document.getElementById('m-srch')?.value||'').toLowerCase();
+  document.getElementById('m-ctrl').style.display='';
+  const co={all:mbs.length,online:mbs.filter(m=>m.status==='online').length,idle:mbs.filter(m=>m.status==='idle').length,dnd:mbs.filter(m=>m.status==='dnd').length};
+  document.getElementById('fc-a').textContent=co.all;
+  document.getElementById('fc-o').textContent=co.online;
+  document.getElementById('fc-i').textContent=co.idle;
+  document.getElementById('fc-d').textContent=co.dnd;
+  let list=mbs.filter(m=>(flt==='all'||m.status===flt)&&(!q||m.username.toLowerCase().includes(q)));
+  const el=document.getElementById('m-list');
+  if(!list.length){el.innerHTML=`<div class="empty"><div class="eico">🔍</div>No members found</div>`;return;}
+  el.innerHTML=list.map(m=>`<div class="mcrd">
+    <div class="avw"><img class="av" src="${m.avatar_url}" alt="${esc(m.username)}" loading="lazy"><div class="avs ${m.status||'o'}"></div></div>
+    <div class="mi"><div class="mn">${esc(m.username)}</div>${m.game?`<div class="ma">🎮 ${esc(m.game.name)}</div>`:''}</div>
+    ${m.game?`<div class="gtag">${esc(m.game.name.slice(0,14))}${m.game.name.length>14?'…':''}</div>`:''}
+  </div>`).join('');
+}
+
+function setF(f){
+  flt=f;
+  document.querySelectorAll('.fb').forEach(b=>b.classList.remove('on'));
+  document.getElementById(f==='all'?'f-all':f==='online'?'f-o':f==='idle'?'f-i':'f-d').classList.add('on');
+  renderMb();
+}
+
+function renderVc(mbs,chs){
+  const el=document.getElementById('vc-l');
+  if(!chs.length){el.innerHTML=`<div class="empty"><div class="eico">🔇</div>No active voice channels</div>`;return;}
+  el.innerHTML=chs.map(c=>{
+    const ins=mbs.filter(m=>m.channel_id===c.id);
+    return`<div class="vcg">
+      <div class="vch">🔊 <span class="vcn">${esc(c.name)}</span><span class="vcc">${ins.length}</span></div>
+      <div class="vcms">${ins.length?ins.map(m=>`<div class="vcmr"><img class="vcav" src="${m.avatar_url}" loading="lazy"><span>${esc(m.username)}</span>${m.game?`<span style="font-size:9px;color:var(--t3);margin-left:auto">🎮${esc(m.game.name.slice(0,12))}</span>`:''}</div>`).join(''):'<div class="vce">— vacant —</div>'}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderAc(online){
+  document.getElementById('ac-live').textContent=`${online} online`;
+  const h=getH();
+  document.getElementById('ac-pk').textContent=h.length?Math.max(...h.map(x=>x.c)):'—';
+  document.getElementById('ac-av').textContent=h.length?Math.round(h.reduce((s,x)=>s+x.c,0)/h.length):'—';
+  document.getElementById('ac-pt').textContent=h.length;
+  const wrap=document.querySelector('.acw');
+  if(h.length<2){wrap.innerHTML=`<div style="padding:12px;text-align:center;font-size:11px;color:var(--t3)">Not enough history yet — revisit to build the chart.</div>`;return;}
+  if(!wrap.querySelector('canvas'))wrap.innerHTML=`<canvas id="actChart" height="110"></canvas>`;
+  const last=h.slice(-30);
+  if(chart)chart.destroy();
+  chart=new Chart(document.getElementById('actChart').getContext('2d'),{
+    type:'line',
+    data:{labels:last.map(x=>{const d=new Date(x.t);return`${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`}),
+      datasets:[{data:last.map(x=>x.c),borderColor:'#57f287',backgroundColor:'rgba(87,242,135,.1)',borderWidth:2,fill:true,tension:.4,pointRadius:last.length<10?3:0,pointHoverRadius:4,pointBackgroundColor:'#57f287'}]},
+    options:{responsive:true,plugins:{legend:{display:false},tooltip:{backgroundColor:'#313338',borderColor:'rgba(255,255,255,.1)',borderWidth:1,titleColor:'#b5bac1',bodyColor:'#57f287',bodyFont:{family:"'JetBrains Mono',monospace",weight:'700',size:13},callbacks:{label:c=>` ${c.parsed.y} online`}}},
+      scales:{x:{display:last.length<15,ticks:{color:'#4e5058',font:{size:9},maxTicksLimit:6},grid:{display:false}},y:{ticks:{color:'#4e5058',font:{family:"'JetBrains Mono',monospace",size:9},maxTicksLimit:4},grid:{color:'rgba(255,255,255,.04)',drawBorder:false}}}}
+  });
+}
+
+function switchTab(t){
+  const names=['ov','mb','vc','ac'];
+  document.querySelectorAll('.tab').forEach((b,i)=>b.classList.toggle('on',names[i]===t));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  document.getElementById(`p-${t}`).classList.add('on');
+}
+
+function copyInv(){
+  navigator.clipboard.writeText(document.getElementById('jbtn').href||`https://discord.gg/${CODE}`).catch(()=>{});
+  const t=document.getElementById('toast');t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1800);
+}
+
+function showErr(msg){
+  document.getElementById('ov-c').innerHTML=`<div class="empty"><div class="eico">⚠️</div><p style="line-height:1.6">${esc(msg)}</p><button class="errbtn" onclick="load()">↻ Retry</button></div>`;
+}
+
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+load();
+setInterval(load,35000);
+</script>
+</body>
+</html>
