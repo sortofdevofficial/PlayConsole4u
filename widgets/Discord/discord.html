@@ -5,12 +5,115 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Discord Widget</title>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="discord.css">
+<style>
+:root {
+  --bg1:#1e1f22;--bg2:#2b2d31;--bg3:#313338;--bghov:#35373c;--bgact:#404249;
+  --blurple:#5865f2;--blurple2:#4752c4;--blurple-a:rgba(88,101,242,.15);
+  --green:#23a55a;--green-b:#57f287;--yellow:#f0b232;--red:#f23f43;--gray:#4e5058;
+  --boost:#ff73fa;--t1:#f2f3f5;--t2:#b5bac1;--t3:#80848e;
+  --bd:rgba(255,255,255,.06);--bd2:rgba(255,255,255,.1);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Outfit',sans-serif;background:transparent;overflow:hidden;}
+.widget{background:var(--bg1);border-radius:14px;border:1px solid var(--bd2);display:flex;flex-direction:column;width:100%;height:100%;overflow:hidden;position:relative;}
+.rfbar{height:3px;background:var(--bg3);flex-shrink:0;overflow:hidden;}
+.rffill{height:100%;width:100%;background:var(--blurple);transform-origin:left;animation:rfa 35s linear forwards;}
+@keyframes rfa{from{transform:scaleX(1);}to{transform:scaleX(0);}}
+.hdr{background:var(--bg2);padding:0 14px 12px;flex-shrink:0;}
+.hdr-banner{height:50px;margin:0 -14px;background:linear-gradient(135deg,#5865f2,#9b59b6 60%,var(--bg2));opacity:.38;}
+.hdr-body{display:flex;align-items:flex-end;gap:10px;margin-top:-26px;position:relative;z-index:1;}
+.sv-icon{width:52px;height:52px;border-radius:13px;border:3px solid var(--bg2);object-fit:cover;background:var(--bg3);flex-shrink:0;}
+.sv-name-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:4px;}
+.sv-name{font-size:13.5px;font-weight:800;color:var(--t1);line-height:1.2;}
+.boost-pill{display:inline-flex;align-items:center;gap:3px;background:rgba(255,115,250,.15);border:1px solid rgba(255,115,250,.35);border-radius:6px;padding:2px 6px;font-size:9px;font-weight:700;color:var(--boost);}
+.sv-desc{font-size:10px;color:var(--t3);margin-top:3px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.srow{display:flex;gap:5px;padding:7px 12px;background:var(--bg2);border-bottom:1px solid var(--bd);flex-shrink:0;}
+.sp{flex:1;background:var(--bg3);border-radius:8px;padding:6px 4px;text-align:center;}
+.sp-n{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--t1);line-height:1;}
+.sp-l{font-size:8px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.7px;margin-top:2px;}
+.sp.on .sp-n{color:var(--green-b);}.sp.vc .sp-n{color:#3b9eed;}.sp.bk .sp-n{color:var(--boost);}
+.tabs{display:flex;background:var(--bg2);border-bottom:1px solid var(--bd);padding:0 10px;flex-shrink:0;}
+.tab{background:none;border:none;border-bottom:2px solid transparent;color:var(--t3);font-family:'Outfit',sans-serif;font-size:11px;font-weight:600;padding:9px 9px 7px;cursor:pointer;transition:all .15s;letter-spacing:.3px;}
+.tab:hover{color:var(--t2);}.tab.on{color:var(--blurple);border-bottom-color:var(--blurple);}
+.panels{flex:1;overflow:hidden;position:relative;}
+.panel{display:none;flex-direction:column;height:100%;}.panel.on{display:flex;}
+.scroll{flex:1;overflow-y:auto;padding:10px 12px;}
+.scroll::-webkit-scrollbar{width:3px;}.scroll::-webkit-scrollbar-thumb{background:var(--bgact);border-radius:3px;}
+.sec{font-size:9px;font-weight:700;letter-spacing:1.3px;text-transform:uppercase;color:var(--t3);margin:10px 0 6px;}.sec:first-child{margin-top:0;}
+.sbb{height:7px;border-radius:4px;overflow:hidden;display:flex;background:var(--bgact);margin-bottom:5px;}
+.sbb-s{height:100%;transition:width .6s ease;}.sbb-s.o{background:var(--green);}.sbb-s.i{background:var(--yellow);}.sbb-s.d{background:var(--red);}
+.leg{display:flex;gap:10px;}.leg-i{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--t3);}
+.ldot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}.lcnt{font-weight:700;color:var(--t2);}
+.igrid{display:grid;grid-template-columns:1fr 1fr;gap:5px;}
+.icell{background:var(--bg3);border:1px solid var(--bd);border-radius:8px;padding:7px 10px;display:flex;align-items:center;gap:7px;font-size:10px;font-weight:600;color:var(--t2);}.iico{font-size:13px;}
+.irow{background:var(--bg3);border:1px solid var(--bd);border-radius:8px;padding:8px 12px;display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;}
+.ilbl{font-size:10px;font-weight:600;color:var(--t3);}.ival{font-size:10px;font-weight:700;color:var(--green-b);}
+.bcard{background:var(--bg3);border:1px solid rgba(255,115,250,.18);border-radius:8px;padding:9px 12px;margin-bottom:5px;}
+.brow{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;}
+.bnm{font-size:11px;font-weight:700;color:var(--boost);}.bsub{font-size:10px;color:var(--t3);}
+.btrack{height:5px;background:var(--bgact);border-radius:3px;overflow:hidden;}
+.bfill{height:100%;background:linear-gradient(90deg,#ff73fa,#a855f7);border-radius:3px;transition:width .6s ease;}
+.mctrl{padding:8px 12px 0;flex-shrink:0;border-bottom:1px solid var(--bd);}
+.msrch{width:100%;background:var(--bg3);border:1px solid var(--bd2);border-radius:7px;padding:6px 10px;font-size:11.5px;font-family:'Outfit',sans-serif;color:var(--t1);outline:none;margin-bottom:7px;transition:border .15s;}
+.msrch::placeholder{color:var(--t3);}.msrch:focus{border-color:var(--blurple);}
+.fltrs{display:flex;gap:4px;margin-bottom:8px;}
+.fb{display:flex;align-items:center;gap:4px;background:var(--bg3);border:1px solid transparent;border-radius:6px;padding:4px 8px;font-size:9.5px;font-weight:600;font-family:'Outfit',sans-serif;color:var(--t3);cursor:pointer;transition:all .15s;}
+.fb:hover{background:var(--bgact);color:var(--t2);}.fb.on{background:var(--blurple-a);border-color:rgba(88,101,242,.4);color:var(--blurple);}
+.fdot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}.fdot.o{background:var(--green);}.fdot.i{background:var(--yellow);}.fdot.d{background:var(--red);}
+
+/* ── MEMBER CARD ── */
+.mcrd{display:flex;align-items:center;gap:9px;padding:6px 7px;border-radius:7px;transition:background .1s;margin-bottom:2px;}
+.mcrd:hover{background:var(--bghov);}
+.avw{position:relative;flex-shrink:0;}
+.av{width:30px;height:30px;border-radius:50%;object-fit:cover;background:var(--bgact);}
+.avs{position:absolute;bottom:-1px;right:-1px;width:10px;height:10px;border-radius:50%;border:2px solid var(--bg1);}
+.avs.o{background:var(--green);}.avs.i{background:var(--yellow);}.avs.d{background:var(--red);}.avs.s{background:#593695;}
+.mi{flex:1;min-width:0;}
+
+/* username + role badge on same line */
+.mn-row{display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
+.mn{font-size:12px;font-weight:600;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2;}
+.role-badge{display:inline-flex;align-items:center;gap:3px;border-radius:4px;padding:1px 5px;font-size:8px;font-weight:700;letter-spacing:.3px;white-space:nowrap;flex-shrink:0;border:1px solid transparent;}
+
+.ma{font-size:9px;color:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;}
+.gtag{background:rgba(163,85,247,.18);border-radius:4px;padding:2px 5px;font-size:8.5px;font-weight:700;color:#b580ff;flex-shrink:0;max-width:65px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+.vcg{margin-bottom:9px;}
+.vch{display:flex;align-items:center;gap:6px;padding:6px 9px;border-radius:7px;background:var(--bg3);border:1px solid var(--bd);font-size:11px;font-weight:600;color:var(--t2);margin-bottom:3px;}
+.vcn{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.vcc{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--t3);background:var(--bgact);border-radius:4px;padding:2px 5px;}
+.vcms{padding-left:8px;}
+.vcmr{display:flex;align-items:center;gap:8px;padding:4px 7px;border-radius:6px;font-size:11px;color:var(--t2);transition:background .1s;}
+.vcmr:hover{background:var(--bghov);}
+.vcav{width:20px;height:20px;border-radius:50%;object-fit:cover;background:var(--bgact);}
+.vce{padding:5px 7px;font-size:10px;color:var(--t3);font-style:italic;}
+.ach{display:flex;justify-content:space-between;align-items:center;padding:10px 12px 5px;flex-shrink:0;}
+.act{font-size:9.5px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:1px;}
+.alv{display:flex;align-items:center;gap:5px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--green-b);}
+.ldv{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pd 2s infinite;}
+@keyframes pd{0%,100%{box-shadow:0 0 0 0 rgba(35,165,90,.5);}50%{box-shadow:0 0 0 5px rgba(35,165,90,0);}}
+.acw{padding:0 12px 8px;flex-shrink:0;}
+canvas#actChart{width:100%!important;display:block;}
+.asts{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;padding:0 12px 10px;flex-shrink:0;}
+.ast{background:var(--bg3);border:1px solid var(--bd);border-radius:8px;padding:7px;text-align:center;}
+.asn{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:var(--t1);line-height:1;}
+.asl{font-size:8px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;margin-top:3px;}
+.ftr{padding:8px 12px 10px;border-top:1px solid var(--bd);background:var(--bg2);flex-shrink:0;}
+.jbtn{display:flex;align-items:center;justify-content:center;gap:7px;background:var(--blurple);color:#fff;border:none;border-radius:8px;width:100%;padding:10px;font-family:'Outfit',sans-serif;font-size:11.5px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;cursor:pointer;text-decoration:none;transition:background .15s,transform .1s;margin-bottom:6px;}
+.jbtn:hover{background:var(--blurple2);transform:translateY(-1px);}.jbtn:active{transform:translateY(0);}
+.frow{display:flex;gap:5px;}
+.sbtn{flex:1;display:flex;align-items:center;justify-content:center;gap:5px;background:var(--bg3);color:var(--t2);border:1px solid var(--bd2);border-radius:8px;padding:7px;font-family:'Outfit',sans-serif;font-size:9.5px;font-weight:700;cursor:pointer;text-decoration:none;transition:all .15s;}
+.sbtn:hover{background:var(--bgact);color:var(--t1);}
+.toast{position:absolute;bottom:68px;left:50%;transform:translateX(-50%);background:var(--green);color:#fff;font-size:11px;font-weight:700;border-radius:6px;padding:5px 14px;opacity:0;pointer-events:none;transition:opacity .2s;white-space:nowrap;z-index:99;}
+.toast.show{opacity:1;}
+.empty{text-align:center;padding:24px 16px;color:var(--t3);font-size:11.5px;}.eico{font-size:26px;margin-bottom:8px;}
+.errbtn{background:var(--bg3);border:1px solid var(--bd2);border-radius:8px;padding:7px 16px;color:var(--t2);font-family:'Outfit',sans-serif;font-size:11.5px;font-weight:600;cursor:pointer;transition:background .15s;margin-top:10px;}
+.errbtn:hover{background:var(--bgact);}
+</style>
 </head>
 <body>
 <div class="widget">
   <div class="rfbar"><div class="rffill" id="rfill"></div></div>
-
   <div class="hdr">
     <div class="hdr-banner"></div>
     <div class="hdr-body">
@@ -42,7 +145,6 @@
 
   <div class="panels">
     <div class="panel on" id="p-ov"><div class="scroll" id="ov-c"><div class="empty"><div class="eico">⏳</div>Loading…</div></div></div>
-
     <div class="panel" id="p-mb">
       <div class="mctrl" id="m-ctrl" style="display:none">
         <input class="msrch" id="m-srch" placeholder="🔍 Search members…" oninput="renderMb()">
@@ -55,9 +157,7 @@
       </div>
       <div class="scroll" id="m-list"><div class="empty"><div class="eico">⏳</div>Loading…</div></div>
     </div>
-
     <div class="panel" id="p-vc"><div class="scroll" id="vc-l"><div class="empty"><div class="eico">⏳</div>Loading…</div></div></div>
-
     <div class="panel" id="p-ac">
       <div class="ach">
         <span class="act">Online Trend</span>
@@ -79,7 +179,6 @@
       <a class="sbtn" href="https://sortofdevofficial.github.io/PlayConsole4u/widgets/discord.html" target="_blank" rel="noopener">⛶ Dashboard</a>
     </div>
   </div>
-
   <div class="toast" id="toast">✓ Invite copied!</div>
 </div>
 
@@ -96,6 +195,25 @@ const FM={
   NEWS:['📰','News Channels'],MORE_STICKERS:['🎭','More Stickers'],
   THREADS_ENABLED:['🧵','Threads'],MONETIZATION_ENABLED:['💰','Monetization']
 };
+
+// ── ROLE BADGES — edit these to match your actual server roles ──
+// Format: { match: 'exact_username', role: 'Label', color: '#hex', bg: '#hex' }
+// OR use keyword matching in username for groups
+const ROLE_MAP = [
+  { match: 'sortofdev',  role: '👑 Owner',    color: '#ffd700', bg: 'rgba(255,215,0,.15)'   },
+  { match: 'mod',        role: '🛡 Mod',       color: '#57f287', bg: 'rgba(87,242,135,.15)'  },
+  { match: 'admin',      role: '⚡ Admin',     color: '#5865f2', bg: 'rgba(88,101,242,.15)'  },
+  { match: 'bot',        role: '🤖 Bot',       color: '#80848e', bg: 'rgba(128,132,142,.15)' },
+  { match: 'dev',        role: '💻 Dev',       color: '#3b9eed', bg: 'rgba(59,158,237,.15)'  },
+];
+
+function getRoleBadge(username) {
+  const u = username.toLowerCase();
+  const match = ROLE_MAP.find(r => u.includes(r.match.toLowerCase()));
+  if (!match) return '';
+  return `<span class="role-badge" style="color:${match.color};background:${match.bg};border-color:${match.color}33">${match.role}</span>`;
+}
+
 let W=null,I=null,chart=null,flt='all';
 
 async function load(){
@@ -112,16 +230,13 @@ async function load(){
 }
 
 function resetBar(){const e=document.getElementById('rfill');e.style.animation='none';void e.offsetWidth;e.style.animation='rfa 35s linear forwards';}
-
 function saveH(c){try{const a=JSON.parse(localStorage.getItem(HK)||'[]');a.push({t:Date.now(),c});while(a.length>80)a.shift();localStorage.setItem(HK,JSON.stringify(a));}catch(e){}}
 function getH(){try{return JSON.parse(localStorage.getItem(HK)||'[]');}catch(e){return[];}}
 
 function render(){
   if(!W)return;
   const g=I?.guild||{};
-  const ico=g.icon
-    ?`https://cdn.discordapp.com/icons/${GID}/${g.icon}.webp?size=128`
-    :`https://ui-avatars.com/api/?name=${encodeURIComponent(W.name)}&background=5865f2&color=fff&bold=true&font-size=0.35&rounded=false`;
+  const ico=g.icon?`https://cdn.discordapp.com/icons/${GID}/${g.icon}.webp?size=128`:`https://ui-avatars.com/api/?name=${encodeURIComponent(W.name)}&background=5865f2&color=fff&bold=true&font-size=0.35&rounded=false`;
   document.getElementById('sv-icon').src=ico;
   document.getElementById('sv-name').textContent=W.name;
   document.getElementById('sv-desc').textContent=g.description||'A Discord community — join us!';
@@ -143,8 +258,7 @@ function cnt(id,v){
   if(typeof v!=='number'||v<=0){e.textContent=v||'—';return;}
   let s=performance.now();
   (function step(n){const p=Math.min((n-s)/600,1),ease=1-Math.pow(1-p,3);
-    e.textContent=Math.round(v*ease).toLocaleString();if(p<1)requestAnimationFrame(step);
-  })(s);
+    e.textContent=Math.round(v*ease).toLocaleString();if(p<1)requestAnimationFrame(step);})(s);
 }
 
 function renderOv(mbs,total,online,tier,bc,g){
@@ -172,11 +286,7 @@ function renderOv(mbs,total,online,tier,bc,g){
     <div class="brow"><span class="bnm">⚡ ${BT[tier]}</span><span class="bsub">${bc} boost${bc!==1?'s':''} · next at ${bn}</span></div>
     <div class="btrack"><div class="bfill" style="width:${bp}%"></div></div>
   </div>`;
-  if(feats.length){
-    h+=`<div class="sec">Features</div><div class="igrid">`;
-    feats.forEach(f=>{const[ic,lb]=FM[f];h+=`<div class="icell"><span class="iico">${ic}</span>${lb}</div>`;});
-    h+=`</div>`;
-  }
+  if(feats.length){h+=`<div class="sec">Features</div><div class="igrid">`;feats.forEach(f=>{const[ic,lb]=FM[f];h+=`<div class="icell"><span class="iico">${ic}</span>${lb}</div>`;});h+=`</div>`;}
   document.getElementById('ov-c').innerHTML=h;
 }
 
@@ -195,7 +305,13 @@ function renderMb(){
   if(!list.length){el.innerHTML=`<div class="empty"><div class="eico">🔍</div>No members found</div>`;return;}
   el.innerHTML=list.map(m=>`<div class="mcrd">
     <div class="avw"><img class="av" src="${m.avatar_url}" alt="${esc(m.username)}" loading="lazy"><div class="avs ${m.status||'o'}"></div></div>
-    <div class="mi"><div class="mn">${esc(m.username)}</div>${m.game?`<div class="ma">🎮 ${esc(m.game.name)}</div>`:''}</div>
+    <div class="mi">
+      <div class="mn-row">
+        <span class="mn">${esc(m.username)}</span>
+        ${getRoleBadge(m.username)}
+      </div>
+      ${m.game?`<div class="ma">🎮 ${esc(m.game.name)}</div>`:''}
+    </div>
     ${m.game?`<div class="gtag">${esc(m.game.name.slice(0,14))}${m.game.name.length>14?'…':''}</div>`:''}
   </div>`).join('');
 }
@@ -214,7 +330,7 @@ function renderVc(mbs,chs){
     const ins=mbs.filter(m=>m.channel_id===c.id);
     return`<div class="vcg">
       <div class="vch">🔊 <span class="vcn">${esc(c.name)}</span><span class="vcc">${ins.length}</span></div>
-      <div class="vcms">${ins.length?ins.map(m=>`<div class="vcmr"><img class="vcav" src="${m.avatar_url}" loading="lazy"><span>${esc(m.username)}</span>${m.game?`<span style="font-size:9px;color:var(--t3);margin-left:auto">🎮${esc(m.game.name.slice(0,12))}</span>`:''}</div>`).join(''):'<div class="vce">— vacant —</div>'}</div>
+      <div class="vcms">${ins.length?ins.map(m=>`<div class="vcmr"><img class="vcav" src="${m.avatar_url}" loading="lazy"><span>${esc(m.username)}</span>${getRoleBadge(m.username)}${m.game?`<span style="font-size:9px;color:var(--t3);margin-left:auto">🎮${esc(m.game.name.slice(0,12))}</span>`:''}</div>`).join(''):'<div class="vce">— vacant —</div>'}</div>
     </div>`;
   }).join('');
 }
