@@ -3,7 +3,7 @@ const fs = require('fs');
 
 // ── CONFIG ───────────────────────────────────────────────
 const TOKEN     = process.env.DISCORD_TOKEN;
-const CLIENT_ID = process.env.DISCORD_CLIENT_ID;  // ✅ FIXED (was DISCORD_GUILD_ID)
+const CLIENT_ID = process.env.DISCORD_CLIENT_ID;
 const STATS_CH  = '1505204180674019520';
 const LINKS_CH  = '1504104519749992559';
 const SYS_CH    = '1505111889850404864';
@@ -58,7 +58,7 @@ async function updateStats() {
     await saveMsg(ch, './msgId.txt', { embeds:[e] });
 }
 
-// ── LINKS ────────────────────────────────────────────────
+// ── LINKS (runs once on boot only — rarely changes) ──────
 async function updateLinks() {
     const ch = await fetchCh(LINKS_CH);
     if (!ch) return;
@@ -107,25 +107,31 @@ const cmds = [
 client.once('ready', async () => {
     console.log(`✅ ${client.user.tag} online`);
 
-    // ✅ FIXED: guard against missing CLIENT_ID before registering commands
     if (!CLIENT_ID) {
-        console.error('❌ DISCORD_CLIENT_ID env var is missing! Slash commands not registered.');
+        console.error('❌ DISCORD_CLIENT_ID missing — slash commands not registered.');
     } else {
         await new REST({version:'10'}).setToken(TOKEN).put(Routes.applicationCommands(CLIENT_ID), {body:cmds});
         console.log('✅ Slash commands registered');
     }
 
+    // Rotating status — every 30s instead of 15s (half the API calls)
     let i=0;
     setInterval(()=>client.user.setActivity([
         {name:'Milestone Goals 🎯',type:ActivityType.Watching},
         {name:`${client.guilds.cache.reduce((a,g)=>a+g.memberCount,0)} Devs 💻`,type:ActivityType.Custom},
         {name:'/commands for help',type:ActivityType.Playing}
-    ][i++%3]),15000);
+    ][i++%3]),30000);
 
+    // Run once on boot
     await Promise.all([syncRoles(), updateStats(), updateLinks()]);
-    setInterval(updateStats, 10*60*1000);
-    setInterval(syncRoles,    5*60*1000);
-    setInterval(updateLinks, 60*60*1000);
+
+    // Stats: every 2hrs instead of 10min — saves ~11 YT API calls/hr
+    setInterval(updateStats, 2*60*60*1000);
+
+    // Role sync: once per day — roles don't change that fast
+    setInterval(syncRoles, 24*60*60*1000);
+
+    // Links never auto-update (static content, use /forceupdate if needed)
 });
 
 // ── MEMBER EVENTS ─────────────────────────────────────────
@@ -174,7 +180,8 @@ client.on('messageCreate', async msg => {
     }
 
     msgs[key] = (msgs[key]||0)+1;
-    if (msgs[key]%50===0) save('./msgs.json', msgs);
+    // Save every 10 messages instead of 50 — less data loss on restart
+    if (msgs[key]%10===0) save('./msgs.json', msgs);
 });
 
 // ── INTERACTIONS ──────────────────────────────────────────
