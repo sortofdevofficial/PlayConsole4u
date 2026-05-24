@@ -3,7 +3,7 @@ const fs = require('fs');
 
 // ── CONFIG ───────────────────────────────────────────────
 const TOKEN     = process.env.DISCORD_TOKEN;
-const CLIENT_ID = process.env.DISCORD_GUILD_ID;
+const CLIENT_ID = process.env.DISCORD_CLIENT_ID;  // ✅ FIXED (was DISCORD_GUILD_ID)
 const STATS_CH  = '1505204180674019520';
 const LINKS_CH  = '1504104519749992559';
 const SYS_CH    = '1505111889850404864';
@@ -106,8 +106,14 @@ const cmds = [
 // ── BOOT ──────────────────────────────────────────────────
 client.once('ready', async () => {
     console.log(`✅ ${client.user.tag} online`);
-    await new REST({version:'10'}).setToken(TOKEN).put(Routes.applicationCommands(CLIENT_ID), {body:cmds});
-    console.log('✅ Slash commands registered');
+
+    // ✅ FIXED: guard against missing CLIENT_ID before registering commands
+    if (!CLIENT_ID) {
+        console.error('❌ DISCORD_CLIENT_ID env var is missing! Slash commands not registered.');
+    } else {
+        await new REST({version:'10'}).setToken(TOKEN).put(Routes.applicationCommands(CLIENT_ID), {body:cmds});
+        console.log('✅ Slash commands registered');
+    }
 
     let i=0;
     setInterval(()=>client.user.setActivity([
@@ -156,20 +162,17 @@ client.on('messageCreate', async msg => {
     if (msg.author.bot || !msg.guild) return;
     const key = `${msg.guild.id}-${msg.author.id}`;
 
-    // AFK return
     if (afk[key]) {
         delete afk[key]; save('./afk.json', afk);
         const r = await msg.reply(diff('+ Welcome back! AFK removed.')).catch(()=>null);
         if (r) setTimeout(()=>r.delete().catch(()=>{}), 4000);
     }
 
-    // Ping AFK check
     for (const [,u] of msg.mentions.users) {
         const k = `${msg.guild.id}-${u.id}`;
         if (afk[k]) await msg.reply(fix(` 💤 ${u.tag} is AFK`) + diff(`+ Reason : ${afk[k].reason}\n+ Since  : ${ago(afk[k].since)} ago`)).catch(()=>{});
     }
 
-    // Count
     msgs[key] = (msgs[key]||0)+1;
     if (msgs[key]%50===0) save('./msgs.json', msgs);
 });
@@ -199,9 +202,9 @@ client.on('interactionCreate', async i => {
     if (cmd==='commands') {
         return i.reply({ embeds:[embed('#5865F2','⚡  𝗔𝗟𝗟  𝗖𝗢𝗠𝗠𝗔𝗡𝗗𝗦')
             .addFields(
-                {name:fix(' 📊 INFO '),     value:diff('+ /ping\n+ /stats\n+ /serverinfo\n+ /userinfo\n+ /avatar\n+ /messages\n+ /leaderboard'),inline:true},
-                {name:fix(' 💤 AFK '),      value:diff('+ /afk [reason]'),inline:true},
-                {name:fix(' 🔧 ADMIN '),    value:diff('+ /forceupdate'),inline:true}
+                {name:fix(' 📊 INFO '),  value:diff('+ /ping\n+ /stats\n+ /serverinfo\n+ /userinfo\n+ /avatar\n+ /messages\n+ /leaderboard'),inline:true},
+                {name:fix(' 💤 AFK '),   value:diff('+ /afk [reason]'),inline:true},
+                {name:fix(' 🔧 ADMIN '), value:diff('+ /forceupdate'),inline:true}
             )] });
     }
 
@@ -260,5 +263,9 @@ client.on('interactionCreate', async i => {
         return i.reply(diff(`+ AFK set!\n+ Reason : ${reason}\n+ Auto-removed when you send a message.`));
     }
 });
+
+// ── CRASH GUARD ───────────────────────────────────────────
+process.on('unhandledRejection', e => console.error('❌ Unhandled rejection:', e));
+process.on('uncaughtException',  e => console.error('❌ Uncaught exception:', e));
 
 client.login(TOKEN);
