@@ -42,24 +42,20 @@ function spawnParticles() {
   if (!wrap) return;
 
   const frag = document.createDocumentFragment();
-
   for (let i = 0; i < 18; i++) {
     const p = document.createElement('div');
     p.className = 'particle';
-
     const size = Math.random() * 4 + 2;
     p.style.cssText = `
-      width: ${size}px;
-      height: ${size}px;
-      left: ${Math.random() * 100}%;
-      top: ${Math.random() * 100}%;
-      animation-duration: ${Math.random() * 12 + 8}s;
-      animation-delay: ${Math.random() * 8}s;
+      width:${size}px;
+      height:${size}px;
+      left:${Math.random()*100}%;
+      top:${Math.random()*100}%;
+      animation-duration:${Math.random()*12+8}s;
+      animation-delay:${Math.random()*8}s;
     `;
-
     frag.appendChild(p);
   }
-
   wrap.appendChild(frag);
 }
 
@@ -70,9 +66,7 @@ async function loadData() {
       fetch(`https://discord.com/api/v9/invites/${CODE}?with_counts=true`)
     ]);
 
-    if (!wr.ok) {
-      throw new Error('Widget disabled. Enable it in Server Settings → Widget.');
-    }
+    if (!wr.ok) throw new Error('Widget disabled. Enable it in Server Settings → Widget.');
 
     W = await wr.json();
     I = ir.ok ? await ir.json() : null;
@@ -145,10 +139,8 @@ function render() {
     if (bw) bw.style.display = '';
     setText('boost-tier', BT[tier] || 'Level 0');
     setText('boost-count', `${bc} boost${bc !== 1 ? 's' : ''}`);
-
     const next = BR[Math.min(tier + 1, 3)] || BR[3];
     const pct = next ? Math.min((bc / next) * 100, 100) : 100;
-
     const bf = $('boost-fill');
     if (bf) bf.style.width = `${pct}%`;
   }
@@ -221,11 +213,9 @@ function renderMembers() {
 function setFilter(f) {
   filter = f;
   document.querySelectorAll('.pfb').forEach(b => b.classList.remove('on'));
-
   const map = { all: 'pf-all', online: 'pf-o', idle: 'pf-i', dnd: 'pf-d' };
   const el = $(map[f]);
   if (el) el.classList.add('on');
-
   renderMembers();
 }
 
@@ -240,7 +230,6 @@ function renderVoice(mbs, chs) {
 
   el.innerHTML = chs.map(c => {
     const ins = mbs.filter(m => m.channel_id === c.id);
-
     return `<div class="vcg">
       <div class="vch">🔊 <span class="vcn">${esc(c.name)}</span><span class="vcc">${ins.length}</span></div>
       <div class="vcms">${
@@ -260,24 +249,50 @@ function renderActivity(online) {
   setText('ac-count', `${online} online`);
 
   const h = getHistory();
-  setText('ac-pk', h.length ? Math.max(...h.map(x => x.c)) : '—');
-  setText('ac-av', h.length ? Math.round(h.reduce((s, x) => s + x.c, 0) / h.length) : '—');
-  setText('ac-pt', h.length);
+  const count = h.length;
+  const peak = count ? Math.max(...h.map(x => x.c)) : online;
+  const avg = count ? Math.round(h.reduce((s, x) => s + x.c, 0) / count) : online;
+
+  setText('ac-pk', peak || '—');
+  setText('ac-av', avg || '—');
+  setText('ac-pt', count);
 
   const wrap = document.querySelector('.ac-chart-wrap');
   if (!wrap) return;
 
-  if (h.length < 2) {
-    wrap.innerHTML = `<div style="padding:14px;text-align:center;font-size:11px;color:var(--t3)">Not enough history yet — revisit to build the chart.</div>`;
+  if (count < 2) {
+    wrap.innerHTML = `
+      <div class="ac-empty">
+        <div class="ac-empty-icon">📈</div>
+        <div class="ac-empty-title">Not enough history yet</div>
+        <div class="ac-empty-desc">
+          Activity data will build up over time as this page keeps loading.
+        </div>
+        <div class="ac-empty-stats">
+          <div class="ac-mini">
+            <span class="ac-mini-n">${online}</span>
+            <span class="ac-mini-l">Current</span>
+          </div>
+          <div class="ac-mini">
+            <span class="ac-mini-n">${peak}</span>
+            <span class="ac-mini-l">Peak</span>
+          </div>
+          <div class="ac-mini">
+            <span class="ac-mini-n">${avg}</span>
+            <span class="ac-mini-l">Average</span>
+          </div>
+        </div>
+        <div class="ac-empty-note">Keep this tab open or revisit later to see the chart.</div>
+      </div>
+    `;
     return;
   }
 
   if (!wrap.querySelector('canvas')) {
-    wrap.innerHTML = `<canvas id="actChart" height="120"></canvas>`;
+    wrap.innerHTML = `<canvas id="actChart" height="140"></canvas>`;
   }
 
   const last = h.slice(-30);
-
   if (chart) chart.destroy();
 
   chart = new Chart($('actChart').getContext('2d'), {
@@ -328,9 +343,12 @@ function renderActivity(online) {
             font: { size: 9 },
             maxTicksLimit: 6
           },
-          grid: { display: false }
+          grid: {
+            display: last.length >= 5
+          }
         },
         y: {
+          beginAtZero: true,
           ticks: {
             color: '#4e5058',
             font: {
@@ -340,6 +358,7 @@ function renderActivity(online) {
             maxTicksLimit: 4
           },
           grid: {
+            display: last.length >= 5,
             color: 'rgba(255,255,255,.04)'
           }
         }
