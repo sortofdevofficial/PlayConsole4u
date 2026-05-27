@@ -82,7 +82,18 @@ header{display:flex;align-items:center;justify-content:space-between;flex-wrap:w
 .featured-btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.18)}
 
 /* SIDEBAR COLUMN */
-.sidebar-col{display:flex;flex-direction:column;gap:14px;position:sticky;top:20px}
+.sidebar-col{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  position:sticky;
+  top:20px;
+  align-self:start;
+}
+
+@media(max-width:900px){
+  .sidebar-col{position:static}
+}
 
 .widget-label{font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--text3);display:flex;align-items:center;gap:8px;margin-bottom:2px}
 .widget-label.yt::before{content:'';width:8px;height:8px;border-radius:50%;background:#ef4444;flex-shrink:0;box-shadow:0 0 0 3px rgba(239,68,68,.15);animation:ytb 1.5s linear infinite}
@@ -98,11 +109,20 @@ header{display:flex;align-items:center;justify-content:space-between;flex-wrap:w
   line-height:0; /* removes inline gap */
 }
 .dc-frame-wrap{
-  width:100%;border-radius:16px;overflow:hidden;
-  border:1.5px solid #3a3d44; /* subtle dark border matching Discord widget */
-  box-shadow:var(--shadow2);
-  background:#1e1f22;
+  width:100%;
+  border-radius:16px;
+  overflow:hidden;
   line-height:0;
+  background:#1e1f22;
+  border:1.5px solid #3a3d44;
+  box-shadow:var(--shadow2);
+}
+
+.dc-frame-wrap iframe{
+  display:block;
+  width:100%;
+  border:none;
+  background:transparent;
 }
 .yt-frame-wrap iframe,
 .dc-frame-wrap iframe{
@@ -281,12 +301,12 @@ header{display:flex;align-items:center;justify-content:space-between;flex-wrap:w
 
       <div class="widget-label dc" style="margin-top:6px">Discord Community</div>
       <div class="dc-frame-wrap">
-        <iframe
-          src="widgets/Discord/discord.html"
-          height="575"
-          scrolling="no"
-          title="Discord Widget"
-        ></iframe>
+<iframe
+  src="widgets/Discord/discord.html"
+  height="680"
+  scrolling="no"
+  title="Discord Widget"
+></iframe>
       </div>
 
     </div>
