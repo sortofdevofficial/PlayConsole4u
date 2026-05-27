@@ -131,7 +131,29 @@ header{display:flex;align-items:center;justify-content:space-between;flex-wrap:w
   border:none;
   background:transparent;
 }
+.extend-btn{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:100%;
+  padding:10px 14px;
+  border-radius:12px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  color:#fff;
+  border:1px solid rgba(91,58,247,.18);
+  box-shadow:0 6px 18px rgba(91,58,247,.16);
+  font-family:'DM Sans',sans-serif;
+  font-size:13px;
+  font-weight:800;
+  letter-spacing:.5px;
+  transition:transform .18s,box-shadow .18s,filter .18s;
+}
 
+.extend-btn:hover{
+  transform:translateY(-2px);
+  filter:brightness(1.05);
+  box-shadow:0 10px 26px rgba(91,58,247,.22);
+}
 /* SLIDE-OUT PANEL */
 #veil{position:fixed;inset:0;z-index:150;background:rgba(26,22,37,0);pointer-events:none;transition:background .22s ease}
 #veil.on{background:rgba(26,22,37,.28);pointer-events:all;backdrop-filter:blur(3px)}
@@ -299,15 +321,20 @@ header{display:flex;align-items:center;justify-content:space-between;flex-wrap:w
         ></iframe>
       </div>
 
-      <div class="widget-label dc" style="margin-top:6px">Discord Community</div>
-      <div class="dc-frame-wrap">
-<iframe
-  src="widgets/Discord/discord.html"
-  height="680"
-  scrolling="no"
-  title="Discord Widget"
-></iframe>
-      </div>
+<div class="widget-label dc" style="margin-top:6px">Discord Community</div>
+
+<a class="extend-btn" href="https://sortofdevofficial.github.io/PlayConsole4u/widgets/Discord/discord.html" target="_blank" rel="noopener">
+  Extend
+</a>
+
+<div class="dc-frame-wrap">
+  <iframe
+    src="widgets/Discord/discord.html"
+    height="680"
+    scrolling="no"
+    title="Discord Widget"
+  ></iframe>
+</div>
 
     </div>
   </div>
