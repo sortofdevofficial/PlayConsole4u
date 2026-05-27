@@ -109,7 +109,7 @@
   <script>
     const GOOGLE_API_KEY = "AIzaSyAmJzKU1txxHAL_Xeu-owQ2DFVeC8j8tF0";
     const YT_CHANNEL_ID = "UC8eEGtjt9tW3jpkXucPBvvA";
-    const TARGET = 25;
+    const TARGET = 50;
 
     function formatNumber(num) {
       if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
@@ -147,7 +147,7 @@
         progressEl.style.width = progressPercent + '%';
 
         if (subs >= TARGET) {
-          msg.textContent = "🎉 Goal reached! Next goal: 50 subs!";
+          msg.textContent = "🎉 Goal reached! Next goal: 100 subs!";
           msg.style.background = "#d1fae5";
           msg.style.color = "#065f46";
         } else {
