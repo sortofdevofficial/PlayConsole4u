@@ -19,43 +19,47 @@ const FM = {
   MONETIZATION_ENABLED: ['💰', 'Monetization']
 };
 
-const ROLE_GROUPS = [
-  { ids: ['1505118900948566059'], label: '〔 👑 〕 OWNER', color: '#ffd700', bg: 'rgba(255,215,0,.15)' },
-  { ids: ['1508465924846653511'], label: '〔 🔐 〕 ADMIN', color: '#5865f2', bg: 'rgba(88,101,242,.15)' },
-  { ids: ['1506648379965575309'], label: '〔 🛡️ 〕 MODERATOR', color: '#57f287', bg: 'rgba(87,242,135,.15)' },
-  { ids: ['1505220660123799553'], label: '〔 📢 〕 ADVERTISER', color: '#f0b232', bg: 'rgba(240,178,50,.15)' },
-  { ids: ['1505910102677389402'], label: '〔 🎬 〕 CREATOR', color: '#ff73fa', bg: 'rgba(255,115,250,.15)' },
-  { ids: ['1505120712518795265'], label: '〔 💎 〕 VIP', color: '#3b9eed', bg: 'rgba(59,158,237,.15)' },
-  { ids: ['1505127774611046472'], label: '〔 🎈 〕 GUEST', color: '#80848e', bg: 'rgba(128,132,142,.15)' },
-  { ids: ['1505448077333368852'], label: '〔 🔴 〕 SUBSCRIBER', color: '#ef4444', bg: 'rgba(239,68,68,.15)' },
-  { ids: ['1505120185088999444'], label: '〔 💬 〕 MEMBER', color: '#b5bac1', bg: 'rgba(255,255,255,.08)' },
-  { ids: ['1505118545493626920'], label: '〔 ⚙️ 〕 BOT', color: '#80848e', bg: 'rgba(128,132,142,.15)' },
-];
-
-let W = null, I = null, chart = null, filter = 'all';
+let W = null;
+let I = null;
+let chart = null;
+let filter = 'all';
 
 const $ = (id) => document.getElementById(id);
-const setText = (id, val) => { const el = $(id); if (el) el.textContent = val; };
-const esc = (s) => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const setText = (id, val) => {
+  const el = $(id);
+  if (el) el.textContent = val;
+};
+
+const esc = (s) =>
+  String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 
 function spawnParticles() {
   const wrap = $('particles');
   if (!wrap) return;
+
   const frag = document.createDocumentFragment();
+
   for (let i = 0; i < 18; i++) {
     const p = document.createElement('div');
     p.className = 'particle';
+
     const size = Math.random() * 4 + 2;
     p.style.cssText = `
-      width:${size}px;
-      height:${size}px;
-      left:${Math.random()*100}%;
-      top:${Math.random()*100}%;
-      animation-duration:${Math.random()*12+8}s;
-      animation-delay:${Math.random()*8}s;
+      width: ${size}px;
+      height: ${size}px;
+      left: ${Math.random() * 100}%;
+      top: ${Math.random() * 100}%;
+      animation-duration: ${Math.random() * 12 + 8}s;
+      animation-delay: ${Math.random() * 8}s;
     `;
+
     frag.appendChild(p);
   }
+
   wrap.appendChild(frag);
 }
 
@@ -65,15 +69,22 @@ async function loadData() {
       fetch(`https://discord.com/api/guilds/${GID}/widget.json`),
       fetch(`https://discord.com/api/v9/invites/${CODE}?with_counts=true`)
     ]);
-    if (!wr.ok) throw new Error('Widget disabled. Enable it in Server Settings → Widget.');
+
+    if (!wr.ok) {
+      throw new Error('Widget disabled. Enable it in Server Settings → Widget.');
+    }
+
     W = await wr.json();
     I = ir.ok ? await ir.json() : null;
+
     saveHistory(W.presence_count || 0);
     render();
     resetBar();
   } catch (e) {
     const el = $('ov-content');
-    if (el) el.innerHTML = `<div class="pempty"><div class="peico">⚠️</div><p>${esc(e.message || 'Failed to load server data.')}</p></div>`;
+    if (el) {
+      el.innerHTML = `<div class="pempty"><div class="peico">⚠️</div><p>${esc(e.message || 'Failed to load server data.')}</p></div>`;
+    }
   }
 }
 
@@ -87,7 +98,11 @@ function saveHistory(c) {
 }
 
 function getHistory() {
-  try { return JSON.parse(localStorage.getItem(HK) || '[]'); } catch { return []; }
+  try {
+    return JSON.parse(localStorage.getItem(HK) || '[]');
+  } catch {
+    return [];
+  }
 }
 
 function resetBar() {
@@ -100,6 +115,7 @@ function resetBar() {
 
 function render() {
   if (!W) return;
+
   const g = I?.guild || {};
   const total = I?.approximate_member_count || 0;
   const online = W.presence_count || 0;
@@ -129,8 +145,10 @@ function render() {
     if (bw) bw.style.display = '';
     setText('boost-tier', BT[tier] || 'Level 0');
     setText('boost-count', `${bc} boost${bc !== 1 ? 's' : ''}`);
+
     const next = BR[Math.min(tier + 1, 3)] || BR[3];
     const pct = next ? Math.min((bc / next) * 100, 100) : 100;
+
     const bf = $('boost-fill');
     if (bf) bf.style.width = `${pct}%`;
   }
@@ -151,18 +169,13 @@ function memberCountMap(mbs) {
     all: mbs.length,
     online: mbs.filter(m => m.status === 'online').length,
     idle: mbs.filter(m => m.status === 'idle').length,
-    dnd: mbs.filter(m => m.status === 'dnd').length,
+    dnd: mbs.filter(m => m.status === 'dnd').length
   };
-}
-
-function roleBadges(member) {
-  const roles = [...(member.roles?.cache?.values?.() || [])].filter(r => r.id !== member.guild?.id);
-  const matches = ROLE_GROUPS.filter(group => group.ids.some(id => roles.some(r => r.id === id)));
-  return matches.map(m => `<span class="role-badge" style="color:${m.color};background:${m.bg};border-color:${m.color}33">${m.label}</span>`).join(' ');
 }
 
 function renderMembers() {
   if (!W) return;
+
   const mbs = W.members || [];
   const q = ($('mb-srch')?.value || '').toLowerCase();
   const ctrl = $('mb-ctrl');
@@ -174,21 +187,29 @@ function renderMembers() {
   setText('pfc-i', co.idle);
   setText('pfc-d', co.dnd);
 
-  const list = mbs.filter(m => (filter === 'all' || m.status === filter) && (!q || m.username.toLowerCase().includes(q)));
+  const list = mbs.filter(m => {
+    const okStatus = filter === 'all' || m.status === filter;
+    const okSearch = !q || m.username.toLowerCase().includes(q);
+    return okStatus && okSearch;
+  });
+
   const el = $('mb-list');
   if (!el) return;
-  if (!list.length) { el.innerHTML = `<div class="pempty"><div class="peico">🔍</div>No members found</div>`; return; }
+
+  if (!list.length) {
+    el.innerHTML = `<div class="pempty"><div class="peico">🔍</div>No members found</div>`;
+    return;
+  }
 
   el.innerHTML = list.map(m => `
     <div class="mcrd">
       <div class="avw">
         <img class="av" src="${m.avatar_url}" alt="${esc(m.username)}" loading="lazy">
-        <div class="avs ${m.status || 'o'}"></div>
+        <div class="avs ${m.status || 'offline'}"></div>
       </div>
       <div class="minfo">
         <div class="mn-row">
           <span class="mn">${esc(m.username)}</span>
-          ${roleBadges(m)}
         </div>
         ${m.game ? `<div class="ma">🎮 ${esc(m.game.name)}</div>` : ''}
       </div>
@@ -200,19 +221,26 @@ function renderMembers() {
 function setFilter(f) {
   filter = f;
   document.querySelectorAll('.pfb').forEach(b => b.classList.remove('on'));
+
   const map = { all: 'pf-all', online: 'pf-o', idle: 'pf-i', dnd: 'pf-d' };
   const el = $(map[f]);
   if (el) el.classList.add('on');
+
   renderMembers();
 }
 
 function renderVoice(mbs, chs) {
   const el = $('vc-list');
   if (!el) return;
-  if (!chs.length) { el.innerHTML = `<div class="pempty"><div class="peico">🔇</div>No active voice channels</div>`; return; }
+
+  if (!chs.length) {
+    el.innerHTML = `<div class="pempty"><div class="peico">🔇</div>No active voice channels</div>`;
+    return;
+  }
 
   el.innerHTML = chs.map(c => {
     const ins = mbs.filter(m => m.channel_id === c.id);
+
     return `<div class="vcg">
       <div class="vch">🔊 <span class="vcn">${esc(c.name)}</span><span class="vcc">${ins.length}</span></div>
       <div class="vcms">${
@@ -220,7 +248,6 @@ function renderVoice(mbs, chs) {
           ? ins.map(m => `<div class="vcmr">
               <img class="vcav" src="${m.avatar_url}" alt="${esc(m.username)}" loading="lazy">
               <span>${esc(m.username)}</span>
-              ${roleBadges(m)}
               ${m.game ? `<span style="font-size:9px;color:var(--t3);margin-left:auto">🎮 ${esc(m.game.name.slice(0, 12))}</span>` : ''}
             </div>`).join('')
           : '<div class="vce">— vacant —</div>'
@@ -231,6 +258,7 @@ function renderVoice(mbs, chs) {
 
 function renderActivity(online) {
   setText('ac-count', `${online} online`);
+
   const h = getHistory();
   setText('ac-pk', h.length ? Math.max(...h.map(x => x.c)) : '—');
   setText('ac-av', h.length ? Math.round(h.reduce((s, x) => s + x.c, 0) / h.length) : '—');
@@ -238,12 +266,18 @@ function renderActivity(online) {
 
   const wrap = document.querySelector('.ac-chart-wrap');
   if (!wrap) return;
+
   if (h.length < 2) {
     wrap.innerHTML = `<div style="padding:14px;text-align:center;font-size:11px;color:var(--t3)">Not enough history yet — revisit to build the chart.</div>`;
     return;
   }
-  if (!wrap.querySelector('canvas')) wrap.innerHTML = `<canvas id="actChart" height="120"></canvas>`;
+
+  if (!wrap.querySelector('canvas')) {
+    wrap.innerHTML = `<canvas id="actChart" height="120"></canvas>`;
+  }
+
   const last = h.slice(-30);
+
   if (chart) chart.destroy();
 
   chart = new Chart($('actChart').getContext('2d'), {
@@ -251,38 +285,64 @@ function renderActivity(online) {
     data: {
       labels: last.map(x => {
         const d = new Date(x.t);
-        return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+        return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
       }),
       datasets: [{
         data: last.map(x => x.c),
-        borderColor:'#57f287',
-        backgroundColor:'rgba(87,242,135,.08)',
-        borderWidth:2,
-        fill:true,
-        tension:.4,
-        pointRadius:last.length < 10 ? 3 : 0,
-        pointHoverRadius:4,
-        pointBackgroundColor:'#57f287'
+        borderColor: '#57f287',
+        backgroundColor: 'rgba(87,242,135,.08)',
+        borderWidth: 2,
+        fill: true,
+        tension: .4,
+        pointRadius: last.length < 10 ? 3 : 0,
+        pointHoverRadius: 4,
+        pointBackgroundColor: '#57f287'
       }]
     },
     options: {
-      responsive:true,
-      maintainAspectRatio:false,
-      plugins:{
-        legend:{display:false},
-        tooltip:{
-          backgroundColor:'#313338',
-          borderColor:'rgba(255,255,255,.1)',
-          borderWidth:1,
-          titleColor:'#b5bac1',
-          bodyColor:'#57f287',
-          bodyFont:{family:"'JetBrains Mono',monospace",weight:'700',size:13},
-          callbacks:{label:c=>` ${c.parsed.y} online`}
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#313338',
+          borderColor: 'rgba(255,255,255,.1)',
+          borderWidth: 1,
+          titleColor: '#b5bac1',
+          bodyColor: '#57f287',
+          bodyFont: {
+            family: "'JetBrains Mono',monospace",
+            weight: '700',
+            size: 13
+          },
+          callbacks: {
+            label: c => ` ${c.parsed.y} online`
+          }
         }
       },
-      scales:{
-        x:{display:last.length < 15, ticks:{color:'#4e5058',font:{size:9},maxTicksLimit:6}, grid:{display:false}},
-        y:{ticks:{color:'#4e5058',font:{family:"'JetBrains Mono',monospace",size:9},maxTicksLimit:4}, grid:{color:'rgba(255,255,255,.04)'}}
+      scales: {
+        x: {
+          display: last.length < 15,
+          ticks: {
+            color: '#4e5058',
+            font: { size: 9 },
+            maxTicksLimit: 6
+          },
+          grid: { display: false }
+        },
+        y: {
+          ticks: {
+            color: '#4e5058',
+            font: {
+              family: "'JetBrains Mono',monospace",
+              size: 9
+            },
+            maxTicksLimit: 4
+          },
+          grid: {
+            color: 'rgba(255,255,255,.04)'
+          }
+        }
       }
     }
   });
@@ -316,7 +376,10 @@ function renderOverview(mbs, total, online, tier, bc, g) {
 
   if (feats.length) {
     h += `<div class="ov-sec" style="margin-top:12px">Features</div><div class="igrid">`;
-    feats.forEach(f => { const [ic, lb] = FM[f]; h += `<div class="icell"><span>${ic}</span>${lb}</div>`; });
+    feats.forEach(f => {
+      const [ic, lb] = FM[f];
+      h += `<div class="icell"><span>${ic}</span>${lb}</div>`;
+    });
     h += `</div>`;
   }
 
@@ -327,18 +390,29 @@ function renderOverview(mbs, total, online, tier, bc, g) {
 function switchTab(t) {
   const map = { mb: 'wp-mb', vc: 'wp-vc', ac: 'wp-ac', ov: 'wp-ov' };
   const keys = ['mb', 'vc', 'ac', 'ov'];
-  document.querySelectorAll('.wtab').forEach((b, i) => b.classList.toggle('on', keys[i] === t));
-  Object.values(map).forEach(id => { const el = $(id); if (el) el.classList.remove('on'); });
+
+  document.querySelectorAll('.wtab').forEach((b, i) => {
+    b.classList.toggle('on', keys[i] === t);
+  });
+
+  Object.values(map).forEach(id => {
+    const el = $(id);
+    if (el) el.classList.remove('on');
+  });
+
   const active = $(map[t]);
   if (active) active.classList.add('on');
+
   if (t === 'ac' && chart) chart.resize();
 }
 
 function copyInvite() {
   const url = $('join-btn')?.href || `https://discord.gg/${CODE}`;
   navigator.clipboard.writeText(url).catch(() => {});
+
   const t = $('toast');
   if (!t) return;
+
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 1800);
 }
@@ -346,7 +420,12 @@ function copyInvite() {
 function animCount(id, v) {
   const el = $(id);
   if (!el) return;
-  if (!v) { el.textContent = '—'; return; }
+
+  if (!v) {
+    el.textContent = '—';
+    return;
+  }
+
   const start = performance.now();
   const tick = (now) => {
     const p = Math.min((now - start) / 700, 1);
@@ -354,6 +433,7 @@ function animCount(id, v) {
     el.textContent = Math.round(v * ease).toLocaleString();
     if (p < 1) requestAnimationFrame(tick);
   };
+
   requestAnimationFrame(tick);
 }
 
