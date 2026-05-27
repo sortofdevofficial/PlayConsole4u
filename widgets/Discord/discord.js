@@ -1,7 +1,7 @@
 const GID = '1503297362246897694';
 const CODE = 'dS4pgC9J5H';
 const HK = `dcw_${GID}`;
-
+const GOAL = 40;
 const BR = [0, 2, 7, 14];
 const BT = { 0: 'No Level', 1: 'Level 1', 2: 'Level 2', 3: 'Level 3' };
 const VL = ['None', 'Low', 'Medium', 'High', 'Very High'];
@@ -126,13 +126,17 @@ function render() {
   const heroIcon = $('hero-icon');
   if (heroIcon) heroIcon.src = ico;
 
-  setText('hero-title', W.name);
-  setText('hero-desc', g.description || 'An active community of gamers and creators — join the grid.');
+setText('hero-title', W.name);
+setText('hero-desc', g.description || 'An active community of gamers and creators — join the grid.');
 
-  animCount('h-total', total);
-  animCount('h-online', online);
-  setText('h-voice', voiceCount);
-  setText('h-boosts', bc);
+setText('goal-text', `${total} / ${GOAL}`);
+const goalFill = $('goal-fill');
+if (goalFill) goalFill.style.width = `${Math.min((total / GOAL) * 100, 100)}%`;
+
+animCount('h-total', total);
+animCount('h-online', online);
+setText('h-voice', voiceCount);
+setText('h-boosts', bc);
 
   if (tier > 0 || bc > 0) {
     const bw = $('boost-wrap');

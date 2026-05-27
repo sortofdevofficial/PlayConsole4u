@@ -215,3 +215,31 @@ canvas#actChart{width:100%!important;display:block}
   .btn-primary,.btn-secondary{width:100%;justify-content:center}
   .ac-stats,.ac-empty-stats{grid-template-columns:1fr}
 }
+.goal-box{
+  max-width:480px;
+  margin:0 auto 28px;
+  text-align:left;
+}
+.goal-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  font-size:12px;
+  font-weight:700;
+  color:var(--t2);
+  margin-bottom:8px;
+}
+.goal-track{
+  height:8px;
+  background:var(--bgact);
+  border-radius:999px;
+  overflow:hidden;
+  border:1px solid var(--bd2);
+}
+.goal-fill{
+  height:100%;
+  width:0%;
+  background:linear-gradient(90deg,var(--blurple),#7289da);
+  border-radius:999px;
+  transition:width .4s ease;
+}
