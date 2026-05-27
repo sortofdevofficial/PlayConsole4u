@@ -1,193 +1,220 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Engine Grid — Discord</title>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="discord.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Engine Grid — Discord</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="discord.css">
 </head>
 <body>
 
-<!-- ── HERO ── -->
-<header class="hero">
-  <div class="hero-bg"></div>
-  <div class="hero-particles" id="particles"></div>
-  <div class="hero-inner">
-    <div class="hero-badge">⚡ LIVE SERVER</div>
-    <img class="hero-icon" id="hero-icon" src="" alt="Server Icon">
-    <h1 class="hero-title" id="hero-title">Engine Grid</h1>
-    <p class="hero-desc" id="hero-desc">Loading server info…</p>
-    <div class="hero-stats" id="hero-stats">
-      <div class="hstat"><span class="hstat-n" id="h-total">—</span><span class="hstat-l">Members</span></div>
-      <div class="hstat on"><span class="hstat-n" id="h-online">—</span><span class="hstat-l">Online</span></div>
-      <div class="hstat vc"><span class="hstat-n" id="h-voice">—</span><span class="hstat-l">In Voice</span></div>
-      <div class="hstat bk"><span class="hstat-n" id="h-boosts">—</span><span class="hstat-l">Boosts</span></div>
-    </div>
-    <div class="hero-actions">
-      <a class="btn-primary" id="join-btn" href="https://discord.gg/dS4pgC9J5H" target="_blank" rel="noopener">🚀 Join Server</a>
-      <button class="btn-secondary" onclick="copyInvite()">📋 Copy Invite</button>
-    </div>
-    <div class="boost-bar-wrap" id="boost-wrap" style="display:none">
-      <div class="boost-bar-label">
-        <span id="boost-tier">Level 0</span>
-        <span id="boost-count">0 boosts</span>
-      </div>
-      <div class="boost-track"><div class="boost-fill" id="boost-fill"></div></div>
-    </div>
-  </div>
-  <div class="hero-scroll-hint">↓ scroll</div>
-</header>
+  <main>
+    <header class="hero">
+      <div class="hero-bg" aria-hidden="true"></div>
+      <div class="hero-particles" id="particles" aria-hidden="true"></div>
 
-<!-- ── HIGHLIGHTS ── -->
-<section class="section" id="s-highlights">
-  <div class="container">
-    <div class="section-label">Why Join?</div>
-    <h2 class="section-title">Everything in one grid</h2>
-    <div class="highlights-grid">
-      <div class="hcard">
-        <div class="hcard-icon">🎮</div>
-        <div class="hcard-title">Play Instantly</div>
-        <div class="hcard-desc">Lag-free browser gaming at PlayConsole4U — no downloads, click and play.</div>
-        <a class="hcard-link" href="https://sortofdevofficial.github.io/PlayConsole4u" target="_blank">Play Now →</a>
-      </div>
-      <div class="hcard">
-        <div class="hcard-icon">📺</div>
-        <div class="hcard-title">Dev Drops</div>
-        <div class="hcard-desc">Exclusive game dev updates, tutorials, showcases and feature reveals on YouTube.</div>
-        <a class="hcard-link" href="https://www.youtube.com/@sortofdev0" target="_blank">Subscribe →</a>
-      </div>
-      <div class="hcard">
-        <div class="hcard-icon">💬</div>
-        <div class="hcard-title">Active Community</div>
-        <div class="hcard-desc">Talk anime, share clips, discuss gaming and link up with other creators.</div>
-        <a class="hcard-link" href="https://discord.gg/dS4pgC9J5H" target="_blank">Join →</a>
-      </div>
-      <div class="hcard">
-        <div class="hcard-icon">⭐</div>
-        <div class="hcard-title">Rate Us</div>
-        <div class="hcard-desc">Love the community? Bump us on Disboard and help us grow globally.</div>
-        <a class="hcard-link" href="https://disboard.org/server/1503297362246897694" target="_blank">Rate →</a>
-      </div>
-    </div>
-  </div>
-</section>
+      <div class="hero-inner">
+        <div class="hero-badge">⚡ LIVE SERVER</div>
+        <img class="hero-icon" id="hero-icon" src="" alt="Server Icon">
+        <h1 class="hero-title" id="hero-title">Engine Grid</h1>
+        <p class="hero-desc" id="hero-desc">Loading server info…</p>
 
-<!-- ── LIVE WIDGET ── -->
-<section class="section dark" id="s-widget">
-  <div class="container">
-    <div class="section-label">Live Data</div>
-    <h2 class="section-title">Server Activity</h2>
-    <div class="widget-layout">
+        <div class="hero-stats" id="hero-stats" aria-label="Server stats">
+          <div class="hstat"><span class="hstat-n" id="h-total">—</span><span class="hstat-l">Members</span></div>
+          <div class="hstat on"><span class="hstat-n" id="h-online">—</span><span class="hstat-l">Online</span></div>
+          <div class="hstat vc"><span class="hstat-n" id="h-voice">—</span><span class="hstat-l">In Voice</span></div>
+          <div class="hstat bk"><span class="hstat-n" id="h-boosts">—</span><span class="hstat-l">Boosts</span></div>
+        </div>
 
-      <!-- refresh bar -->
-      <div class="rfbar"><div class="rffill" id="rfill"></div></div>
+        <div class="hero-actions">
+          <a class="btn-primary" id="join-btn" href="https://discord.gg/dS4pgC9J5H" target="_blank" rel="noopener">🚀 Join Server</a>
+          <button class="btn-secondary" type="button" onclick="copyInvite()">📋 Copy Invite</button>
+        </div>
 
-      <!-- tabs -->
-      <div class="wtabs">
-        <button class="wtab on" onclick="switchTab('mb')">👥 Members</button>
-        <button class="wtab" onclick="switchTab('vc')">🔊 Voice</button>
-        <button class="wtab" onclick="switchTab('ac')">📈 Activity</button>
-        <button class="wtab" onclick="switchTab('ov')">🌐 Overview</button>
-      </div>
-
-      <!-- panels -->
-      <div class="wpanels">
-
-        <!-- Members -->
-        <div class="wpanel on" id="wp-mb">
-          <div class="panel-ctrl" id="mb-ctrl" style="display:none">
-            <input class="psrch" id="mb-srch" placeholder="🔍 Search members…" oninput="renderMembers()">
-            <div class="pfltrs">
-              <button class="pfb on" id="pf-all" onclick="setFilter('all')">All <span id="pfc-a"></span></button>
-              <button class="pfb" id="pf-o" onclick="setFilter('online')"><span class="pdot o"></span>Online <span id="pfc-o"></span></button>
-              <button class="pfb" id="pf-i" onclick="setFilter('idle')"><span class="pdot i"></span>Idle <span id="pfc-i"></span></button>
-              <button class="pfb" id="pf-d" onclick="setFilter('dnd')"><span class="pdot d"></span>DND <span id="pfc-d"></span></button>
-            </div>
+        <div class="boost-bar-wrap" id="boost-wrap" style="display:none">
+          <div class="boost-bar-label">
+            <span id="boost-tier">Level 0</span>
+            <span id="boost-count">0 boosts</span>
           </div>
-          <div class="pscroll" id="mb-list"><div class="pempty"><div class="peico">⏳</div>Loading members…</div></div>
+          <div class="boost-track"><div class="boost-fill" id="boost-fill"></div></div>
         </div>
+      </div>
 
-        <!-- Voice -->
-        <div class="wpanel" id="wp-vc">
-          <div class="pscroll" id="vc-list"><div class="pempty"><div class="peico">⏳</div>Loading voice…</div></div>
+      <div class="hero-scroll-hint">↓ scroll</div>
+    </header>
+
+    <section class="section" id="s-highlights">
+      <div class="container">
+        <div class="section-label">Why Join?</div>
+        <h2 class="section-title">Everything in one grid</h2>
+
+        <div class="highlights-grid">
+          <article class="hcard">
+            <div class="hcard-icon">🎮</div>
+            <div class="hcard-title">Play Instantly</div>
+            <div class="hcard-desc">Lag-free browser gaming at PlayConsole4U — no downloads, click and play.</div>
+            <a class="hcard-link" href="https://sortofdevofficial.github.io/PlayConsole4u" target="_blank" rel="noopener">Play Now →</a>
+          </article>
+
+          <article class="hcard">
+            <div class="hcard-icon">📺</div>
+            <div class="hcard-title">Dev Drops</div>
+            <div class="hcard-desc">Exclusive game dev updates, tutorials, showcases and feature reveals on YouTube.</div>
+            <a class="hcard-link" href="https://www.youtube.com/@sortofdev0" target="_blank" rel="noopener">Subscribe →</a>
+          </article>
+
+          <article class="hcard">
+            <div class="hcard-icon">💬</div>
+            <div class="hcard-title">Active Community</div>
+            <div class="hcard-desc">Talk anime, share clips, discuss gaming and link up with other creators.</div>
+            <a class="hcard-link" href="https://discord.gg/dS4pgC9J5H" target="_blank" rel="noopener">Join →</a>
+          </article>
+
+          <article class="hcard">
+            <div class="hcard-icon">⭐</div>
+            <div class="hcard-title">Rate Us</div>
+            <div class="hcard-desc">Love the community? Bump us on Disboard and help us grow globally.</div>
+            <a class="hcard-link" href="https://disboard.org/server/1503297362246897694" target="_blank" rel="noopener">Rate →</a>
+          </article>
         </div>
+      </div>
+    </section>
 
-        <!-- Activity -->
-        <div class="wpanel" id="wp-ac">
-          <div class="ac-head">
-            <span class="ac-label">Online Trend</span>
-            <span class="ac-live"><span class="live-dot"></span><span id="ac-count">— online</span></span>
+    <section class="section dark" id="s-widget">
+      <div class="container">
+        <div class="section-label">Live Data</div>
+        <h2 class="section-title">Server Activity</h2>
+
+        <div class="widget-layout">
+          <div class="rfbar" aria-hidden="true"><div class="rffill" id="rfill"></div></div>
+
+          <nav class="wtabs" aria-label="Server widget tabs">
+            <button class="wtab on" type="button" onclick="switchTab('mb')">👥 Members</button>
+            <button class="wtab" type="button" onclick="switchTab('vc')">🔊 Voice</button>
+            <button class="wtab" type="button" onclick="switchTab('ac')">📈 Activity</button>
+            <button class="wtab" type="button" onclick="switchTab('ov')">🌐 Overview</button>
+          </nav>
+
+          <div class="wpanels">
+            <section class="wpanel on" id="wp-mb" aria-label="Members panel">
+              <div class="panel-ctrl" id="mb-ctrl" style="display:none">
+                <input class="psrch" id="mb-srch" type="search" placeholder="🔍 Search members…" oninput="renderMembers()">
+                <div class="pfltrs">
+                  <button class="pfb on" id="pf-all" type="button" onclick="setFilter('all')">All <span id="pfc-a"></span></button>
+                  <button class="pfb" id="pf-o" type="button" onclick="setFilter('online')"><span class="pdot o"></span>Online <span id="pfc-o"></span></button>
+                  <button class="pfb" id="pf-i" type="button" onclick="setFilter('idle')"><span class="pdot i"></span>Idle <span id="pfc-i"></span></button>
+                  <button class="pfb" id="pf-d" type="button" onclick="setFilter('dnd')"><span class="pdot d"></span>DND <span id="pfc-d"></span></button>
+                </div>
+              </div>
+              <div class="pscroll" id="mb-list"><div class="pempty"><div class="peico">⏳</div>Loading members…</div></div>
+            </section>
+
+            <section class="wpanel" id="wp-vc" aria-label="Voice panel">
+              <div class="pscroll" id="vc-list"><div class="pempty"><div class="peico">⏳</div>Loading voice…</div></div>
+            </section>
+
+            <section class="wpanel" id="wp-ac" aria-label="Activity panel">
+              <div class="ac-head">
+                <span class="ac-label">Online Trend</span>
+                <span class="ac-live"><span class="live-dot"></span><span id="ac-count">— online</span></span>
+              </div>
+              <div class="ac-chart-wrap"><canvas id="actChart" height="120"></canvas></div>
+              <div class="ac-stats">
+                <div class="acstat"><div class="acstat-n" id="ac-pk">—</div><div class="acstat-l">Peak</div></div>
+                <div class="acstat"><div class="acstat-n" id="ac-av">—</div><div class="acstat-l">Avg</div></div>
+                <div class="acstat"><div class="acstat-n" id="ac-pt">—</div><div class="acstat-l">Data Pts</div></div>
+              </div>
+            </section>
+
+            <section class="wpanel" id="wp-ov" aria-label="Overview panel">
+              <div class="pscroll" id="ov-content"><div class="pempty"><div class="peico">⏳</div>Loading…</div></div>
+            </section>
           </div>
-          <div class="ac-chart-wrap"><canvas id="actChart" height="120"></canvas></div>
-          <div class="ac-stats">
-            <div class="acstat"><div class="acstat-n" id="ac-pk">—</div><div class="acstat-l">Peak</div></div>
-            <div class="acstat"><div class="acstat-n" id="ac-av">—</div><div class="acstat-l">Avg</div></div>
-            <div class="acstat"><div class="acstat-n" id="ac-pt">—</div><div class="acstat-l">Data Pts</div></div>
-          </div>
         </div>
+      </div>
+    </section>
 
-        <!-- Overview -->
-        <div class="wpanel" id="wp-ov">
-          <div class="pscroll" id="ov-content"><div class="pempty"><div class="peico">⏳</div>Loading…</div></div>
+    <section class="section" id="s-rules">
+      <div class="container">
+        <div class="section-label">Onboarding</div>
+        <h2 class="section-title">Server Rules</h2>
+
+        <div class="rules-grid">
+          <article class="rule"><span class="rule-n">01</span><div><div class="rule-t">Be Respectful</div><div class="rule-d">Treat everyone with respect. No harassment, hate speech, or discrimination.</div></div></article>
+          <article class="rule"><span class="rule-n">02</span><div><div class="rule-t">No Spam</div><div class="rule-d">Don't flood channels with repeated messages, emojis, or off-topic content.</div></div></article>
+          <article class="rule"><span class="rule-n">03</span><div><div class="rule-t">Right Channel</div><div class="rule-d">Keep topics in the correct channels. Read the channel descriptions before posting.</div></div></article>
+          <article class="rule"><span class="rule-n">04</span><div><div class="rule-t">No NSFW</div><div class="rule-d">All content must be SFW. NSFW content in any channel will result in an instant ban.</div></div></article>
+          <article class="rule"><span class="rule-n">05</span><div><div class="rule-t">No Self-Promo</div><div class="rule-d">Don't advertise other servers, products, or services without staff permission.</div></div></article>
+          <article class="rule"><span class="rule-n">06</span><div><div class="rule-t">Follow Discord ToS</div><div class="rule-d">All Discord Terms of Service apply. Violations = immediate ban.</div></div></article>
         </div>
+      </div>
+    </section>
 
+    <section class="section dark" id="s-socials">
+      <div class="container">
+        <div class="section-label">Connect</div>
+        <h2 class="section-title">Find us everywhere</h2>
+
+        <div class="socials-grid">
+          <a class="scard" href="https://www.youtube.com/@sortofdev0" target="_blank" rel="noopener">
+            <div class="scard-icon" style="background:#ff000022;color:#ff4444">📺</div>
+            <div class="scard-label">YouTube</div>
+            <div class="scard-sub">@sortofdev0</div>
+          </a>
+
+          <a class="scard" href="https://x.com/sortofdev" target="_blank" rel="noopener">
+            <div class="scard-icon" style="background:#ffffff11;color:#fff">𝕏</div>
+            <div class="scard-label">Twitter / X</div>
+            <div class="scard-sub">@sortofdev</div>
+          </a>
+
+          <a class="scard" href="https://www.instagram.com/sortofdev0/" target="_blank" rel="noopener">
+            <div class="scard-icon" style="background:#e91e6322;color:#e91e63">📸</div>
+            <div class="scard-label">Instagram</div>
+            <div class="scard-sub">@sortofdev0</div>
+          </a>
+
+          <a class="scard" href="https://www.reddit.com/r/sortofdev/" target="_blank" rel="noopener">
+            <div class="scard-icon" style="background:#ff451a22;color:#ff5722">🔴</div>
+            <div class="scard-label">Reddit</div>
+            <div class="scard-sub">r/sortofdev</div>
+          </a>
+
+          <a class="scard" href="https://www.facebook.com/profile.php?id=61590356186955" target="_blank" rel="noopener">
+            <div class="scard-icon" style="background:#1877f222;color:#1877f2">📘</div>
+            <div class="scard-label">Facebook</div>
+            <div class="scard-sub">Official Page</div>
+          </a>
+
+          <a class="scard" href="https://sortofdevofficial.github.io/PlayConsole4u" target="_blank" rel="noopener">
+            <div class="scard-icon" style="background:#5865f222;color:#5865f2">🎮</div>
+            <div class="scard-label">PlayConsole4U</div>
+            <div class="scard-sub">Play Now</div>
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-inner">
+        <div class="footer-brand">⚡ Engine Grid</div>
+        <div class="footer-links">
+          <a href="https://discord.gg/dS4pgC9J5H" target="_blank" rel="noopener">Discord</a>
+          <a href="https://www.youtube.com/@sortofdev0" target="_blank" rel="noopener">YouTube</a>
+          <a href="https://sortofdevofficial.github.io/PlayConsole4u" target="_blank" rel="noopener">PlayConsole4U</a>
+          <a href="https://disboard.org/server/1503297362246897694" target="_blank" rel="noopener">Disboard</a>
+        </div>
+        <div class="footer-copy">© 2025 sortofdev · All rights reserved</div>
       </div>
     </div>
-  </div>
-</section>
+  </footer>
 
-<!-- ── RULES ── -->
-<section class="section" id="s-rules">
-  <div class="container">
-    <div class="section-label">Onboarding</div>
-    <h2 class="section-title">Server Rules</h2>
-    <div class="rules-grid">
-      <div class="rule"><span class="rule-n">01</span><div><div class="rule-t">Be Respectful</div><div class="rule-d">Treat everyone with respect. No harassment, hate speech, or discrimination.</div></div></div>
-      <div class="rule"><span class="rule-n">02</span><div><div class="rule-t">No Spam</div><div class="rule-d">Don't flood channels with repeated messages, emojis, or off-topic content.</div></div></div>
-      <div class="rule"><span class="rule-n">03</span><div><div class="rule-t">Right Channel</div><div class="rule-d">Keep topics in the correct channels. Read the channel descriptions before posting.</div></div></div>
-      <div class="rule"><span class="rule-n">04</span><div><div class="rule-t">No NSFW</div><div class="rule-d">All content must be SFW. NSFW content in any channel will result in an instant ban.</div></div></div>
-      <div class="rule"><span class="rule-n">05</span><div><div class="rule-t">No Self-Promo</div><div class="rule-d">Don't advertise other servers, products, or services without staff permission.</div></div></div>
-      <div class="rule"><span class="rule-n">06</span><div><div class="rule-t">Follow Discord ToS</div><div class="rule-d">All Discord Terms of Service apply. Violations = immediate ban.</div></div></div>
-    </div>
-  </div>
-</section>
+  <div class="toast" id="toast" role="status" aria-live="polite">✓ Invite copied!</div>
 
-<!-- ── SOCIALS ── -->
-<section class="section dark" id="s-socials">
-  <div class="container">
-    <div class="section-label">Connect</div>
-    <h2 class="section-title">Find us everywhere</h2>
-    <div class="socials-grid">
-      <a class="scard" href="https://www.youtube.com/@sortofdev0" target="_blank"><div class="scard-icon" style="background:#ff000022;color:#ff4444">📺</div><div class="scard-label">YouTube</div><div class="scard-sub">@sortofdev0</div></a>
-      <a class="scard" href="https://x.com/sortofdev" target="_blank"><div class="scard-icon" style="background:#ffffff11;color:#fff">𝕏</div><div class="scard-label">Twitter / X</div><div class="scard-sub">@sortofdev</div></a>
-      <a class="scard" href="https://www.instagram.com/sortofdev0/" target="_blank"><div class="scard-icon" style="background:#e91e6322;color:#e91e63">📸</div><div class="scard-label">Instagram</div><div class="scard-sub">@sortofdev0</div></a>
-      <a class="scard" href="https://www.reddit.com/r/sortofdev/" target="_blank"><div class="scard-icon" style="background:#ff451a22;color:#ff5722">🔴</div><div class="scard-label">Reddit</div><div class="scard-sub">r/sortofdev</div></a>
-      <a class="scard" href="https://www.facebook.com/profile.php?id=61590356186955" target="_blank"><div class="scard-icon" style="background:#1877f222;color:#1877f2">📘</div><div class="scard-label">Facebook</div><div class="scard-sub">Official Page</div></a>
-      <a class="scard" href="https://sortofdevofficial.github.io/PlayConsole4u" target="_blank"><div class="scard-icon" style="background:#5865f222;color:#5865f2">🎮</div><div class="scard-label">PlayConsole4U</div><div class="scard-sub">Play Now</div></a>
-    </div>
-  </div>
-</section>
-
-<!-- ── FOOTER ── -->
-<footer class="footer">
-  <div class="container">
-    <div class="footer-inner">
-      <div class="footer-brand">⚡ Engine Grid</div>
-      <div class="footer-links">
-        <a href="https://discord.gg/dS4pgC9J5H" target="_blank">Discord</a>
-        <a href="https://www.youtube.com/@sortofdev0" target="_blank">YouTube</a>
-        <a href="https://sortofdevofficial.github.io/PlayConsole4u" target="_blank">PlayConsole4U</a>
-        <a href="https://disboard.org/server/1503297362246897694" target="_blank">Disboard</a>
-      </div>
-      <div class="footer-copy">© 2025 sortofdev · All rights reserved</div>
-    </div>
-  </div>
-</footer>
-
-<div class="toast" id="toast">✓ Invite copied!</div>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script src="discord.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="discord.js"></script>
 </body>
 </html>
