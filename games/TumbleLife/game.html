@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <title>Tumble Life</title>
   <style>
     :root{
@@ -30,7 +30,7 @@
       box-shadow:0 10px 22px rgba(33,56,45,.16);transition:transform .15s,box-shadow .15s;}
     .menu-btn:hover{transform:translateY(-1px);box-shadow:0 14px 28px rgba(33,56,45,.20);}
     #mp-screen h2{color:#f8fdff;font-size:16px;font-weight:800;margin-bottom:4px;}
-    #mp-screen label{color:var(--muted2);font-size:10px;text-transform:uppercase;letter-spacing:.09em;align-self:flex-start;margin-top:4px;}
+    #mp-screen label{color:rgba(247,251,255,.45);font-size:10px;text-transform:uppercase;letter-spacing:.09em;align-self:flex-start;margin-top:4px;}
     .code-box{width:100%;background:rgba(255,255,255,.12);border-radius:12px;padding:10px 12px;
       display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid rgba(255,255,255,.16);}
     #my-code{font-family:monospace;font-size:16px;font-weight:800;color:#f6fff8;letter-spacing:.16em;}
@@ -76,11 +76,14 @@
     <div id="mp-screen">
       <h2>Multiplayer</h2>
       <label>Your Room Code</label>
-      <div class="code-box"><span id="my-code">••••••••</span><button class="sm-btn" id="btn-copy">Copy</button></div>
+      <div class="code-box">
+        <span id="my-code">••</span>
+        <button class="sm-btn" id="btn-copy">Copy</button>
+      </div>
       <label>Join a Friend</label>
-      <input id="room-input" type="text" placeholder="Paste their code…" maxlength="60" autocomplete="off" spellcheck="false"/>
+      <input id="room-input" type="text" placeholder="AA" maxlength="2" autocomplete="off" spellcheck="false"/>
       <button id="btn-join">Join Room</button>
-      <p class="mp-hint">Share your code with a friend.<br>They paste it and hit Join.</p>
+      <p class="mp-hint">Short 2-char room code.<br>Host shares code, friend joins.</p>
       <button id="btn-back">← Back</button>
     </div>
   </div>
@@ -112,8 +115,8 @@
     if (peer) { cb?.(); return; }
     peer = new Peer(undefined, { debug: 0 });
     peer.on('open', id => {
-      myId = id;
-      document.getElementById('my-code').textContent = id.slice(0, 8).toUpperCase();
+      myId = id.slice(0, 2).toUpperCase();
+      document.getElementById('my-code').textContent = myId;
       cb?.();
     });
     peer.on('error', e => console.warn(e));
@@ -137,11 +140,11 @@
   });
 
   document.getElementById('btn-copy').addEventListener('click', () => {
-    if (myId) navigator.clipboard?.writeText(myId.slice(0, 8).toUpperCase());
+    if (myId) navigator.clipboard?.writeText(myId);
   });
 
   document.getElementById('btn-join').addEventListener('click', () => {
-    const code = document.getElementById('room-input').value.trim();
+    const code = document.getElementById('room-input').value.trim().toUpperCase();
     if (!code || !peer) return;
     menu.style.display = 'none';
     if (IS_MOBILE) document.getElementById('mobile-ui').style.display = 'block';
