@@ -4,15 +4,6 @@ import { WorldMap } from './map.js';
 import { Bamborghini } from './Life/bamborghini.js';
 import { updateVehicle, updateVehicleCollision, updateCharacterPosition } from './physics.js';
 
-function makeShortCode(len = 4) {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let code = '';
-  for (let i = 0; i < len; i++) {
-    code += chars[Math.floor(Math.random() * chars.length)];
-  }
-  return code;
-}
-
 export function startGame({ peer = null, connection = null, isMobile = false, isMultiplayer = false, isHost = true } = {}) {
   const renderer = new THREE.WebGLRenderer({ antialias: !isMobile, powerPreference: 'high-performance' });
   renderer.setSize(innerWidth, innerHeight);
@@ -152,10 +143,9 @@ export function startGame({ peer = null, connection = null, isMobile = false, is
     }, { passive:false });
   }
 
-  // Multiplayer - both sides sync
+  // ── Multiplayer ──────────────────────────────────────────────
   const peers = {};
   const conns = [];
-  let myCode = makeShortCode();
 
   function makeRemoteChar() {
     const rc = new WobblyCharacter(scene);
@@ -167,15 +157,25 @@ export function startGame({ peer = null, connection = null, isMobile = false, is
   function setupConn(conn) {
     if (conns.includes(conn)) return;
     conns.push(conn);
-    
-    conn.on('open', () => {
-      if (!peers[conn.peer]) peers[conn.peer] = { char: makeRemoteChar(), driving: false };
-      conn.send({ type: 'welcome', code: myCode });
-    });
+
+    // Connection may already be open when setupConn is called (race-free handler)
+    const onOpen = () => {
+      if (!peers[conn.peer]) {
+        peers[conn.peer] = { char: makeRemoteChar(), driving: false };
+      }
+    };
+
+    if (conn.open) {
+      onOpen();
+    } else {
+      conn.on('open', onOpen);
+    }
 
     conn.on('data', d => {
+      if (!d) return;
+      // Lazily create remote peer entry if somehow missed
+      if (!peers[conn.peer]) peers[conn.peer] = { char: makeRemoteChar(), driving: false };
       const p = peers[conn.peer];
-      if (!p || !d) return;
 
       if (d.type === 'state') {
         p.char.position.set(d.x, d.y, d.z);
@@ -188,16 +188,24 @@ export function startGame({ peer = null, connection = null, isMobile = false, is
 
     conn.on('close', () => {
       const p = peers[conn.peer];
-      if (p && p.char && p.char.bodyGroup) scene.remove(p.char.bodyGroup);
+      if (p?.char?.bodyGroup) scene.remove(p.char.bodyGroup);
       delete peers[conn.peer];
-      conns.splice(conns.indexOf(conn), 1);
+      const idx = conns.indexOf(conn);
+      if (idx !== -1) conns.splice(idx, 1);
+    });
+
+    conn.on('error', err => {
+      console.warn('conn error', err);
     });
   }
 
-  if (peer) {
-    if (isMultiplayer && connection) {
+  if (peer && isMultiplayer) {
+    if (connection) {
+      // Both host (first conn passed in) and guest use this path
       setupConn(connection);
-    } else if (isMultiplayer && isHost) {
+    }
+    if (isHost) {
+      // Host also listens for future incoming connections
       peer.on('connection', conn => setupConn(conn));
     }
   }
@@ -218,9 +226,12 @@ export function startGame({ peer = null, connection = null, isMobile = false, is
       carAngle: car.angle,
       carSpeed: car.speed
     };
-    for (const c of conns) if (c.open) try { c.send(d); } catch {}
+    for (const c of conns) {
+      if (c.open) try { c.send(d); } catch {}
+    }
   }
 
+  // ── Game logic ───────────────────────────────────────────────
   function tryEnterExit() {
     if (isDriving) {
       isDriving = false;
