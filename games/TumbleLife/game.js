@@ -4,12 +4,7 @@ import { WorldMap } from './map.js';
 import { Bamborghini } from './Life/bamborghini.js';
 import { updateVehicle, updateVehicleCollision, updateCharacterPosition } from './physics.js';
 
-function shortCode() {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  return Array.from({ length: 2 }, () => chars[(Math.random() * chars.length) | 0]).join('');
-}
-
-export function startGame({ peer = null, joinCode = null, isMobile = false } = {}) {
+export function startGame({ peer = null, connection = null, joinCode = null, isMobile = false, isMultiplayer = false, isHost = true } = {}) {
   const renderer = new THREE.WebGLRenderer({ antialias: !isMobile, powerPreference: 'high-performance' });
   renderer.setSize(innerWidth, innerHeight);
   renderer.setPixelRatio(Math.min(devicePixelRatio, isMobile ? 1 : 1.5));
@@ -150,20 +145,22 @@ export function startGame({ peer = null, joinCode = null, isMobile = false } = {
     }, { passive:false });
   }
 
+  // Multiplayer setup
   const peers = {};
   const conns = [];
-  let isHost = false;
-  let myCode = joinCode || shortCode();
+  let myCode = isHost ? 'HOST' : 'CLIENT';
 
   function makeRemoteChar() {
     const rc = new WobblyCharacter(scene);
     const c = new THREE.Color().setHSL(Math.random(), 0.35, 0.55);
-    rc.torsoMesh.material = rc.head.material = c ? new THREE.MeshStandardMaterial({ color: c, roughness: 0.75 }) : rc.torsoMesh.material;
+    rc.torsoMesh.material = rc.head.material = new THREE.MeshStandardMaterial({ color: c, roughness: 0.75 });
     return rc;
   }
 
   function setupConn(conn) {
+    if (conns.includes(conn)) return;
     conns.push(conn);
+    
     conn.on('open', () => {
       if (!peers[conn.peer]) peers[conn.peer] = { char: makeRemoteChar(), driving: false, passenger: false };
       conn.send({ type: 'welcome', code: myCode });
@@ -187,20 +184,16 @@ export function startGame({ peer = null, joinCode = null, isMobile = false } = {
       const p = peers[conn.peer];
       if (p) scene.remove(p.char.bodyGroup);
       delete peers[conn.peer];
+      conns.splice(conns.indexOf(conn), 1);
     });
   }
 
+  // Handle connection
   if (peer) {
-    peer.on('connection', conn => setupConn(conn));
-
-    if (joinCode) {
-      isHost = false;
-      const conn = peer.connect(joinCode, { reliable: false, serialization: 'json' });
-      setupConn(conn);
-    } else {
-      isHost = true;
-      document.getElementById('my-code').textContent = myCode;
-      peer.id = myCode;
+    if (isMultiplayer && !isHost && connection) {
+      setupConn(connection);
+    } else if (isMultiplayer && isHost) {
+      peer.on('connection', conn => setupConn(conn));
     }
   }
 
