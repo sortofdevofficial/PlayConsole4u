@@ -4,7 +4,7 @@ import { WorldMap } from './map.js';
 import { Bamborghini } from './Life/bamborghini.js';
 import { updateVehicle, updateVehicleCollision, updateCharacterPosition } from './physics.js';
 
-export function startGame({ peer = null, connection = null, joinCode = null, isMobile = false, isMultiplayer = false, isHost = true } = {}) {
+export function startGame({ peer = null, connection = null, isMobile = false, isMultiplayer = false, isHost = true } = {}) {
   const renderer = new THREE.WebGLRenderer({ antialias: !isMobile, powerPreference: 'high-performance' });
   renderer.setSize(innerWidth, innerHeight);
   renderer.setPixelRatio(Math.min(devicePixelRatio, isMobile ? 1 : 1.5));
@@ -99,8 +99,6 @@ export function startGame({ peer = null, connection = null, joinCode = null, isM
       joy.id = t.identifier;
       joy.startX = t.clientX;
       joy.startY = t.clientY;
-      joy.dx = 0;
-      joy.dy = 0;
     }, { passive:false });
 
     window.addEventListener('touchmove', e => {
@@ -145,10 +143,8 @@ export function startGame({ peer = null, connection = null, joinCode = null, isM
     }, { passive:false });
   }
 
-  // Multiplayer setup
   const peers = {};
   const conns = [];
-  let myCode = isHost ? 'HOST' : 'CLIENT';
 
   function makeRemoteChar() {
     const rc = new WobblyCharacter(scene);
@@ -162,21 +158,19 @@ export function startGame({ peer = null, connection = null, joinCode = null, isM
     conns.push(conn);
     
     conn.on('open', () => {
-      if (!peers[conn.peer]) peers[conn.peer] = { char: makeRemoteChar(), driving: false, passenger: false };
-      conn.send({ type: 'welcome', code: myCode });
+      if (!peers[conn.peer]) peers[conn.peer] = { char: makeRemoteChar(), driving: false };
+      conn.send({ type: 'welcome' });
     });
 
     conn.on('data', d => {
       const p = peers[conn.peer];
       if (!p || !d) return;
-
       if (d.type === 'state') {
         p.char.position.set(d.x, d.y, d.z);
         p.char.bodyGroup.position.set(d.x, d.y, d.z);
         p.char.bodyGroup.rotation.y = d.ry || 0;
         p.char.walkWeight = d.ww || 0;
         p.driving = !!d.drv;
-        p.passenger = !!d.psg;
       }
     });
 
@@ -188,7 +182,6 @@ export function startGame({ peer = null, connection = null, joinCode = null, isM
     });
   }
 
-  // Handle connection
   if (peer) {
     if (isMultiplayer && !isHost && connection) {
       setupConn(connection);
@@ -206,8 +199,7 @@ export function startGame({ peer = null, connection = null, joinCode = null, isM
       z: character.position.z,
       ry: character.bodyGroup.rotation.y,
       ww: character.walkWeight,
-      drv: isDriving,
-      psg: isPassenger
+      drv: isDriving
     };
     for (const c of conns) if (c.open) try { c.send(d); } catch {}
   }
@@ -222,14 +214,6 @@ export function startGame({ peer = null, connection = null, joinCode = null, isM
       character.setDrivingState(false);
       document.getElementById('speedometer').style.display = 'none';
       updateHint('');
-    } else if (isPassenger) {
-      isPassenger = false;
-      character.position.copy(car.meshGroup.position);
-      character.position.x += Math.sin(car.angle + Math.PI / 2) * 2.5;
-      character.position.z += Math.cos(car.angle + Math.PI / 2) * 2.5;
-      character.snapToTerrain(worldMap);
-      character.setDrivingState(false);
-      updateHint('');
     } else {
       const distSq = character.position.distanceToSquared(car.meshGroup.position);
       if (distSq < 25) {
@@ -240,9 +224,6 @@ export function startGame({ peer = null, connection = null, joinCode = null, isM
           camPos.copy(desiredPos);
           camTarget.copy(desiredTarget);
           document.getElementById('speedometer').style.display = 'block';
-          updateHint('F to exit car');
-        } else {
-          isPassenger = true;
           updateHint('F to exit car');
         }
       }
@@ -286,12 +267,6 @@ export function startGame({ peer = null, connection = null, joinCode = null, isM
       updateCam(car.meshGroup.position, 4.5, 14, car.angle, true);
       document.getElementById('speedometer').textContent = `${Math.round(Math.abs(car.speed) * 8)} KM/H`;
       camera.fov = THREE.MathUtils.lerp(camera.fov, 60 + Math.abs(car.speed) * .8, .08);
-    } else if (isPassenger) {
-      const pPos = car.getSeatPosition('passenger');
-      character.position.copy(pPos);
-      character.setDrivingState(true, pPos, car.angle, 0, time);
-      updateCam(car.meshGroup.position, 4.5, 14, car.angle, true);
-      camera.fov = THREE.MathUtils.lerp(camera.fov, 62, .08);
     } else {
       moveDir.set(
         (keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0)+jx, 0,
@@ -313,13 +288,13 @@ export function startGame({ peer = null, connection = null, joinCode = null, isM
     _broadcastTimer += dt;
     if (_broadcastTimer >= 0.05) { broadcast(); _broadcastTimer = 0; }
 
-    const lT = isDriving || isPassenger ? 1 - Math.pow(.002, dt) : 1 - Math.pow(.001, dt);
+    const lT = isDriving ? 1 - Math.pow(.002, dt) : 1 - Math.pow(.001, dt);
     camPos.lerp(desiredPos, lT);
     camTarget.lerp(desiredTarget, lT);
     camera.position.copy(camPos);
     camera.lookAt(camTarget);
 
-    const focus = (isDriving || isPassenger) ? car.meshGroup.position : character.position;
+    const focus = isDriving ? car.meshGroup.position : character.position;
     sun.target.position.copy(focus);
     sun.target.updateMatrixWorld();
     worldMap.update(time, focus);
