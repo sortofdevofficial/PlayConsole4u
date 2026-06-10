@@ -33,12 +33,12 @@
     #mp-screen label{color:rgba(247,251,255,.45);font-size:10px;text-transform:uppercase;letter-spacing:.09em;align-self:flex-start;margin-top:4px;}
     .code-box{width:100%;background:rgba(255,255,255,.12);border-radius:12px;padding:10px 12px;
       display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid rgba(255,255,255,.16);}
-    #my-code{font-family:monospace;font-size:16px;font-weight:800;color:#f6fff8;letter-spacing:.16em;}
+    #my-code{font-family:monospace;font-size:14px;font-weight:800;color:#f6fff8;letter-spacing:.08em;word-break:break-all;}
     .sm-btn{background:rgba(255,255,255,.10);color:#f8fdff;border:1px solid rgba(255,255,255,.14);
       border-radius:10px;padding:6px 10px;font-size:11px;font-weight:700;cursor:pointer;}
     .sm-btn:hover{background:rgba(255,255,255,.16);}
     #room-input{width:100%;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.16);
-      border-radius:12px;padding:10px 12px;color:#fff;font-size:14px;font-family:monospace;letter-spacing:.08em;outline:none;}
+      border-radius:12px;padding:10px 12px;color:#fff;font-size:13px;font-family:monospace;outline:none;}
     #btn-join{width:100%;padding:12px;background:linear-gradient(180deg,rgba(111,143,99,.95),rgba(94,127,85,.95));
       color:#fff;border:1px solid rgba(255,255,255,.12);border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;}
     #btn-back{background:none;border:none;color:rgba(255,255,255,.7);cursor:pointer;font-size:12px;margin-top:4px;}
@@ -46,6 +46,7 @@
     .mp-hint{color:rgba(255,255,255,.56);font-size:10px;text-align:center;line-height:1.6;}
     #mp-error{color:#ff6b6b;font-size:12px;font-weight:700;text-align:center;display:none;margin-top:4px;}
     #mp-loading{color:#8fb7ca;font-size:13px;font-weight:700;text-align:center;display:none;margin-top:4px;}
+    #host-wait{color:#6f8f63;font-size:12px;font-weight:700;text-align:center;display:none;margin-top:8px;}
 
     #speedometer{position:fixed;bottom:14px;right:14px;background:rgba(32,54,69,.34);backdrop-filter:blur(10px);
       color:#f8fdff;padding:6px 12px;border-radius:12px;font-size:12px;font-weight:800;letter-spacing:.08em;
@@ -77,15 +78,16 @@
     </div>
     <div id="mp-screen">
       <h2>Multiplayer</h2>
-      <label>Your Room Code</label>
+      <label>Your Room Code (share this)</label>
       <div class="code-box">
-        <span id="my-code">••••••</span>
+        <span id="my-code">Loading...</span>
         <button class="sm-btn" id="btn-copy">Copy</button>
       </div>
-      <label>Join a Friend</label>
-      <input id="room-input" type="text" placeholder="Enter host code" maxlength="6" autocomplete="off" spellcheck="false"/>
+      <div id="host-wait">Waiting for friend to join...</div>
+      <label style="margin-top:12px">Join a Friend</label>
+      <input id="room-input" type="text" placeholder="Paste their full code" maxlength="50" autocomplete="off" spellcheck="false"/>
       <button id="btn-join">Join Room</button>
-      <p class="mp-hint">Share your code with a friend.<br>They paste it and hit Join.</p>
+      <p class="mp-hint">Host shares code → Friend copies it → Hits Join</p>
       <div id="mp-error"></div>
       <div id="mp-loading">Connecting...</div>
       <button id="btn-back">← Back</button>
@@ -116,6 +118,7 @@
   const mpScreen = document.getElementById('mp-screen');
   const mpError = document.getElementById('mp-error');
   const mpLoading = document.getElementById('mp-loading');
+  const hostWait = document.getElementById('host-wait');
   
   let peer = null;
   let myId = null;
@@ -124,19 +127,25 @@
 
   function showError(msg) {
     mpLoading.style.display = 'none';
+    hostWait.style.display = 'none';
     mpError.textContent = msg;
     mpError.style.display = 'block';
     joining = false;
+    const btn = document.getElementById('btn-join');
+    btn.textContent = 'Join Room';
+    btn.disabled = false;
   }
 
   function hideError() {
     mpError.textContent = '';
     mpError.style.display = 'none';
     mpLoading.style.display = 'none';
+    hostWait.style.display = 'none';
   }
 
   function showLoading() {
     mpError.style.display = 'none';
+    hostWait.style.display = 'none';
     mpLoading.style.display = 'block';
   }
 
@@ -146,7 +155,7 @@
     
     peer.on('open', id => {
       myId = id;
-      document.getElementById('my-code').textContent = id.slice(0, 6).toUpperCase();
+      document.getElementById('my-code').textContent = id;
       hideError();
       cb?.();
     });
@@ -156,15 +165,26 @@
     });
     
     peer.on('connection', conn => {
-      conn.on('open', () => {
-        conn.send({ type: 'host_ready' });
+      setupHostConn(conn);
+    });
+  }
+
+  function setupHostConn(conn) {
+    conn.on('open', () => {
+      conn.send({ type: 'host_ready' });
+      menu.style.display = 'none';
+      if (IS_MOBILE) document.getElementById('mobile-ui').style.display = 'block';
+      startGame({ peer, connection: conn, isMobile: IS_MOBILE, isMultiplayer: true, isHost: true });
+    });
+    
+    conn.on('data', d => {
+      if (d?.type === 'host_ready') {
         conn.close();
-      });
-      conn.on('data', d => {
-        if (d?.type === 'host_ready') {
-          conn.close();
-        }
-      });
+      }
+    });
+    
+    conn.on('close', () => {
+      hostWait.style.display = 'block';
     });
   }
 
@@ -179,6 +199,7 @@
     mpScreen.style.display = 'flex';
     hideError();
     initPeer();
+    hostWait.style.display = 'block';
   });
 
   document.getElementById('btn-back').addEventListener('click', () => {
@@ -193,14 +214,14 @@
   });
 
   document.getElementById('btn-copy').addEventListener('click', () => {
-    if (myId) navigator.clipboard?.writeText(myId.slice(0, 6).toUpperCase());
+    if (myId) navigator.clipboard?.writeText(myId);
   });
 
   document.getElementById('btn-join').addEventListener('click', () => {
-    const code = document.getElementById('room-input').value.trim().toUpperCase();
+    const code = document.getElementById('room-input').value.trim();
     
-    if (!code || code.length !== 6) {
-      showError('Code invalid - must be 6 characters');
+    if (!code || code.length < 10) {
+      showError('Code invalid - paste the full code from host');
       return;
     }
     
@@ -236,7 +257,7 @@
       joining = false;
       btn.textContent = 'Join Room';
       btn.disabled = false;
-      showError('Code invalid or room not found');
+      showError('Code invalid or host not online');
     });
     
     hostConn.on('close', () => {
@@ -245,7 +266,7 @@
         joining = false;
         btn.textContent = 'Join Room';
         btn.disabled = false;
-        showError('Room disconnected');
+        showError('Host disconnected');
       }
     });
     
@@ -255,7 +276,7 @@
         joining = false;
         btn.textContent = 'Join Room';
         btn.disabled = false;
-        showError('This room is already full');
+        showError('Connection failed');
       }
     });
   });
