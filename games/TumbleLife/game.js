@@ -220,7 +220,7 @@ export function startGame({ peer = null, connection = null, isMobile = false, is
           // Snap remote character into the driving pose immediately
           // (per-frame refresh happens in animate())
           _remoteCarPos.set(d.carX, d.carY, d.carZ);
-          p.char.setDrivingState(true, _remoteCarPos, p.rx, p.rs, 0);
+          p.char.setDrivingState(true, _remoteCarPos, p.rx, p.rs, 0, null, 1);
 
         } else {
           // ── Remote peer is on foot ───────────────────────────
@@ -359,7 +359,7 @@ export function startGame({ peer = null, connection = null, isMobile = false, is
       if (p.driving) {
         // Refresh driving pose each frame so the wobble/steer anim plays
         // Use the shared car position (already synced via data handler)
-        p.char.setDrivingState(true, car.meshGroup.position, p.rx, p.rs, time);
+        p.char.setDrivingState(true, car.meshGroup.position, p.rx, p.rs, time, null, 1);
       } else {
         // Tick walk / idle animation for the remote character
         // Pass _zeroDir so position doesn't move (network owns position)
