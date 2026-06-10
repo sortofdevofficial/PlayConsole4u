@@ -44,6 +44,7 @@
     #btn-back{background:none;border:none;color:rgba(255,255,255,.7);cursor:pointer;font-size:12px;margin-top:4px;}
     #btn-back:hover{color:#fff;}
     .mp-hint{color:rgba(255,255,255,.56);font-size:10px;text-align:center;line-height:1.6;}
+    #mp-error{color:#ff6b6b;font-size:12px;font-weight:700;text-align:center;display:none;margin-top:4px;}
 
     #speedometer{position:fixed;bottom:14px;right:14px;background:rgba(32,54,69,.34);backdrop-filter:blur(10px);
       color:#f8fdff;padding:6px 12px;border-radius:12px;font-size:12px;font-weight:800;letter-spacing:.08em;
@@ -62,7 +63,7 @@
       border-radius:50%;width:48px;height:48px;font-size:9px;font-weight:800;cursor:pointer;
       display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.15;user-select:none;box-shadow:0 10px 22px rgba(18,31,42,.18);}
     .m-btn:active{transform:scale(.96);}
-    @media (max-width:900px){#hint{display:none}#main-menu .sub{margin-bottom:24px}.menu-card{padding:16px 12px}#speedometer{right:10px;bottom:10px}}
+    @media (max-width:900px){#hint{display:none}.menu-card{padding:16px 12px}#speedometer{right:10px;bottom:10px}}
   </style>
 </head>
 <body>
@@ -77,13 +78,14 @@
       <h2>Multiplayer</h2>
       <label>Your Room Code</label>
       <div class="code-box">
-        <span id="my-code">••</span>
+        <span id="my-code">••••••</span>
         <button class="sm-btn" id="btn-copy">Copy</button>
       </div>
       <label>Join a Friend</label>
-      <input id="room-input" type="text" placeholder="AA" maxlength="2" autocomplete="off" spellcheck="false"/>
+      <input id="room-input" type="text" placeholder="Enter 6-char code" maxlength="6" autocomplete="off" spellcheck="false"/>
       <button id="btn-join">Join Room</button>
-      <p class="mp-hint">Short 2-char room code.<br>Host shares code, friend joins.</p>
+      <p class="mp-hint">Share your code with a friend.<br>They paste it and hit Join.</p>
+      <div id="mp-error"></div>
       <button id="btn-back">← Back</button>
     </div>
   </div>
@@ -105,50 +107,140 @@
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script type="module">
   import { startGame } from './game.js';
+  
   const IS_MOBILE = innerWidth <= 900 || navigator.maxTouchPoints > 0;
   const menu = document.getElementById('main-menu');
   const menuHome = document.getElementById('menu-home');
   const mpScreen = document.getElementById('mp-screen');
-  let peer = null, myId = null;
+  const mpError = document.getElementById('mp-error');
+  
+  let peer = null;
+  let myId = null;
+  let hostConn = null;
+
+  function showError(msg) {
+    mpError.textContent = msg;
+    mpError.style.display = 'block';
+  }
+
+  function hideError() {
+    mpError.textContent = '';
+    mpError.style.display = 'none';
+  }
 
   function initPeer(cb) {
-    if (peer) { cb?.(); return; }
+    if (peer && myId) { cb?.(); return; }
     peer = new Peer(undefined, { debug: 0 });
+    
     peer.on('open', id => {
-      myId = id.slice(0, 2).toUpperCase();
-      document.getElementById('my-code').textContent = myId;
+      myId = id;
+      document.getElementById('my-code').textContent = id.slice(0, 6).toUpperCase();
+      hideError();
       cb?.();
     });
-    peer.on('error', e => console.warn(e));
+    
+    peer.on('error', e => {
+      console.warn('Peer error:', e);
+      if (e.type === 'peer-unavailable' || e.type === 'connection-failed') {
+        showError('Code invalid or room not found');
+      }
+    });
+    
+    peer.on('connection', conn => {
+      setupConn(conn);
+      showHostingUI();
+    });
+  }
+
+  function showHostingUI() {
+    const btn = document.getElementById('btn-join');
+    btn.textContent = 'Hosting...';
+    btn.disabled = true;
+  }
+
+  function setupConn(conn) {
+    conn.on('open', () => {
+      conn.send({ type: 'host_ready', code: myId?.slice(0, 6).toUpperCase() });
+    });
+    
+    conn.on('data', d => {
+      if (d?.type === 'welcome') {
+        conn.close();
+        showError('This room is already full');
+      }
+    });
+    
+    conn.on('close', () => {
+      const btn = document.getElementById('btn-join');
+      btn.textContent = 'Join Room';
+      btn.disabled = false;
+    });
   }
 
   document.getElementById('btn-sp').addEventListener('click', () => {
     menu.style.display = 'none';
     if (IS_MOBILE) document.getElementById('mobile-ui').style.display = 'block';
-    startGame({ peer: null, isMobile: IS_MOBILE });
+    startGame({ peer: null, isMobile: IS_MOBILE, isMultiplayer: false });
   });
 
   document.getElementById('btn-mp-open').addEventListener('click', () => {
     menuHome.style.display = 'none';
     mpScreen.style.display = 'flex';
+    hideError();
     initPeer();
   });
 
   document.getElementById('btn-back').addEventListener('click', () => {
+    if (hostConn) hostConn.close();
     mpScreen.style.display = 'none';
     menuHome.style.display = 'flex';
   });
 
   document.getElementById('btn-copy').addEventListener('click', () => {
-    if (myId) navigator.clipboard?.writeText(myId);
+    if (myId) navigator.clipboard?.writeText(myId.slice(0, 6).toUpperCase());
   });
 
   document.getElementById('btn-join').addEventListener('click', () => {
     const code = document.getElementById('room-input').value.trim().toUpperCase();
-    if (!code || !peer) return;
+    
+    // Validate code: must be 6 characters
+    if (!code || code.length !== 6) {
+      showError('Code invalid - must be 6 characters');
+      return;
+    }
+    
+    if (!peer) {
+      showError('Connecting... wait a moment');
+      return;
+    }
+    
+    hideError();
     menu.style.display = 'none';
     if (IS_MOBILE) document.getElementById('mobile-ui').style.display = 'block';
-    startGame({ peer, joinCode: code, isMobile: IS_MOBILE });
+    
+    hostConn = peer.connect(code, { reliable: true, serialization: 'json' });
+    
+    hostConn.on('open', () => {
+      hostConn.send({ type: 'join_request', code: code });
+      startGame({ peer, connection: hostConn, isMobile: IS_MOBILE, isMultiplayer: true, isHost: false });
+    });
+    
+    hostConn.on('error', e => {
+      console.error('Connection error:', e);
+      if (!menu.style.display || menu.style.display === 'none') {
+        menu.style.display = 'flex';
+        if (IS_MOBILE) document.getElementById('mobile-ui').style.display = 'none';
+      }
+      showError('Code invalid or room not found');
+    });
+    
+    hostConn.on('close', () => {
+      if (!menu.style.display || menu.style.display === 'none') {
+        menu.style.display = 'flex';
+        if (IS_MOBILE) document.getElementById('mobile-ui').style.display = 'none';
+      }
+      showError('Room disconnected');
+    });
   });
 </script>
 </body>
