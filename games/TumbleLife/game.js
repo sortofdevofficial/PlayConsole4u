@@ -4,6 +4,15 @@ import { WorldMap } from './map.js';
 import { Bamborghini } from './Life/bamborghini.js';
 import { updateVehicle, updateVehicleCollision, updateCharacterPosition } from './physics.js';
 
+function makeShortCode(len = 4) {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let code = '';
+  for (let i = 0; i < len; i++) {
+    code += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return code;
+}
+
 export function startGame({ peer = null, connection = null, isMobile = false, isMultiplayer = false, isHost = true } = {}) {
   const renderer = new THREE.WebGLRenderer({ antialias: !isMobile, powerPreference: 'high-performance' });
   renderer.setSize(innerWidth, innerHeight);
@@ -44,7 +53,7 @@ export function startGame({ peer = null, connection = null, isMobile = false, is
   car.meshGroup.position.y = worldMap.getElevation(0, -6) + car.groundOffset;
 
   const keys = {};
-  let isDriving = false, isPassenger = false;
+  let isDriving = false;
   let orbitY = Math.PI, orbitX = 0.08;
   let lastX = 0, lastY = 0, dragging = false;
   const joy = { active:false, id:-1, startX:0, startY:0, dx:0, dy:0 };
@@ -143,8 +152,10 @@ export function startGame({ peer = null, connection = null, isMobile = false, is
     }, { passive:false });
   }
 
+  // Multiplayer - both sides sync
   const peers = {};
   const conns = [];
+  let myCode = makeShortCode();
 
   function makeRemoteChar() {
     const rc = new WobblyCharacter(scene);
@@ -159,12 +170,13 @@ export function startGame({ peer = null, connection = null, isMobile = false, is
     
     conn.on('open', () => {
       if (!peers[conn.peer]) peers[conn.peer] = { char: makeRemoteChar(), driving: false };
-      conn.send({ type: 'welcome' });
+      conn.send({ type: 'welcome', code: myCode });
     });
 
     conn.on('data', d => {
       const p = peers[conn.peer];
       if (!p || !d) return;
+
       if (d.type === 'state') {
         p.char.position.set(d.x, d.y, d.z);
         p.char.bodyGroup.position.set(d.x, d.y, d.z);
@@ -176,14 +188,14 @@ export function startGame({ peer = null, connection = null, isMobile = false, is
 
     conn.on('close', () => {
       const p = peers[conn.peer];
-      if (p) scene.remove(p.char.bodyGroup);
+      if (p && p.char && p.char.bodyGroup) scene.remove(p.char.bodyGroup);
       delete peers[conn.peer];
       conns.splice(conns.indexOf(conn), 1);
     });
   }
 
   if (peer) {
-    if (isMultiplayer && !isHost && connection) {
+    if (isMultiplayer && connection) {
       setupConn(connection);
     } else if (isMultiplayer && isHost) {
       peer.on('connection', conn => setupConn(conn));
@@ -199,7 +211,12 @@ export function startGame({ peer = null, connection = null, isMobile = false, is
       z: character.position.z,
       ry: character.bodyGroup.rotation.y,
       ww: character.walkWeight,
-      drv: isDriving
+      drv: isDriving,
+      carX: car.meshGroup.position.x,
+      carY: car.meshGroup.position.y,
+      carZ: car.meshGroup.position.z,
+      carAngle: car.angle,
+      carSpeed: car.speed
     };
     for (const c of conns) if (c.open) try { c.send(d); } catch {}
   }
@@ -217,15 +234,12 @@ export function startGame({ peer = null, connection = null, isMobile = false, is
     } else {
       const distSq = character.position.distanceToSquared(car.meshGroup.position);
       if (distSq < 25) {
-        const remoteDriverExists = Object.values(peers).some(p => p.driving);
-        if (!remoteDriverExists) {
-          isDriving = true;
-          updateCam(car.meshGroup.position, 4.5, 14, car.angle, true);
-          camPos.copy(desiredPos);
-          camTarget.copy(desiredTarget);
-          document.getElementById('speedometer').style.display = 'block';
-          updateHint('F to exit car');
-        }
+        isDriving = true;
+        updateCam(car.meshGroup.position, 4.5, 14, car.angle, true);
+        camPos.copy(desiredPos);
+        camTarget.copy(desiredTarget);
+        document.getElementById('speedometer').style.display = 'block';
+        updateHint('F to exit car');
       }
     }
   }
