@@ -33,12 +33,14 @@
     #mp-screen label{color:rgba(247,251,255,.45);font-size:10px;text-transform:uppercase;letter-spacing:.09em;align-self:flex-start;margin-top:4px;}
     .code-box{width:100%;background:rgba(255,255,255,.12);border-radius:12px;padding:10px 12px;
       display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid rgba(255,255,255,.16);}
-    #my-code{font-family:monospace;font-size:20px;font-weight:800;color:#f6fff8;letter-spacing:.16em;}
+    #my-code{font-family:monospace;font-size:26px;font-weight:900;color:#f6fff8;letter-spacing:.22em;}
     .sm-btn{background:rgba(255,255,255,.10);color:#f8fdff;border:1px solid rgba(255,255,255,.14);
       border-radius:10px;padding:6px 10px;font-size:11px;font-weight:700;cursor:pointer;}
     .sm-btn:hover{background:rgba(255,255,255,.16);}
     #room-input{width:100%;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.16);
-      border-radius:12px;padding:10px 12px;color:#fff;font-size:18px;font-family:monospace;letter-spacing:.1em;outline:none;text-align:center;}
+      border-radius:12px;padding:10px 12px;color:#fff;font-size:26px;font-family:monospace;
+      font-weight:900;letter-spacing:.22em;outline:none;text-align:center;text-transform:uppercase;}
+    #room-input::placeholder{color:rgba(255,255,255,.3);font-weight:400;letter-spacing:.05em;font-size:14px;}
     #btn-join{width:100%;padding:12px;background:linear-gradient(180deg,rgba(111,143,99,.95),rgba(94,127,85,.95));
       color:#fff;border:1px solid rgba(255,255,255,.12);border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;}
     #btn-back{background:none;border:none;color:rgba(255,255,255,.7);cursor:pointer;font-size:12px;margin-top:4px;}
@@ -80,14 +82,15 @@
       <h2>Multiplayer</h2>
       <label>Your Code (share this)</label>
       <div class="code-box">
-        <span id="my-code">••••••••</span>
+        <span id="my-code">····</span>
         <button class="sm-btn" id="btn-copy">Copy</button>
       </div>
       <div id="host-wait">Waiting for friend...</div>
       <label style="margin-top:12px">Join Friend</label>
-      <input id="room-input" type="text" placeholder="Paste full code" maxlength="40" autocomplete="off" spellcheck="false"/>
+      <input id="room-input" type="text" placeholder="Enter 4-letter code" maxlength="4"
+             autocomplete="off" spellcheck="false" inputmode="text"/>
       <button id="btn-join">Join</button>
-      <p class="mp-hint">Host copies code → Friend pastes → Join</p>
+      <p class="mp-hint">Host shares 4-letter code → Friend types it → Join</p>
       <div id="mp-error"></div>
       <div id="mp-loading">Connecting...</div>
       <button id="btn-back">← Back</button>
@@ -111,70 +114,104 @@
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script type="module">
   import { startGame } from './game.js';
-  
+
+  const CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  function makeCode() {
+    let c = '';
+    for (let i = 0; i < 4; i++) c += CHARS[Math.floor(Math.random() * CHARS.length)];
+    return c;
+  }
+
   const IS_MOBILE = innerWidth <= 900 || navigator.maxTouchPoints > 0;
-  const menu = document.getElementById('main-menu');
-  const menuHome = document.getElementById('menu-home');
-  const mpScreen = document.getElementById('mp-screen');
-  const mpError = document.getElementById('mp-error');
+  const menu      = document.getElementById('main-menu');
+  const menuHome  = document.getElementById('menu-home');
+  const mpScreen  = document.getElementById('mp-screen');
+  const mpError   = document.getElementById('mp-error');
   const mpLoading = document.getElementById('mp-loading');
-  const hostWait = document.getElementById('host-wait');
-  
-  let peer = null;
-  let myId = null;
-  let hostConn = null;
-  let joining = false;
+  const hostWait  = document.getElementById('host-wait');
+  const codeEl    = document.getElementById('my-code');
+  const roomInput = document.getElementById('room-input');
+
+  let peer      = null;
+  let myId      = null;
+  let hostConn  = null;
+  let joining   = false;
+
+  // Force uppercase as user types
+  roomInput.addEventListener('input', () => {
+    const pos = roomInput.selectionStart;
+    roomInput.value = roomInput.value.toUpperCase().replace(/[^A-Z]/g, '');
+    roomInput.setSelectionRange(pos, pos);
+  });
 
   function showError(msg) {
     mpLoading.style.display = 'none';
-    hostWait.style.display = 'none';
-    mpError.textContent = msg;
-    mpError.style.display = 'block';
+    hostWait.style.display  = 'none';
+    mpError.textContent     = msg;
+    mpError.style.display   = 'block';
     joining = false;
     const btn = document.getElementById('btn-join');
     btn.textContent = 'Join';
-    btn.disabled = false;
+    btn.disabled    = false;
   }
 
   function hideError() {
-    mpError.textContent = '';
-    mpError.style.display = 'none';
+    mpError.textContent    = '';
+    mpError.style.display  = 'none';
     mpLoading.style.display = 'none';
-    hostWait.style.display = 'none';
+    hostWait.style.display  = 'none';
   }
 
-  function showLoading() {
-    mpError.style.display = 'none';
-    hostWait.style.display = 'none';
+  function showLoading(msg = 'Connecting...') {
+    mpError.style.display   = 'none';
+    hostWait.style.display  = 'none';
+    mpLoading.textContent   = msg;
     mpLoading.style.display = 'block';
   }
 
-  function initPeer(cb) {
-    if (peer && myId) { cb?.(); return; }
-    peer = new Peer(undefined, { debug: 0 });
-    
+  // Try to register a 4-letter code with PeerJS; retry on collision
+  function initPeer(attempt = 0) {
+    if (peer && myId) return; // already ready
+
+    const code = makeCode();
+    codeEl.textContent = '····';
+
+    peer = new Peer(code, { debug: 0 });
+
     peer.on('open', id => {
       myId = id;
-      document.getElementById('my-code').textContent = id;
+      codeEl.textContent = id;
       hideError();
-      cb?.();
+      hostWait.style.display = 'block';
     });
-    
+
     peer.on('error', e => {
-      console.warn('Peer error:', e);
+      if (e.type === 'unavailable-id') {
+        // Code taken — destroy and retry with a new one
+        peer.destroy();
+        peer  = null;
+        myId  = null;
+        if (attempt < 10) {
+          initPeer(attempt + 1);
+        } else {
+          showError('Could not get a room code. Try again.');
+        }
+        return;
+      }
+      console.warn('Peer error:', e.type, e);
     });
-    
+
     peer.on('connection', conn => {
+      // Host: incoming connection from guest
       conn.on('open', () => {
-        conn.send({ type: 'host_ready' });
         menu.style.display = 'none';
         if (IS_MOBILE) document.getElementById('mobile-ui').style.display = 'block';
         startGame({ peer, connection: conn, isMobile: IS_MOBILE, isMultiplayer: true, isHost: true });
       });
-      conn.on('close', () => { hostWait.style.display = 'block'; });
     });
   }
 
+  // ── Buttons ─────────────────────────────────────────────────
   document.getElementById('btn-sp').addEventListener('click', () => {
     menu.style.display = 'none';
     if (IS_MOBILE) document.getElementById('mobile-ui').style.display = 'block';
@@ -186,11 +223,11 @@
     mpScreen.style.display = 'flex';
     hideError();
     initPeer();
-    hostWait.style.display = 'block';
   });
 
   document.getElementById('btn-back').addEventListener('click', () => {
     if (hostConn) { hostConn.close(); hostConn = null; }
+    if (peer)     { peer.destroy();   peer = null; myId = null; }
     joining = false;
     mpScreen.style.display = 'none';
     menuHome.style.display = 'flex';
@@ -202,54 +239,69 @@
   });
 
   document.getElementById('btn-join').addEventListener('click', () => {
-    const code = document.getElementById('room-input').value.trim();
-    
-    if (!code || code.length < 10) {
-      showError('Code invalid - paste full code from host');
+    const code = roomInput.value.trim().toUpperCase();
+
+    if (code.length !== 4 || !/^[A-Z]{4}$/.test(code)) {
+      showError('Enter the 4-letter code from the host');
       return;
     }
-    
-    if (!peer) {
-      showError('Connecting... wait');
+
+    if (!peer || !myId) {
+      showError('Still connecting — wait a moment');
       return;
     }
-    
+
     if (joining) return;
     joining = true;
     hideError();
-    showLoading();
-    
+    showLoading('Connecting...');
+
     const btn = document.getElementById('btn-join');
     btn.textContent = 'Joining...';
-    btn.disabled = true;
-    
+    btn.disabled    = true;
+
     hostConn = peer.connect(code, { reliable: true, serialization: 'json' });
-    
+
+    let opened = false;
+
     hostConn.on('open', () => {
-      hostConn.send({ type: 'join_request' });
+      opened = true;
       menu.style.display = 'none';
       if (IS_MOBILE) document.getElementById('mobile-ui').style.display = 'block';
       startGame({ peer, connection: hostConn, isMobile: IS_MOBILE, isMultiplayer: true, isHost: false });
     });
-    
-    hostConn.on('error', e => {
-      console.error('Connection error:', e);
-      if (hostConn) { hostConn.close(); hostConn = null; }
-      joining = false;
+
+    hostConn.on('error', () => {
+      if (opened) return;
+      hostConn.close();
+      hostConn = null;
+      joining  = false;
       btn.textContent = 'Join';
-      btn.disabled = false;
-      showError('Code invalid or host not online');
+      btn.disabled    = false;
+      showError('Code not found or host offline');
     });
-    
+
     hostConn.on('close', () => {
-      if (joining) {
+      if (!opened) {
         hostConn = null;
-        joining = false;
+        joining  = false;
         btn.textContent = 'Join';
-        btn.disabled = false;
+        btn.disabled    = false;
         showError('Host disconnected');
       }
     });
+
+    // Timeout if no response in 8 s
+    setTimeout(() => {
+      if (!opened) {
+        hostConn?.close();
+        hostConn = null;
+        joining  = false;
+        btn.textContent = 'Join';
+        btn.disabled    = false;
+        showError('Timed out — check the code and try again');
+      }
+    }, 8000);
   });
 </script>
 </body>
