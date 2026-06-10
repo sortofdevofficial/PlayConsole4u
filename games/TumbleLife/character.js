@@ -18,16 +18,16 @@ export class WobblyCharacter {
     this.torsoMesh.position.y = 1.1;
     this.bodyGroup.add(this.torsoMesh);
 
-    this.leftArmPivot = this.makeLimb(mat, [0.42, 1.35, 0]);
+    this.leftArmPivot  = this.makeLimb(mat, [ 0.42, 1.35, 0]);
     this.rightArmPivot = this.makeLimb(mat, [-0.42, 1.35, 0]);
-    this.leftLegPivot = this.makeLimb(mat, [0.22, 0.65, 0]);
+    this.leftLegPivot  = this.makeLimb(mat, [ 0.22, 0.65, 0]);
     this.rightLegPivot = this.makeLimb(mat, [-0.22, 0.65, 0]);
 
     const legGeo = new THREE.CapsuleGeometry(0.16, 0.45, 6, 12);
-    this.addMesh(this.leftLegPivot, legGeo, mat, 0, -0.22);
+    this.addMesh(this.leftLegPivot,  legGeo, mat, 0, -0.22);
     this.addMesh(this.rightLegPivot, legGeo, mat, 0, -0.22);
     const armGeo = new THREE.CapsuleGeometry(0.18, 0.68, 6, 12);
-    this.addMesh(this.leftArmPivot, armGeo, mat, 0, -0.34);
+    this.addMesh(this.leftArmPivot,  armGeo, mat, 0, -0.34);
     this.addMesh(this.rightArmPivot, armGeo, mat, 0, -0.34);
 
     this.head = new THREE.Mesh(new THREE.SphereGeometry(0.78, 24, 24), mat);
@@ -36,8 +36,8 @@ export class WobblyCharacter {
     this.bodyGroup.add(this.head);
 
     const eyeMat = new THREE.MeshBasicMaterial({ color: 0x0a0a0a });
-    const eyeG = new THREE.SphereGeometry(0.1, 8, 8);
-    this.addMesh(this.head, eyeG, eyeMat, 0.22, 0.05, 0.7);
+    const eyeG   = new THREE.SphereGeometry(0.1, 8, 8);
+    this.addMesh(this.head, eyeG, eyeMat,  0.22, 0.05, 0.7);
     this.addMesh(this.head, eyeG, eyeMat, -0.22, 0.05, 0.7);
   }
 
@@ -62,12 +62,13 @@ export class WobblyCharacter {
     this.bodyGroup.position.copy(this.position);
   }
 
-  setDrivingState(isDriving, carPos = null, carAngle = 0, steerVal = 0, time = 0, worldMap = null) {
+  // seatSide: -1 = driver (left), +1 = passenger (right)
+  setDrivingState(isDriving, carPos = null, carAngle = 0, steerVal = 0, time = 0, worldMap = null, seatSide = -1) {
     this.isDriving = isDriving;
 
     if (!isDriving) {
       this.torsoMesh.position.y = 1.1;
-      this.leftLegPivot.position.set(0.22, 0.65, 0);
+      this.leftLegPivot.position.set( 0.22, 0.65, 0);
       this.rightLegPivot.position.set(-0.22, 0.65, 0);
       this.head.position.set(0, 1.9, 0);
       return;
@@ -76,20 +77,29 @@ export class WobblyCharacter {
     if (!carPos) return;
 
     const wobble = Math.sin(time * 22) * 0.008;
+
+    // Forward offset (slightly behind center)
     this.position.copy(carPos);
     this.position.x -= Math.sin(carAngle) * 0.38;
     this.position.z -= Math.cos(carAngle) * 0.38;
+
+    // Lateral offset — right vector perpendicular to car forward
+    // seatSide -1 = left (driver), +1 = right (passenger)
+    this.position.x += Math.cos(carAngle) * 0.85 * seatSide;
+    this.position.z -= Math.sin(carAngle) * 0.85 * seatSide;
+
     this.position.y = carPos.y + 0.55 + wobble;
 
     this.bodyGroup.position.copy(this.position);
     this.bodyGroup.rotation.set(0.02, carAngle, -steerVal * 0.06);
 
     this.torsoMesh.position.y = 0.5;
-    this.leftArmPivot.rotation.set(-1.15, 0.1, 0.22 - steerVal * 0.55);
+    this.leftArmPivot.rotation.set( -1.15,  0.1,  0.22 - steerVal * 0.55);
     this.rightArmPivot.rotation.set(-1.15, -0.1, -0.22 - steerVal * 0.55);
-    this.leftLegPivot.rotation.set(-1.35, 0.15, 0);
+    this.leftLegPivot.rotation.set( -1.35,  0.15, 0);
     this.rightLegPivot.rotation.set(-1.35, -0.15, 0);
-    this.leftLegPivot.position.y = this.rightLegPivot.position.y = 0.55;
+    this.leftLegPivot.position.y  = 0.55;
+    this.rightLegPivot.position.y = 0.55;
     this.head.position.set(0, 0.92, 0.12);
     this.head.rotation.set(0.02, carAngle + steerVal * 0.2, -steerVal * 0.05);
   }
@@ -120,13 +130,13 @@ export class WobblyCharacter {
     this.bodyGroup.rotation.z = w * 0.06 * this.walkWeight;
     this.head.position.set(0, 1.9 + c * 0.06 * this.walkWeight + Math.sin(time * 2) * 0.015, 0);
     this.head.rotation.set(0, this.bodyGroup.rotation.y, -(w * 0.04 * this.walkWeight));
-    this.leftLegPivot.rotation.x = w * 0.5 * this.walkWeight;
+    this.leftLegPivot.rotation.x  =  w * 0.5 * this.walkWeight;
     this.rightLegPivot.rotation.x = -w * 0.5 * this.walkWeight;
-    this.leftLegPivot.position.y = 0.65 + (w > 0 ? w * 0.12 * this.walkWeight : 0);
+    this.leftLegPivot.position.y  = 0.65 + (w > 0 ?  w * 0.12 * this.walkWeight : 0);
     this.rightLegPivot.position.y = 0.65 + (w < 0 ? -w * 0.12 * this.walkWeight : 0);
-    this.leftArmPivot.rotation.x = -w * 0.4 * this.walkWeight;
-    this.rightArmPivot.rotation.x = w * 0.4 * this.walkWeight;
-    this.leftArmPivot.rotation.z = 0.15 + Math.abs(w) * 0.25 * this.walkWeight;
+    this.leftArmPivot.rotation.x  = -w * 0.4 * this.walkWeight;
+    this.rightArmPivot.rotation.x =  w * 0.4 * this.walkWeight;
+    this.leftArmPivot.rotation.z  =  0.15 + Math.abs(w) * 0.25 * this.walkWeight;
     this.rightArmPivot.rotation.z = -0.15 - Math.abs(w) * 0.25 * this.walkWeight;
   }
 }
