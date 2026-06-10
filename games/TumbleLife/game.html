@@ -80,14 +80,14 @@
       <h2>Multiplayer</h2>
       <label>Your Code (share this)</label>
       <div class="code-box">
-        <span id="my-code">••••</span>
+        <span id="my-code">••••••••</span>
         <button class="sm-btn" id="btn-copy">Copy</button>
       </div>
       <div id="host-wait">Waiting for friend...</div>
       <label style="margin-top:12px">Join Friend</label>
-      <input id="room-input" type="text" placeholder="AAAA" maxlength="4" autocomplete="off" spellcheck="false"/>
+      <input id="room-input" type="text" placeholder="Paste full code" maxlength="40" autocomplete="off" spellcheck="false"/>
       <button id="btn-join">Join</button>
-      <p class="mp-hint">Host gives 4-char code → Friend types it → Join</p>
+      <p class="mp-hint">Host copies code → Friend pastes → Join</p>
       <div id="mp-error"></div>
       <div id="mp-loading">Connecting...</div>
       <button id="btn-back">← Back</button>
@@ -109,7 +109,6 @@
 
 <script>document.addEventListener('contextmenu', e => e.preventDefault());</script>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-<script src="https://unpkg.com/peerjs-scheduler"></script>
 <script type="module">
   import { startGame } from './game.js';
   
@@ -122,8 +121,7 @@
   const hostWait = document.getElementById('host-wait');
   
   let peer = null;
-  let myFullId = null;
-  let myCode = null;
+  let myId = null;
   let hostConn = null;
   let joining = false;
 
@@ -152,13 +150,12 @@
   }
 
   function initPeer(cb) {
-    if (peer && myFullId) { cb?.(); return; }
+    if (peer && myId) { cb?.(); return; }
     peer = new Peer(undefined, { debug: 0 });
     
     peer.on('open', id => {
-      myFullId = id;
-      myCode = myFullId.slice(0, 4).toUpperCase();
-      document.getElementById('my-code').textContent = myCode;
+      myId = id;
+      document.getElementById('my-code').textContent = id;
       hideError();
       cb?.();
     });
@@ -169,13 +166,10 @@
     
     peer.on('connection', conn => {
       conn.on('open', () => {
-        conn.send({ type: 'host_ready', code: myCode });
+        conn.send({ type: 'host_ready' });
         menu.style.display = 'none';
         if (IS_MOBILE) document.getElementById('mobile-ui').style.display = 'block';
         startGame({ peer, connection: conn, isMobile: IS_MOBILE, isMultiplayer: true, isHost: true });
-      });
-      conn.on('data', d => {
-        if (d?.type === 'host_ready') conn.close();
       });
       conn.on('close', () => { hostWait.style.display = 'block'; });
     });
@@ -204,14 +198,14 @@
   });
 
   document.getElementById('btn-copy').addEventListener('click', () => {
-    if (myCode) navigator.clipboard?.writeText(myCode);
+    if (myId) navigator.clipboard?.writeText(myId);
   });
 
   document.getElementById('btn-join').addEventListener('click', () => {
-    const code = document.getElementById('room-input').value.trim().toUpperCase();
+    const code = document.getElementById('room-input').value.trim();
     
-    if (!code || code.length !== 4) {
-      showError('Code invalid - must be 4 chars');
+    if (!code || code.length < 10) {
+      showError('Code invalid - paste full code from host');
       return;
     }
     
@@ -229,50 +223,32 @@
     btn.textContent = 'Joining...';
     btn.disabled = true;
     
-    // Find peer with this short code
-    peer.listPeers().then(peers => {
-      let targetId = null;
-      for (const p of peers) {
-        if (p.slice(0, 4).toUpperCase() === code) {
-          targetId = p;
-          break;
-        }
-      }
-      
-      if (!targetId) {
+    hostConn = peer.connect(code, { reliable: true, serialization: 'json' });
+    
+    hostConn.on('open', () => {
+      hostConn.send({ type: 'join_request' });
+      menu.style.display = 'none';
+      if (IS_MOBILE) document.getElementById('mobile-ui').style.display = 'block';
+      startGame({ peer, connection: hostConn, isMobile: IS_MOBILE, isMultiplayer: true, isHost: false });
+    });
+    
+    hostConn.on('error', e => {
+      console.error('Connection error:', e);
+      if (hostConn) { hostConn.close(); hostConn = null; }
+      joining = false;
+      btn.textContent = 'Join';
+      btn.disabled = false;
+      showError('Code invalid or host not online');
+    });
+    
+    hostConn.on('close', () => {
+      if (joining) {
+        hostConn = null;
         joining = false;
         btn.textContent = 'Join';
         btn.disabled = false;
-        showError('Code invalid or host not online');
-        return;
+        showError('Host disconnected');
       }
-      
-      hostConn = peer.connect(targetId, { reliable: true, serialization: 'json' });
-      
-      hostConn.on('open', () => {
-        hostConn.send({ type: 'join_request', code: code });
-        menu.style.display = 'none';
-        if (IS_MOBILE) document.getElementById('mobile-ui').style.display = 'block';
-        startGame({ peer, connection: hostConn, isMobile: IS_MOBILE, isMultiplayer: true, isHost: false });
-      });
-      
-      hostConn.on('error', e => {
-        if (hostConn) { hostConn.close(); hostConn = null; }
-        joining = false;
-        btn.textContent = 'Join';
-        btn.disabled = false;
-        showError('Code invalid or host not online');
-      });
-      
-      hostConn.on('close', () => {
-        if (joining) {
-          hostConn = null;
-          joining = false;
-          btn.textContent = 'Join';
-          btn.disabled = false;
-          showError('Host disconnected');
-        }
-      });
     });
   });
 </script>
