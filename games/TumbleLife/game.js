@@ -4,12 +4,15 @@ import { WorldMap } from './map.js';
 import { Bamborghini } from './Life/bamborghini.js';
 import { updateVehicle, updateVehicleCollision, updateCharacterPosition } from './physics.js';
 
-export function startGame({ peer = null, joinCode = null, isMobile = false } = {}) {
+function shortCode() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  return Array.from({ length: 2 }, () => chars[(Math.random() * chars.length) | 0]).join('');
+}
 
-  // ── Renderer ──────────────────────────────────────────────────────────────
+export function startGame({ peer = null, joinCode = null, isMobile = false } = {}) {
   const renderer = new THREE.WebGLRenderer({ antialias: !isMobile, powerPreference: 'high-performance' });
   renderer.setSize(innerWidth, innerHeight);
-  renderer.setPixelRatio(Math.min(devicePixelRatio, isMobile ? 1.0 : 1.5));
+  renderer.setPixelRatio(Math.min(devicePixelRatio, isMobile ? 1 : 1.5));
   renderer.shadowMap.enabled = !isMobile;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -17,36 +20,34 @@ export function startGame({ peer = null, joinCode = null, isMobile = false } = {
   renderer.toneMappingExposure = 1.1;
   document.body.appendChild(renderer.domElement);
 
-  // ── Scene ─────────────────────────────────────────────────────────────────
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0xbfdfff);
   scene.fog = new THREE.Fog(0xbfdfff, isMobile ? 60 : 85, isMobile ? 200 : 320);
   scene.add(new THREE.HemisphereLight(0xeaf4ff, 0x97b36a, 1.35));
   const sun = new THREE.DirectionalLight(0xffe2b0, 1.7);
-  sun.position.set(60, 90, 30); sun.castShadow = !isMobile;
+  sun.position.set(60, 90, 30);
+  sun.castShadow = !isMobile;
   if (!isMobile) {
     sun.shadow.mapSize.set(512, 512);
     Object.assign(sun.shadow.camera, { left:-120,right:120,top:120,bottom:-120,near:1,far:220 });
-    sun.shadow.bias = -0.00015; sun.shadow.normalBias = 0.02;
+    sun.shadow.bias = -0.00015;
+    sun.shadow.normalBias = 0.02;
   }
   scene.add(sun);
 
-  // ── Camera ────────────────────────────────────────────────────────────────
-  const camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.5, isMobile ? 1000 : 2000);
+  const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.5, isMobile ? 1000 : 2000);
   const camPos = new THREE.Vector3(), camTarget = new THREE.Vector3();
   const desiredPos = new THREE.Vector3(), desiredTarget = new THREE.Vector3();
   const moveDir = new THREE.Vector3();
-  const UP = new THREE.Vector3(0,1,0), X_AXIS = new THREE.Vector3(1,0,0);
+  const UP = new THREE.Vector3(0, 1, 0), X_AXIS = new THREE.Vector3(1, 0, 0);
 
-  // ── World ─────────────────────────────────────────────────────────────────
   const worldMap = new WorldMap(scene, { cityRadius: 130, treeDensity: 2 });
   const character = new WobblyCharacter(scene);
   const car = new Bamborghini(scene, 0, -6);
-  character.position.set(0, worldMap.getElevation(0,0) + character.groundOffset, 0);
+  character.position.set(0, worldMap.getElevation(0, 0) + character.groundOffset, 0);
   character.bodyGroup.position.copy(character.position);
-  car.meshGroup.position.y = worldMap.getElevation(0,-6) + car.groundOffset;
+  car.meshGroup.position.y = worldMap.getElevation(0, -6) + car.groundOffset;
 
-  // ── State ─────────────────────────────────────────────────────────────────
   const keys = {};
   let isDriving = false, isPassenger = false;
   let orbitY = Math.PI, orbitX = 0.08;
@@ -54,182 +55,200 @@ export function startGame({ peer = null, joinCode = null, isMobile = false } = {
   const joy = { active:false, id:-1, startX:0, startY:0, dx:0, dy:0 };
   const camDrag = { active:false, id:-1, startX:0, startY:0 };
 
-  // ── Mouse/KB ──────────────────────────────────────────────────────────────
   window.addEventListener('mousedown', e => {
-    if (e.button !== 0) return; dragging=true; lastX=e.clientX; lastY=e.clientY;
+    if (e.button !== 0) return;
+    dragging = true;
+    lastX = e.clientX;
+    lastY = e.clientY;
     if (!document.pointerLockElement) document.body.requestPointerLock();
   });
+
   window.addEventListener('mousemove', e => {
     if (!dragging && !document.pointerLockElement) return;
-    const dx = document.pointerLockElement ? e.movementX : e.clientX-lastX;
-    const dy = document.pointerLockElement ? e.movementY : e.clientY-lastY;
-    orbitY -= dx*.0025;
-    orbitX = THREE.MathUtils.clamp(orbitX-dy*.0025, -Math.PI/8, Math.PI/3.5);
-    lastX=e.clientX; lastY=e.clientY;
-  });
-  window.addEventListener('mouseup', () => dragging=false);
-  window.addEventListener('keydown', e => {
-    const k = e.key.toLowerCase(); keys[k]=true;
-    if (k==='f'||k==='enter') tryEnterExit();
-  });
-  window.addEventListener('keyup', e => keys[e.key.toLowerCase()]=false);
-  window.addEventListener('resize', () => {
-    camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
-    renderer.setSize(innerWidth,innerHeight);
+    const dx = document.pointerLockElement ? e.movementX : e.clientX - lastX;
+    const dy = document.pointerLockElement ? e.movementY : e.clientY - lastY;
+    orbitY -= dx * .0025;
+    orbitX = THREE.MathUtils.clamp(orbitX - dy * .0025, -Math.PI / 8, Math.PI / 3.5);
+    lastX = e.clientX;
+    lastY = e.clientY;
   });
 
-  // ── Mobile ────────────────────────────────────────────────────────────────
+  window.addEventListener('mouseup', () => dragging = false);
+
+  window.addEventListener('keydown', e => {
+    const k = e.key.toLowerCase();
+    keys[k] = true;
+    if (k === 'f' || k === 'enter') tryEnterExit();
+  });
+
+  window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+
+  window.addEventListener('resize', () => {
+    camera.aspect = innerWidth / innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+  });
+
   if (isMobile) {
     const joyZone = document.getElementById('joy-zone');
     const camZone = document.getElementById('cam-zone');
-
-    // Car button — enter/exit
     document.getElementById('btn-enter')?.addEventListener('touchstart', e => {
-      e.preventDefault(); tryEnterExit();
+      e.preventDefault();
+      tryEnterExit();
     }, { passive:false });
 
     joyZone?.addEventListener('touchstart', e => {
-      e.preventDefault(); const t=e.changedTouches[0];
-      joy.active=true; joy.id=t.identifier;
-      joy.startX=t.clientX; joy.startY=t.clientY; joy.dx=0; joy.dy=0;
+      e.preventDefault();
+      const t = e.changedTouches[0];
+      joy.active = true;
+      joy.id = t.identifier;
+      joy.startX = t.clientX;
+      joy.startY = t.clientY;
+      joy.dx = 0;
+      joy.dy = 0;
     }, { passive:false });
 
     window.addEventListener('touchmove', e => {
       for (const t of e.changedTouches) {
-        if (t.identifier===joy.id) {
-          const rdx=t.clientX-joy.startX, rdy=t.clientY-joy.startY;
-          const dist=Math.hypot(rdx,rdy)||1, r=Math.min(dist,40)/40;
-          joy.dx=(rdx/dist)*r; joy.dy=(rdy/dist)*r;
-          const knob=document.getElementById('joy-knob');
-          if(knob) knob.style.transform=`translate(calc(-50% + ${joy.dx*40}px),calc(-50% + ${joy.dy*40}px))`;
+        if (t.identifier === joy.id) {
+          const rdx = t.clientX - joy.startX, rdy = t.clientY - joy.startY;
+          const dist = Math.hypot(rdx, rdy) || 1, r = Math.min(dist, 40) / 40;
+          joy.dx = (rdx / dist) * r;
+          joy.dy = (rdy / dist) * r;
+          const knob = document.getElementById('joy-knob');
+          if (knob) knob.style.transform = `translate(calc(-50% + ${joy.dx * 40}px),calc(-50% + ${joy.dy * 40}px))`;
         }
-        if (t.identifier===camDrag.id) {
-          orbitY-=(t.clientX-camDrag.startX)*.008;
-          orbitX=THREE.MathUtils.clamp(orbitX-(t.clientY-camDrag.startY)*.006,-Math.PI/8,Math.PI/3.5);
-          camDrag.startX=t.clientX; camDrag.startY=t.clientY;
+        if (t.identifier === camDrag.id) {
+          orbitY -= (t.clientX - camDrag.startX) * .008;
+          orbitX = THREE.MathUtils.clamp(orbitX - (t.clientY - camDrag.startY) * .006, -Math.PI / 8, Math.PI / 3.5);
+          camDrag.startX = t.clientX;
+          camDrag.startY = t.clientY;
         }
       }
     }, { passive:true });
 
     window.addEventListener('touchend', e => {
       for (const t of e.changedTouches) {
-        if (t.identifier===joy.id) {
-          joy.active=false; joy.dx=0; joy.dy=0;
-          const k=document.getElementById('joy-knob');
-          if(k) k.style.transform='translate(-50%,-50%)';
+        if (t.identifier === joy.id) {
+          joy.active = false;
+          joy.dx = 0;
+          joy.dy = 0;
+          const k = document.getElementById('joy-knob');
+          if (k) k.style.transform = 'translate(-50%,-50%)';
         }
-        if (t.identifier===camDrag.id) camDrag.active=false;
+        if (t.identifier === camDrag.id) camDrag.active = false;
       }
     });
 
     camZone?.addEventListener('touchstart', e => {
-      e.preventDefault(); const t=e.changedTouches[0];
-      camDrag.active=true; camDrag.id=t.identifier;
-      camDrag.startX=t.clientX; camDrag.startY=t.clientY;
+      e.preventDefault();
+      const t = e.changedTouches[0];
+      camDrag.active = true;
+      camDrag.id = t.identifier;
+      camDrag.startX = t.clientX;
+      camDrag.startY = t.clientY;
     }, { passive:false });
   }
 
-  // ── Multiplayer ───────────────────────────────────────────────────────────
-  // peerId → { char, driving, passenger, carX, carY, carZ, carAngle, carSteer }
   const peers = {};
   const conns = [];
-  const COLORS = [0xff6b6b, 0x6bffb8, 0x6b9fff, 0xff6bef];
-  let _colorIdx = 0;
+  let isHost = false;
+  let myCode = joinCode || shortCode();
+
+  function makeRemoteChar() {
+    const rc = new WobblyCharacter(scene);
+    const c = new THREE.Color().setHSL(Math.random(), 0.35, 0.55);
+    rc.torsoMesh.material = rc.head.material = c ? new THREE.MeshStandardMaterial({ color: c, roughness: 0.75 }) : rc.torsoMesh.material;
+    return rc;
+  }
 
   function setupConn(conn) {
     conns.push(conn);
     conn.on('open', () => {
-      const rc = new WobblyCharacter(scene);
-      rc.mat.color.setHex(COLORS[_colorIdx++ % 4]);
-      // Also tint head mesh children
-      rc.head.material = rc.mat;
-      peers[conn.peer] = { char: rc, driving: false, passenger: false };
-      console.log('peer connected:', conn.peer.slice(0,6));
+      if (!peers[conn.peer]) peers[conn.peer] = { char: makeRemoteChar(), driving: false, passenger: false };
+      conn.send({ type: 'welcome', code: myCode });
     });
-    conn.on('data', d => {
-      const p = peers[conn.peer]; if (!p) return;
-      // Update remote character position
-      p.char.position.set(d.x, d.y, d.z);
-      p.char.bodyGroup.position.set(d.x, d.y, d.z);
-      p.char.bodyGroup.rotation.y = d.ry;
-      p.char.walkWeight = d.ww ?? 0;
-      p.driving = d.drv ?? false;
-      p.passenger = d.psg ?? false;
 
-      // If remote peer is driving, move the shared car for them
-      // (host controls car, guests see it via broadcast)
-      if (d.drv && d.cx !== undefined) {
-        car.meshGroup.position.set(d.cx, d.cy, d.cz);
-        car.angle = d.ca ?? 0;
-        car.steer = d.cs ?? 0;
-        car.meshGroup.rotation.set(0, car.angle, 0);
+    conn.on('data', d => {
+      const p = peers[conn.peer];
+      if (!p || !d) return;
+
+      if (d.type === 'state') {
+        p.char.position.set(d.x, d.y, d.z);
+        p.char.bodyGroup.position.set(d.x, d.y, d.z);
+        p.char.bodyGroup.rotation.y = d.ry || 0;
+        p.char.walkWeight = d.ww || 0;
+        p.driving = !!d.drv;
+        p.passenger = !!d.psg;
       }
     });
+
     conn.on('close', () => {
       const p = peers[conn.peer];
-      if (p) { scene.remove(p.char.bodyGroup); delete peers[conn.peer]; }
+      if (p) scene.remove(p.char.bodyGroup);
+      delete peers[conn.peer];
     });
   }
 
   if (peer) {
     peer.on('connection', conn => setupConn(conn));
+
     if (joinCode) {
-      // Guest joins: connect to host
-      const fullCode = joinCode.toLowerCase().replace(/\s/g,'');
-      const conn = peer.connect(fullCode, { reliable: false, serialization: 'json' });
+      isHost = false;
+      const conn = peer.connect(joinCode, { reliable: false, serialization: 'json' });
       setupConn(conn);
+    } else {
+      isHost = true;
+      document.getElementById('my-code').textContent = myCode;
+      peer.id = myCode;
     }
   }
 
   function broadcast() {
     if (!conns.length) return;
     const d = {
-      x: character.position.x, y: character.position.y, z: character.position.z,
-      ry: character.bodyGroup.rotation.y, ww: character.walkWeight,
-      drv: isDriving, psg: isPassenger,
+      type: 'state',
+      x: character.position.x,
+      y: character.position.y,
+      z: character.position.z,
+      ry: character.bodyGroup.rotation.y,
+      ww: character.walkWeight,
+      drv: isDriving,
+      psg: isPassenger
     };
-    if (isDriving) {
-      d.cx = car.meshGroup.position.x; d.cy = car.meshGroup.position.y; d.cz = car.meshGroup.position.z;
-      d.ca = car.angle; d.cs = car.steer;
-    }
-    for (const c of conns) if (c.open) try { c.send(d); } catch(_) {}
+    for (const c of conns) if (c.open) try { c.send(d); } catch {}
   }
 
-  // ── Enter / Exit car ──────────────────────────────────────────────────────
   function tryEnterExit() {
     if (isDriving) {
-      // Exit driver seat
       isDriving = false;
       character.position.copy(car.meshGroup.position);
-      character.position.x += Math.sin(car.angle - Math.PI/2) * 2.5;
-      character.position.z += Math.cos(car.angle - Math.PI/2) * 2.5;
+      character.position.x += Math.sin(car.angle - Math.PI / 2) * 2.5;
+      character.position.z += Math.cos(car.angle - Math.PI / 2) * 2.5;
       character.snapToTerrain(worldMap);
       character.setDrivingState(false);
       document.getElementById('speedometer').style.display = 'none';
       updateHint('');
     } else if (isPassenger) {
-      // Exit passenger seat
       isPassenger = false;
       character.position.copy(car.meshGroup.position);
-      character.position.x += Math.sin(car.angle + Math.PI/2) * 2.5;
-      character.position.z += Math.cos(car.angle + Math.PI/2) * 2.5;
+      character.position.x += Math.sin(car.angle + Math.PI / 2) * 2.5;
+      character.position.z += Math.cos(car.angle + Math.PI / 2) * 2.5;
       character.snapToTerrain(worldMap);
       character.setDrivingState(false);
       updateHint('');
     } else {
       const distSq = character.position.distanceToSquared(car.meshGroup.position);
       if (distSq < 25) {
-        // Check if driver seat is free (no remote peer driving)
         const remoteDriverExists = Object.values(peers).some(p => p.driving);
         if (!remoteDriverExists) {
-          // Enter driver seat
           isDriving = true;
           updateCam(car.meshGroup.position, 4.5, 14, car.angle, true);
-          camPos.copy(desiredPos); camTarget.copy(desiredTarget);
+          camPos.copy(desiredPos);
+          camTarget.copy(desiredTarget);
           document.getElementById('speedometer').style.display = 'block';
           updateHint('F to exit car');
         } else {
-          // Driver taken — enter passenger seat
           isPassenger = true;
           updateHint('F to exit car');
         }
@@ -237,13 +256,12 @@ export function startGame({ peer = null, joinCode = null, isMobile = false } = {
     }
   }
 
-  // ── Camera ────────────────────────────────────────────────────────────────
-  function updateCam(targetPos, h, dist, angle, lookLow=false) {
-    const off = new THREE.Vector3(0,h,dist).applyAxisAngle(UP,angle+orbitY).applyAxisAngle(X_AXIS,orbitX);
+  function updateCam(targetPos, h, dist, angle, lookLow = false) {
+    const off = new THREE.Vector3(0, h, dist).applyAxisAngle(UP, angle + orbitY).applyAxisAngle(X_AXIS, orbitX);
     desiredPos.copy(targetPos).add(off);
-    if (desiredPos.y < targetPos.y+1.5) desiredPos.y = targetPos.y+1.5;
+    if (desiredPos.y < targetPos.y + 1.5) desiredPos.y = targetPos.y + 1.5;
     desiredTarget.copy(targetPos);
-    desiredTarget.y += lookLow ? 0.3 : h*.15;
+    desiredTarget.y += lookLow ? 0.3 : h * .15;
   }
 
   function updateHint(txt) {
@@ -251,44 +269,36 @@ export function startGame({ peer = null, joinCode = null, isMobile = false } = {
     if (h) h.textContent = txt || 'WASD move · F enter car · Drag camera';
   }
 
-  // ── Loop ──────────────────────────────────────────────────────────────────
   const clock = new THREE.Clock();
-  // Throttle broadcast to ~20hz to reduce network load
   let _broadcastTimer = 0;
 
   function animate() {
     requestAnimationFrame(animate);
     const dt = Math.min(clock.getDelta(), 0.033);
     const time = clock.elapsedTime;
-
     const jx = joy.active ? joy.dx : 0;
     const jz = joy.active ? joy.dy : 0;
 
     if (isDriving) {
-      // Apply joystick as keys for driving
       if (isMobile) {
         keys._w = jz < -0.2; keys._s = jz > 0.2;
         keys._a = jx < -0.2; keys._d = jx > 0.2;
       }
       const dk = isMobile
-        ? { w: keys._w, s: keys._s, a: keys._a, d: keys._d, arrowup: false, arrowdown: false, arrowleft: false, arrowright: false }
+        ? { w: keys._w, s: keys._s, a: keys._a, d: keys._d, arrowup:false, arrowdown:false, arrowleft:false, arrowright:false }
         : keys;
-
       updateVehicle(car, dk, dt, worldMap);
       updateVehicleCollision(car, worldMap.getNearbyObstacles(car.meshGroup.position.x, car.meshGroup.position.z), worldMap);
       character.setDrivingState(true, car.meshGroup.position, car.angle, car.steer, time);
       updateCam(car.meshGroup.position, 4.5, 14, car.angle, true);
-      document.getElementById('speedometer').textContent = `${Math.round(Math.abs(car.speed)*8)} KM/H`;
-      camera.fov = THREE.MathUtils.lerp(camera.fov, 60+Math.abs(car.speed)*.8, .08);
-
+      document.getElementById('speedometer').textContent = `${Math.round(Math.abs(car.speed) * 8)} KM/H`;
+      camera.fov = THREE.MathUtils.lerp(camera.fov, 60 + Math.abs(car.speed) * .8, .08);
     } else if (isPassenger) {
-      // Sit in passenger seat — no driving input
       const pPos = car.getSeatPosition('passenger');
       character.position.copy(pPos);
       character.setDrivingState(true, pPos, car.angle, 0, time);
       updateCam(car.meshGroup.position, 4.5, 14, car.angle, true);
       camera.fov = THREE.MathUtils.lerp(camera.fov, 62, .08);
-
     } else {
       moveDir.set(
         (keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0)+jx, 0,
@@ -305,20 +315,23 @@ export function startGame({ peer = null, joinCode = null, isMobile = false } = {
       updateCam(character.position, 5, 11, 0, false);
       camera.fov = THREE.MathUtils.lerp(camera.fov, 60, .08);
     }
-    camera.updateProjectionMatrix();
 
-    // Broadcast at ~20hz
+    camera.updateProjectionMatrix();
     _broadcastTimer += dt;
     if (_broadcastTimer >= 0.05) { broadcast(); _broadcastTimer = 0; }
 
-    const lT = isDriving||isPassenger ? 1-Math.pow(.002,dt) : 1-Math.pow(.001,dt);
-    camPos.lerp(desiredPos,lT); camTarget.lerp(desiredTarget,lT);
-    camera.position.copy(camPos); camera.lookAt(camTarget);
+    const lT = isDriving || isPassenger ? 1 - Math.pow(.002, dt) : 1 - Math.pow(.001, dt);
+    camPos.lerp(desiredPos, lT);
+    camTarget.lerp(desiredTarget, lT);
+    camera.position.copy(camPos);
+    camera.lookAt(camTarget);
 
-    const focus = (isDriving||isPassenger) ? car.meshGroup.position : character.position;
-    sun.target.position.copy(focus); sun.target.updateMatrixWorld();
+    const focus = (isDriving || isPassenger) ? car.meshGroup.position : character.position;
+    sun.target.position.copy(focus);
+    sun.target.updateMatrixWorld();
     worldMap.update(time, focus);
     renderer.render(scene, camera);
   }
+
   animate();
 }
