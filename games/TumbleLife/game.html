@@ -45,6 +45,7 @@
     #btn-back:hover{color:#fff;}
     .mp-hint{color:rgba(255,255,255,.56);font-size:10px;text-align:center;line-height:1.6;}
     #mp-error{color:#ff6b6b;font-size:12px;font-weight:700;text-align:center;display:none;margin-top:4px;}
+    #mp-loading{color:#8fb7ca;font-size:13px;font-weight:700;text-align:center;display:none;margin-top:4px;}
 
     #speedometer{position:fixed;bottom:14px;right:14px;background:rgba(32,54,69,.34);backdrop-filter:blur(10px);
       color:#f8fdff;padding:6px 12px;border-radius:12px;font-size:12px;font-weight:800;letter-spacing:.08em;
@@ -82,10 +83,11 @@
         <button class="sm-btn" id="btn-copy">Copy</button>
       </div>
       <label>Join a Friend</label>
-      <input id="room-input" type="text" placeholder="Enter 6-char code" maxlength="6" autocomplete="off" spellcheck="false"/>
+      <input id="room-input" type="text" placeholder="Enter host code" maxlength="6" autocomplete="off" spellcheck="false"/>
       <button id="btn-join">Join Room</button>
       <p class="mp-hint">Share your code with a friend.<br>They paste it and hit Join.</p>
       <div id="mp-error"></div>
+      <div id="mp-loading">Connecting...</div>
       <button id="btn-back">← Back</button>
     </div>
   </div>
@@ -113,19 +115,29 @@
   const menuHome = document.getElementById('menu-home');
   const mpScreen = document.getElementById('mp-screen');
   const mpError = document.getElementById('mp-error');
+  const mpLoading = document.getElementById('mp-loading');
   
   let peer = null;
   let myId = null;
   let hostConn = null;
+  let joining = false;
 
   function showError(msg) {
+    mpLoading.style.display = 'none';
     mpError.textContent = msg;
     mpError.style.display = 'block';
+    joining = false;
   }
 
   function hideError() {
     mpError.textContent = '';
     mpError.style.display = 'none';
+    mpLoading.style.display = 'none';
+  }
+
+  function showLoading() {
+    mpError.style.display = 'none';
+    mpLoading.style.display = 'block';
   }
 
   function initPeer(cb) {
@@ -141,39 +153,18 @@
     
     peer.on('error', e => {
       console.warn('Peer error:', e);
-      if (e.type === 'peer-unavailable' || e.type === 'connection-failed') {
-        showError('Code invalid or room not found');
-      }
     });
     
     peer.on('connection', conn => {
-      setupConn(conn);
-      showHostingUI();
-    });
-  }
-
-  function showHostingUI() {
-    const btn = document.getElementById('btn-join');
-    btn.textContent = 'Hosting...';
-    btn.disabled = true;
-  }
-
-  function setupConn(conn) {
-    conn.on('open', () => {
-      conn.send({ type: 'host_ready', code: myId?.slice(0, 6).toUpperCase() });
-    });
-    
-    conn.on('data', d => {
-      if (d?.type === 'welcome') {
+      conn.on('open', () => {
+        conn.send({ type: 'host_ready' });
         conn.close();
-        showError('This room is already full');
-      }
-    });
-    
-    conn.on('close', () => {
-      const btn = document.getElementById('btn-join');
-      btn.textContent = 'Join Room';
-      btn.disabled = false;
+      });
+      conn.on('data', d => {
+        if (d?.type === 'host_ready') {
+          conn.close();
+        }
+      });
     });
   }
 
@@ -191,9 +182,14 @@
   });
 
   document.getElementById('btn-back').addEventListener('click', () => {
-    if (hostConn) hostConn.close();
+    if (hostConn) {
+      hostConn.close();
+      hostConn = null;
+    }
+    joining = false;
     mpScreen.style.display = 'none';
     menuHome.style.display = 'flex';
+    hideError();
   });
 
   document.getElementById('btn-copy').addEventListener('click', () => {
@@ -203,7 +199,6 @@
   document.getElementById('btn-join').addEventListener('click', () => {
     const code = document.getElementById('room-input').value.trim().toUpperCase();
     
-    // Validate code: must be 6 characters
     if (!code || code.length !== 6) {
       showError('Code invalid - must be 6 characters');
       return;
@@ -214,32 +209,54 @@
       return;
     }
     
+    if (joining) return;
+    joining = true;
     hideError();
-    menu.style.display = 'none';
-    if (IS_MOBILE) document.getElementById('mobile-ui').style.display = 'block';
+    showLoading();
+    
+    const btn = document.getElementById('btn-join');
+    btn.textContent = 'Joining...';
+    btn.disabled = true;
     
     hostConn = peer.connect(code, { reliable: true, serialization: 'json' });
     
     hostConn.on('open', () => {
-      hostConn.send({ type: 'join_request', code: code });
+      hostConn.send({ type: 'join_request' });
+      menu.style.display = 'none';
+      if (IS_MOBILE) document.getElementById('mobile-ui').style.display = 'block';
       startGame({ peer, connection: hostConn, isMobile: IS_MOBILE, isMultiplayer: true, isHost: false });
     });
     
     hostConn.on('error', e => {
       console.error('Connection error:', e);
-      if (!menu.style.display || menu.style.display === 'none') {
-        menu.style.display = 'flex';
-        if (IS_MOBILE) document.getElementById('mobile-ui').style.display = 'none';
+      if (hostConn) {
+        hostConn.close();
+        hostConn = null;
       }
+      joining = false;
+      btn.textContent = 'Join Room';
+      btn.disabled = false;
       showError('Code invalid or room not found');
     });
     
     hostConn.on('close', () => {
-      if (!menu.style.display || menu.style.display === 'none') {
-        menu.style.display = 'flex';
-        if (IS_MOBILE) document.getElementById('mobile-ui').style.display = 'none';
+      if (joining) {
+        hostConn = null;
+        joining = false;
+        btn.textContent = 'Join Room';
+        btn.disabled = false;
+       .showError('Room disconnected');
       }
-      showError('Room disconnected');
+    });
+    
+    hostConn.on('data', d => {
+      if (d?.type === 'join_request') {
+        hostConn.close();
+        joining = false;
+        btn.textContent = 'Join Room';
+        btn.disabled = false;
+        showError('This room is already full');
+      }
     });
   });
 </script>
