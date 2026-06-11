@@ -2,7 +2,15 @@ import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
 import { WobblyCharacter } from './character.js';
 import { WorldMap } from './map.js';
 import { Bamborghini } from './Life/bamborghini.js';
+import { NPC } from './Life/npc.js';
 import { updateVehicle, updateVehicleCollision, updateCharacterPosition } from './physics.js';
+
+// NPC Waypoints (wander around city)
+const npcWaypoints = [
+  {x: -20, z: -10}, {x: 10, z: -20}, {x: 30, z: 0},
+  {x: -15, z: 25}, {x: 25, z: 30}, {x: -40, z: 15},
+  {x: 5, z: 40}, {x: -30, z: -35}, {x: 45, z: -15}, {x: 0, z: 50}
+];
 
 export function startGame({ peer = null, connection = null, isMobile = false, isMultiplayer = false, isHost = true } = {}) {
   const renderer = new THREE.WebGLRenderer({ antialias: !isMobile, powerPreference: 'high-performance' });
@@ -43,6 +51,15 @@ export function startGame({ peer = null, connection = null, isMobile = false, is
   character.bodyGroup.position.copy(character.position);
   car.meshGroup.position.y = worldMap.getElevation(0, -6) + car.groundOffset;
 
+  // Create NPCs
+  const npcs = [];
+  const npcSpots = [{x:-25,z:5}, {x:15,z:-15}, {x:35,z:20}, {x:-10,z:35}, {x:20,z:10}];
+  for (const spot of npcSpots) {
+    const npc = new NPC(scene, spot.x, spot.z);
+    npc.setWaypoints(npcWaypoints);
+    npcs.push(npc);
+  }
+
   const keys = {};
   let isDriving = false;
   let orbitY = Math.PI, orbitX = 0.08;
@@ -50,7 +67,6 @@ export function startGame({ peer = null, connection = null, isMobile = false, is
   const joy = { active:false, id:-1, startX:0, startY:0, dx:0, dy:0 };
   const camDrag = { active:false, id:-1, startX:0, startY:0 };
 
-  // Reusable vector so we don't allocate in the data handler
   const _remoteCarPos = new THREE.Vector3();
   const _zeroDir = new THREE.Vector3();
 
@@ -78,6 +94,7 @@ export function startGame({ peer = null, connection = null, isMobile = false, is
     const k = e.key.toLowerCase();
     keys[k] = true;
     if (k === 'f' || k === 'enter') tryEnterExit();
+    if (k === 'p') character.punch(); // Press P to punch
   });
 
   window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
@@ -88,6 +105,7 @@ export function startGame({ peer = null, connection = null, isMobile = false, is
     renderer.setSize(innerWidth, innerHeight);
   });
 
+  // Mobile controls
   if (isMobile) {
     const joyZone = document.getElementById('joy-zone');
     const camZone = document.getElementById('cam-zone');
@@ -147,8 +165,7 @@ export function startGame({ peer = null, connection = null, isMobile = false, is
     }, { passive:false });
   }
 
-  // ── Multiplayer ──────────────────────────────────────────────
-  // peers map: connId -> { char: WobblyCharacter, driving: bool, rx: carAngle, rs: carSteer }
+  // Multiplayer
   const peers = {};
   const conns = [];
 
@@ -167,68 +184,40 @@ export function startGame({ peer = null, connection = null, isMobile = false, is
 
     const onOpen = () => {
       if (!peers[conn.peer]) {
-        peers[conn.peer] = {
-          char:    makeRemoteChar(),
-          driving: false,
-          rx:      0,   // remote car angle
-          rs:      0,   // remote car steer
-        };
+        peers[conn.peer] = { char: makeRemoteChar(), driving: false, rx: 0, rs: 0 };
       }
     };
 
-    if (conn.open) {
-      onOpen();
-    } else {
-      conn.on('open', onOpen);
-    }
+    if (conn.open) onOpen();
+    else conn.on('open', onOpen);
 
     conn.on('data', d => {
       if (!d) return;
-
-      // Lazily create peer entry if missed
-      if (!peers[conn.peer]) {
-        peers[conn.peer] = { char: makeRemoteChar(), driving: false, rx: 0, rs: 0 };
-      }
+      if (!peers[conn.peer]) peers[conn.peer] = { char: makeRemoteChar(), driving: false, rx: 0, rs: 0 };
       const p = peers[conn.peer];
 
       if (d.type === 'state') {
         p.driving = !!d.drv;
-
         if (d.drv) {
-          // ── Remote peer is driving the car ──────────────────
-          // Only move the shared car when WE are not driving
-          // (the driver always has authority over car position)
           if (!isDriving) {
             car.meshGroup.position.set(d.carX, d.carY, d.carZ);
             car.angle = d.carAngle ?? 0;
             car.speed = d.carSpeed ?? 0;
             car.steer = d.carSteer ?? 0;
             car.meshGroup.rotation.set(0, car.angle, 0);
-
-            // Sync wheel steering visually
             for (let i = 0; i < car.wheels.length; i++) {
-              if (car.wheels[i].userData.isFront) {
-                car.wheels[i].rotation.y = car.steer * 0.32;
-              }
+              if (car.wheels[i].userData.isFront) car.wheels[i].rotation.y = car.steer * 0.32;
             }
           }
-
-          // Store remote car state for per-frame animation
           p.rx = d.carAngle ?? 0;
           p.rs = d.carSteer ?? 0;
-
-          // Snap remote character into the driving pose immediately
-          // (per-frame refresh happens in animate())
           _remoteCarPos.set(d.carX, d.carY, d.carZ);
           p.char.setDrivingState(true, _remoteCarPos, p.rx, p.rs, 0, null, 1);
-
         } else {
-          // ── Remote peer is on foot ───────────────────────────
           p.char.position.set(d.x, d.y, d.z);
           p.char.bodyGroup.position.set(d.x, d.y, d.z);
           p.char.bodyGroup.rotation.y = d.ry ?? 0;
           p.char.walkWeight = d.ww ?? 0;
-          // Make sure driving pose is cleared
           p.char.setDrivingState(false);
         }
       }
@@ -241,8 +230,6 @@ export function startGame({ peer = null, connection = null, isMobile = false, is
       const idx = conns.indexOf(conn);
       if (idx !== -1) conns.splice(idx, 1);
     });
-
-    conn.on('error', err => console.warn('conn error', err));
   }
 
   if (peer && isMultiplayer) {
@@ -253,26 +240,16 @@ export function startGame({ peer = null, connection = null, isMobile = false, is
   function broadcast() {
     if (!conns.length) return;
     const d = {
-      type:     'state',
-      x:        character.position.x,
-      y:        character.position.y,
-      z:        character.position.z,
-      ry:       character.bodyGroup.rotation.y,
-      ww:       character.walkWeight,
-      drv:      isDriving,
-      carX:     car.meshGroup.position.x,
-      carY:     car.meshGroup.position.y,
-      carZ:     car.meshGroup.position.z,
-      carAngle: car.angle,
-      carSpeed: car.speed,
-      carSteer: car.steer,   // ← added so receiver can animate steering wheel & char
+      type: 'state',
+      x: character.position.x, y: character.position.y, z: character.position.z,
+      ry: character.bodyGroup.rotation.y, ww: character.walkWeight,
+      drv: isDriving,
+      carX: car.meshGroup.position.x, carY: car.meshGroup.position.y, carZ: car.meshGroup.position.z,
+      carAngle: car.angle, carSpeed: car.speed, carSteer: car.steer,
     };
-    for (const c of conns) {
-      if (c.open) try { c.send(d); } catch {}
-    }
+    for (const c of conns) { if (c.open) try { c.send(d); } catch {} }
   }
 
-  // ── Game logic ───────────────────────────────────────────────
   function tryEnterExit() {
     if (isDriving) {
       isDriving = false;
@@ -291,7 +268,7 @@ export function startGame({ peer = null, connection = null, isMobile = false, is
         camPos.copy(desiredPos);
         camTarget.copy(desiredTarget);
         document.getElementById('speedometer').style.display = 'block';
-        updateHint('F to exit car');
+        updateHint('F to exit car · P punch');
       }
     }
   }
@@ -306,7 +283,7 @@ export function startGame({ peer = null, connection = null, isMobile = false, is
 
   function updateHint(txt) {
     const h = document.getElementById('hint');
-    if (h) h.textContent = txt || 'WASD move · F enter car · Drag camera';
+    if (h) h.textContent = txt || 'WASD move · F enter car · P punch · Drag camera';
   }
 
   const clock = new THREE.Clock();
@@ -319,7 +296,7 @@ export function startGame({ peer = null, connection = null, isMobile = false, is
     const jx   = joy.active ? joy.dx : 0;
     const jz   = joy.active ? joy.dy : 0;
 
-    // ── Local player ─────────────────────────────────────────
+    // Local player
     if (isDriving) {
       if (isMobile) {
         keys._w = jz < -0.2; keys._s = jz > 0.2;
@@ -351,19 +328,22 @@ export function startGame({ peer = null, connection = null, isMobile = false, is
       camera.fov = THREE.MathUtils.lerp(camera.fov, 60, .08);
     }
 
-    // ── Remote peers — tick animations every frame ───────────
+    // Remote peers
     for (const id in peers) {
       const p = peers[id];
       if (!p?.char) continue;
-
       if (p.driving) {
-        // Refresh driving pose each frame so the wobble/steer anim plays
-        // Use the shared car position (already synced via data handler)
         p.char.setDrivingState(true, car.meshGroup.position, p.rx, p.rs, time, null, 1);
       } else {
-        // Tick walk / idle animation for the remote character
-        // Pass _zeroDir so position doesn't move (network owns position)
         p.char.update(dt, time, _zeroDir, worldMap);
+      }
+    }
+
+    // NPCs (update only nearby ones for performance)
+    for (const npc of npcs) {
+      const dist = Math.hypot(npc.position.x - character.position.x, npc.position.z - character.position.z);
+      if (dist < 60) { // Only update NPCs within 60m
+        npc.update(dt, time, worldMap);
       }
     }
 
