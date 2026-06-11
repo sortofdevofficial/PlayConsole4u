@@ -8,6 +8,8 @@ export class WobblyCharacter {
     this.speed = 6;
     this.isDriving = false;
     this.groundOffset = 0.08;
+    this.isPunching = false;
+    this.punchTime = 0;
 
     const mat = new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.6, metalness: 0.1 });
     this.bodyGroup = new THREE.Group();
@@ -29,6 +31,13 @@ export class WobblyCharacter {
     const armGeo = new THREE.CapsuleGeometry(0.18, 0.68, 6, 12);
     this.addMesh(this.leftArmPivot,  armGeo, mat, 0, -0.34);
     this.addMesh(this.rightArmPivot, armGeo, mat, 0, -0.34);
+
+    // FIST (right hand)
+    const fistMat = new THREE.MeshStandardMaterial({ color: 0xe8b88d, roughness: 0.8 });
+    this.fist = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.18, 0.22), fistMat);
+    this.fist.position.set(0, -0.34, 0.28);
+    this.fist.castShadow = true;
+    this.rightArmPivot.add(this.fist);
 
     this.head = new THREE.Mesh(new THREE.SphereGeometry(0.78, 24, 24), mat);
     this.head.castShadow = true;
@@ -62,7 +71,12 @@ export class WobblyCharacter {
     this.bodyGroup.position.copy(this.position);
   }
 
-  // seatSide: -1 = driver (left), +1 = passenger (right)
+  punch() {
+    if (this.isPunching) return;
+    this.isPunching = true;
+    this.punchTime = 0;
+  }
+
   setDrivingState(isDriving, carPos = null, carAngle = 0, steerVal = 0, time = 0, worldMap = null, seatSide = -1) {
     this.isDriving = isDriving;
 
@@ -78,16 +92,11 @@ export class WobblyCharacter {
 
     const wobble = Math.sin(time * 22) * 0.008;
 
-    // Forward offset (slightly behind center)
     this.position.copy(carPos);
     this.position.x -= Math.sin(carAngle) * 0.38;
     this.position.z -= Math.cos(carAngle) * 0.38;
-
-    // Lateral offset — right vector perpendicular to car forward
-    // seatSide -1 = left (driver), +1 = right (passenger)
     this.position.x += Math.cos(carAngle) * 0.85 * seatSide;
     this.position.z -= Math.sin(carAngle) * 0.85 * seatSide;
-
     this.position.y = carPos.y + 0.55 + wobble;
 
     this.bodyGroup.position.copy(this.position);
@@ -125,6 +134,24 @@ export class WobblyCharacter {
     this.bodyGroup.rotation.y += diff * 14 * deltaTime;
     this.bodyGroup.position.copy(this.position);
 
+    // Punch animation
+    if (this.isPunching) {
+      this.punchTime += deltaTime * 20;
+      if (this.punchTime < 0.5) {
+        // Punch forward
+        this.rightArmPivot.rotation.set(-1.5, 0, 0.8);
+        this.fist.position.z = 0.45;
+      } else if (this.punchTime < 1.0) {
+        // Return
+        this.rightArmPivot.rotation.set(-0.4, 0, 0.2);
+        this.fist.position.z = 0.28;
+      } else {
+        this.isPunching = false;
+        this.rightArmPivot.rotation.set(0, 0, 0.15);
+        this.fist.position.z = 0.28;
+      }
+    }
+
     const w = Math.sin(time * 16), c = Math.cos(time * 16);
     this.torsoMesh.position.y = 1.1 + Math.abs(w) * 0.12 * this.walkWeight;
     this.bodyGroup.rotation.z = w * 0.06 * this.walkWeight;
@@ -136,7 +163,9 @@ export class WobblyCharacter {
     this.rightLegPivot.position.y = 0.65 + (w < 0 ? -w * 0.12 * this.walkWeight : 0);
     this.leftArmPivot.rotation.x  = -w * 0.4 * this.walkWeight;
     this.rightArmPivot.rotation.x =  w * 0.4 * this.walkWeight;
-    this.leftArmPivot.rotation.z  =  0.15 + Math.abs(w) * 0.25 * this.walkWeight;
-    this.rightArmPivot.rotation.z = -0.15 - Math.abs(w) * 0.25 * this.walkWeight;
+    if (!this.isPunching) {
+      this.leftArmPivot.rotation.z  =  0.15 + Math.abs(w) * 0.25 * this.walkWeight;
+      this.rightArmPivot.rotation.z = -0.15 - Math.abs(w) * 0.25 * this.walkWeight;
+    }
   }
 }
