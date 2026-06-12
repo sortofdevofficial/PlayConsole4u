@@ -25,7 +25,7 @@ header{display:flex;align-items:center;justify-content:space-between;flex-wrap:w
 #sign-in-btn:hover{border-color:var(--accent2);box-shadow:var(--shadow2);transform:translateY(-1px)}
 #sign-in-btn img{width:15px;height:15px}
 
-/* ── WhatsApp-Style Profile User Chip ── */
+/* WhatsApp-Style Profile User Chip */
 #user-chip{display:none;align-items:center;gap:10px;background:var(--surface);border:1.5px solid var(--border);border-radius:999px;padding:4px 14px 4px 4px;cursor:pointer;transition:.18s;box-shadow:var(--shadow)}
 #user-chip:hover{border-color:var(--accent);box-shadow:var(--shadow2);transform:translateY(-1px)}
 .u-badge{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;flex-shrink:0;overflow:hidden;background:#ccc;box-shadow:0 2px 6px rgba(0,0,0,.1)}
@@ -232,7 +232,7 @@ header{display:flex;align-items:center;justify-content:space-between;flex-wrap:w
           </div>
         </div>
 
-        <div class="card" id="c3" onclick="openSB(this,'TUMBLE LIFE','High-velocity structural physics and intense peer-to-peer multiplayer stumbling. Share room codes to crash instantly into friends!','images/TumbleLife/tumblelife.png','game.html',['MULTIPLAYER','PEERJS','PHYSICS','SANDBOX'],tumbleLogs)">
+        <div class="card" id="c3" onclick="openSB(this,'TUMBLE LIFE','High-velocity structural physics and intense peer-to-peer multiplayer stumbling. Share room codes to crash instantly into friends!','images/TumbleLife/tumblelife.png','games/TumbleLife/game.html',['MULTIPLAYER','PEERJS','PHYSICS','SANDBOX'],tumbleLogs)">
           <div class="cimg" style="background:linear-gradient(135deg,#e0f2fe,#bae6fd)">
             <img src="images/TumbleLife/tumblelife.png" alt="Tumble Life" loading="lazy" onerror="this.style.display='none';this.parentElement.innerHTML='<div class=cimg-placeholder>🏃‍♂️</div>'">
           </div>
@@ -366,7 +366,6 @@ async function refreshUI(user){
   document.getElementById('uname-inp').value=name;
   document.getElementById('m-email').textContent=user.email||'—';
   
-  // WhatsApp Style Image Display Check
   const av=document.getElementById('u-avatar');
   const imgUrl=profile.ph||user.photoURL;
   if(imgUrl){
