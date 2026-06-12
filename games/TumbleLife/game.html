@@ -14,7 +14,7 @@ canvas{display:block;width:100vw;height:100vh}
   justify-content:center;background:linear-gradient(180deg,rgba(185,216,234,.97),rgba(111,155,176,.97));
   backdrop-filter:blur(10px)}
 
-/* ── WhatsApp Style User Panel Inside Tumble Life Menu ── */
+/* WhatsApp Style User Panel Inside Tumble Life Menu */
 #game-user-panel{display:flex;align-items:center;gap:12px;background:rgba(15,23,42,.2);border:1px solid var(--l);padding:8px 16px;border-radius:999px;margin-bottom:24px;box-shadow:0 4px 16px rgba(0,0,0,.05)}
 .wp-avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:700;overflow:hidden;background:#5b3af7;box-shadow:0 2px 8px rgba(0,0,0,.15);flex-shrink:0}
 .wp-avatar img{width:100%;height:100%;object-fit:cover;display:block}
@@ -24,8 +24,25 @@ canvas{display:block;width:100vw;height:100vh}
 .card{width:min(320px,calc(100vw - 40px));padding:18px 16px;border-radius:20px;background:var(--g);border:1px solid var(--l);box-shadow:var(--sh);backdrop-filter:blur(16px)}
 #home,#mp{width:100%;display:flex;flex-direction:column;align-items:center;gap:10px}
 #mp{display:none}
+
 .btn{width:100%;padding:13px 16px;border-radius:14px;border:1px solid var(--l);font-size:14px;font-weight:700;cursor:pointer;color:#f8fdff;background:linear-gradient(180deg,rgba(111,143,99,.9),rgba(94,127,85,.92));box-shadow:0 10px 22px rgba(33,56,45,.16);transition:transform .15s}
 .btn:hover{transform:translateY(-2px)}
+
+/* Dedicated Google Sign-In Button style */
+.btn.google-auth-btn {
+  background: #ffffff;
+  color: #1a1625;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 1px solid #ccd6dd;
+}
+.btn.google-auth-btn img {
+  width: 18px;
+  height: 18px;
+}
+
 #mp h2{color:#f8fdff;font-size:16px;font-weight:800}
 #mp label{color:rgba(247,251,255,.55);font-size:10px;text-transform:uppercase;letter-spacing:.09em;align-self:flex-start;margin-top:6px}
 .cbox{width:100%;background:rgba(255,255,255,.12);border-radius:12px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid rgba(255,255,255,.16)}
@@ -55,15 +72,19 @@ canvas{display:block;width:100vw;height:100vh}
 
 <div id="menu">
   <div id="game-user-panel">
-    <div id="wp-avatar-box" class="wp-avatar">P</div>
+    <div id="wp-avatar-box" class="wp-avatar">G</div>
     <div id="wp-name-box" class="wp-name">Guest Player</div>
   </div>
 
   <h1>Tumble Life</h1>
   <div class="card">
     <div id="home">
-      <button class="btn" id="btnsp">▶ &nbsp;Singleplayer</button>
-      <button class="btn" id="btnmpopen">🌐 &nbsp;Multiplayer</button>
+      <button class="btn google-auth-btn" id="g-signin-btn" onclick="doSignIn()" style="display:none;">
+        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="">Sign in with Google to Play
+      </button>
+      
+      <button class="btn" id="btnsp" style="display:none;">▶ &nbsp;Singleplayer</button>
+      <button class="btn" id="btnmpopen" style="display:none;">🌐 &nbsp;Multiplayer</button>
       <button class="back" onclick="location.href='../../index.html'">← Leave Game</button>
     </div>
     <div id="mp">
@@ -108,15 +129,32 @@ const menu=document.getElementById('menu'), home=document.getElementById('home')
 
 let peer=null, myId=null, hostConn=null, joining=false;
 
-// Account Identity Sync (WhatsApp profile extraction logic)
 function initials(n){const p=String(n||'Player').trim().split(/\s+/).filter(Boolean);return((p[0]?.[0]||'P')+(p[1]?.[0]||'')).toUpperCase();}
 function hueFor(s){return[...String(s||'')].reduce((a,c)=>a+c.charCodeAt(0),0)%360;}
+
+// Global access function for the sign-in trigger
+window.doSignIn = async function() {
+  try {
+    await window.FB.signInGoogle();
+  } catch(e) {
+    console.error("Sign-in failed:", e);
+  }
+};
 
 if(window.FB){
   window.FB.onAuthChange(async (user)=>{
     const avBox = document.getElementById('wp-avatar-box');
     const nameBox = document.getElementById('wp-name-box');
+    const btnSp = document.getElementById('btnsp');
+    const btnMp = document.getElementById('btnmpopen');
+    const signInBtn = document.getElementById('g-signin-btn');
+
     if(user){
+      // Player is authenticated: Show play controls, hide registration prompt
+      btnSp.style.display = 'block';
+      btnMp.style.display = 'block';
+      signInBtn.style.display = 'none';
+
       const profile = await window.FB.getProfile(user.uid);
       const name = profile.n || user.displayName || 'Player';
       const imgUrl = profile.ph || user.photoURL;
@@ -129,9 +167,15 @@ if(window.FB){
         avBox.style.background = `linear-gradient(135deg,hsl(${hueFor(name)} 70% 42%),hsl(${(hueFor(name)+40)%360} 75% 55%))`;
       }
     } else {
+      // Guest status: Lock options, force display of the auth block
+      btnSp.style.display = 'none';
+      btnMp.style.display = 'none';
+      signInBtn.style.display = 'flex';
+
       nameBox.textContent = "Guest Player";
       avBox.textContent = "G";
       avBox.style.background = "#6b6579";
+      avBox.innerHTML = "G";
     }
   });
 }
