@@ -10,6 +10,9 @@ const NPC_WAYPOINTS = [
   {x:-40,z:15},{x:5,z:40},{x:-30,z:-35},{x:45,z:-15},{x:0,z:50}
 ];
 
+const PEER_LABELS = ['Player 2','Player 3','Player 4','Player 5'];
+const PEER_COLORS = ['#ff6b6b','#6bffb8','#6b9fff','#ff6bef'];
+
 export function startGame({ peer=null, connection=null, isMobile=false, isMultiplayer=false, isHost=true }={}) {
 
   // ── Renderer ──────────────────────────────────────────────────────────────
@@ -46,7 +49,8 @@ export function startGame({ peer=null, connection=null, isMobile=false, isMultip
 
   // ── World ─────────────────────────────────────────────────────────────────
   const worldMap = new WorldMap(scene, { cityRadius:130, treeDensity:2 });
-  const character = new WobblyCharacter(scene);
+  // Local player — label "You", yellow tag
+  const character = new WobblyCharacter(scene, 'You', '#faff6e');
   const car = new Bamborghini(scene, 0, -6);
   character.position.set(0, worldMap.getElevation(0,0)+character.groundOffset, 0);
   character.bodyGroup.position.copy(character.position);
@@ -55,10 +59,11 @@ export function startGame({ peer=null, connection=null, isMobile=false, isMultip
   // ── NPCs ──────────────────────────────────────────────────────────────────
   const npcs = [];
   const npcSpots = [{x:-25,z:5},{x:15,z:-15},{x:35,z:20},{x:-10,z:35},{x:20,z:10}];
-  for (const sp of npcSpots) {
-    const npc = new NPC(scene, sp.x, sp.z);
+  for (let i=0; i<npcSpots.length; i++) {
+    const sp=npcSpots[i];
+    const npc=new NPC(scene, sp.x, sp.z, i);
     npc.setWaypoints(NPC_WAYPOINTS);
-    npc.position.y = worldMap.getElevation(sp.x, sp.z)+npc.groundOffset;
+    npc.position.y=worldMap.getElevation(sp.x,sp.z)+npc.groundOffset;
     npcs.push(npc);
   }
 
@@ -69,26 +74,25 @@ export function startGame({ peer=null, connection=null, isMobile=false, isMultip
   const joy={active:false,id:-1,startX:0,startY:0,dx:0,dy:0};
   const camDrag={active:false,id:-1,startX:0,startY:0};
 
-  window.addEventListener('mousedown', e=>{
+  window.addEventListener('mousedown',e=>{
     if(e.button!==0) return; dragging=true; lastX=e.clientX; lastY=e.clientY;
     if(!document.pointerLockElement) document.body.requestPointerLock();
   });
-  window.addEventListener('mousemove', e=>{
+  window.addEventListener('mousemove',e=>{
     if(!dragging&&!document.pointerLockElement) return;
     const dx=document.pointerLockElement?e.movementX:e.clientX-lastX;
     const dy=document.pointerLockElement?e.movementY:e.clientY-lastY;
-    orbitY-=dx*.0025;
-    orbitX=THREE.MathUtils.clamp(orbitX-dy*.0025,-Math.PI/8,Math.PI/3.5);
+    orbitY-=dx*.0025; orbitX=THREE.MathUtils.clamp(orbitX-dy*.0025,-Math.PI/8,Math.PI/3.5);
     lastX=e.clientX; lastY=e.clientY;
   });
-  window.addEventListener('mouseup', ()=>dragging=false);
-  window.addEventListener('keydown', e=>{
+  window.addEventListener('mouseup',()=>dragging=false);
+  window.addEventListener('keydown',e=>{
     const k=e.key.toLowerCase(); keys[k]=true;
     if(k==='f'||k==='enter') tryEnterExit();
     if(k==='p'||k===' ') doPunch();
   });
-  window.addEventListener('keyup', e=>keys[e.key.toLowerCase()]=false);
-  window.addEventListener('resize', ()=>{
+  window.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
+  window.addEventListener('resize',()=>{
     camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
     renderer.setSize(innerWidth,innerHeight);
   });
@@ -102,7 +106,7 @@ export function startGame({ peer=null, connection=null, isMobile=false, isMultip
 
     joyZone?.addEventListener('touchstart',e=>{
       e.preventDefault(); const t=e.changedTouches[0];
-      joy.active=true; joy.id=t.identifier; joy.startX=t.clientX; joy.startY=t.clientY; joy.dx=0; joy.dy=0;
+      joy.active=true;joy.id=t.identifier;joy.startX=t.clientX;joy.startY=t.clientY;joy.dx=0;joy.dy=0;
     },{passive:false});
     window.addEventListener('touchmove',e=>{
       for(const t of e.changedTouches){
@@ -132,41 +136,37 @@ export function startGame({ peer=null, connection=null, isMobile=false, isMultip
     },{passive:false});
   }
 
-  // ── Punch logic ───────────────────────────────────────────────────────────
-  const _punchDir = new THREE.Vector3();
+  // ── Punch ─────────────────────────────────────────────────────────────────
+  const _punchDir=new THREE.Vector3();
   function doPunch() {
     if (isDriving) return;
     character.punch();
-    // Check NPCs in range
-    const RANGE = 2.2;
+    const RANGE=2.2;
     for (const npc of npcs) {
       const dx=npc.position.x-character.position.x, dz=npc.position.z-character.position.z;
-      if (Math.hypot(dx,dz) < RANGE) {
+      if (Math.hypot(dx,dz)<RANGE) {
         _punchDir.set(dx,0,dz).normalize();
         npc.applyKnockback(_punchDir, 9);
       }
     }
-    // Check remote peers
     for (const id in peers) {
-      const p=peers[id];
-      if(!p?.char) continue;
+      const p=peers[id]; if(!p?.char) continue;
       const dx=p.char.position.x-character.position.x, dz=p.char.position.z-character.position.z;
       if (Math.hypot(dx,dz)<RANGE) {
-        // broadcast punch event to that peer
         for(const c of conns) if(c.peer===id&&c.open) try{c.send({type:'punch',dx,dz});}catch{}
       }
     }
   }
 
   // ── Multiplayer ───────────────────────────────────────────────────────────
-  const peers={};
-  const conns=[];
-  const _zeroDir=new THREE.Vector3();
-  const _rcp=new THREE.Vector3();
+  const peers={}, conns=[];
+  const _zeroDir=new THREE.Vector3(), _rcp=new THREE.Vector3();
+  let _peerIdx=0;
 
   function makeRemoteChar() {
-    const rc=new WobblyCharacter(scene);
-    const c=new THREE.Color().setHSL(Math.random(),.45,.55);
+    const idx=_peerIdx++%PEER_LABELS.length;
+    const rc=new WobblyCharacter(scene, PEER_LABELS[idx], PEER_COLORS[idx]);
+    const c=new THREE.Color(PEER_COLORS[idx]);
     rc.mat.color.copy(c);
     rc.torsoMesh.material=rc.mat; rc.head.material=rc.mat;
     return rc;
@@ -175,29 +175,23 @@ export function startGame({ peer=null, connection=null, isMobile=false, isMultip
   function setupConn(conn) {
     if(conns.includes(conn)) return;
     conns.push(conn);
-    const onOpen=()=>{
-      if(!peers[conn.peer]) peers[conn.peer]={char:makeRemoteChar(),driving:false,rx:0,rs:0};
-    };
+    const onOpen=()=>{ if(!peers[conn.peer]) peers[conn.peer]={char:makeRemoteChar(),driving:false,rx:0,rs:0}; };
     if(conn.open) onOpen(); else conn.on('open',onOpen);
 
     conn.on('data',d=>{
       if(!d) return;
       if(!peers[conn.peer]) peers[conn.peer]={char:makeRemoteChar(),driving:false,rx:0,rs:0};
       const p=peers[conn.peer];
-
       if(d.type==='state'){
         p.driving=!!d.drv;
         if(d.drv){
-          // remote is driving — sync car if we're not
           if(!isDriving){
             car.meshGroup.position.set(d.carX,d.carY,d.carZ);
-            car.angle=d.carAngle??0; car.speed=d.carSpeed??0; car.steer=d.carSteer??0;
+            car.angle=d.carAngle??0;car.speed=d.carSpeed??0;car.steer=d.carSteer??0;
             car.meshGroup.rotation.set(0,car.angle,0);
-            for(let i=0;i<car.wheels.length;i++){
-              if(car.wheels[i].userData.isFront) car.wheels[i].rotation.y=car.steer*0.32;
-            }
+            for(let i=0;i<car.wheels.length;i++) if(car.wheels[i].userData.isFront) car.wheels[i].rotation.y=car.steer*.32;
           }
-          p.rx=d.carAngle??0; p.rs=d.carSteer??0;
+          p.rx=d.carAngle??0;p.rs=d.carSteer??0;
           _rcp.set(d.carX,d.carY,d.carZ);
           p.char.setDrivingState(true,_rcp,p.rx,p.rs,0,null,1);
         } else {
@@ -208,11 +202,8 @@ export function startGame({ peer=null, connection=null, isMobile=false, isMultip
           p.char.setDrivingState(false);
         }
       } else if(d.type==='punch'){
-        // I got punched — apply knockback to local character
         const dir=new THREE.Vector3(d.dx,0,d.dz).normalize();
-        // visual knockback: fling character
-        character.position.x+=dir.x*2.5;
-        character.position.z+=dir.z*2.5;
+        character.position.x+=dir.x*2.5; character.position.z+=dir.z*2.5;
         character._sq=0.6;
       }
     });
@@ -220,6 +211,7 @@ export function startGame({ peer=null, connection=null, isMobile=false, isMultip
     conn.on('close',()=>{
       const p=peers[conn.peer];
       if(p?.char?.bodyGroup) scene.remove(p.char.bodyGroup);
+      if(p?.char?.nameTag) scene.remove(p.char.nameTag);
       delete peers[conn.peer];
       const i=conns.indexOf(conn); if(i!==-1) conns.splice(i,1);
     });
@@ -242,7 +234,7 @@ export function startGame({ peer=null, connection=null, isMobile=false, isMultip
     for(const c of conns) if(c.open) try{c.send(d);}catch{}
   }
 
-  // ── Enter/exit car ────────────────────────────────────────────────────────
+  // ── Enter/exit ────────────────────────────────────────────────────────────
   function tryEnterExit(){
     if(isDriving){
       isDriving=false;
@@ -260,7 +252,6 @@ export function startGame({ peer=null, connection=null, isMobile=false, isMultip
     }
   }
 
-  // ── Camera ────────────────────────────────────────────────────────────────
   function updateCam(targetPos,h,dist,angle,lookLow=false){
     const off=new THREE.Vector3(0,h,dist).applyAxisAngle(UP,angle+orbitY).applyAxisAngle(X_AXIS,orbitX);
     desiredPos.copy(targetPos).add(off);
@@ -278,7 +269,7 @@ export function startGame({ peer=null, connection=null, isMobile=false, isMultip
     const jx=joy.active?joy.dx:0, jz=joy.active?joy.dy:0;
 
     if(isDriving){
-      if(isMobile){ keys._w=jz<-.2;keys._s=jz>.2;keys._a=jx<-.2;keys._d=jx>.2; }
+      if(isMobile){keys._w=jz<-.2;keys._s=jz>.2;keys._a=jx<-.2;keys._d=jx>.2;}
       const dk=isMobile?{w:keys._w,s:keys._s,a:keys._a,d:keys._d}:keys;
       updateVehicle(car,dk,dt,worldMap);
       updateVehicleCollision(car,worldMap.getNearbyObstacles(car.meshGroup.position.x,car.meshGroup.position.z),worldMap);
@@ -303,13 +294,23 @@ export function startGame({ peer=null, connection=null, isMobile=false, isMultip
       camera.fov=THREE.MathUtils.lerp(camera.fov,60,.08);
     }
 
+    // Update name tag for local player (hidden when driving)
+    character.nameTag.visible = !isDriving;
+    character.nameTag.position.set(
+      character.bodyGroup.position.x,
+      character.bodyGroup.position.y + 2.6,
+      character.bodyGroup.position.z
+    );
+
     // Remote peers
     for(const id in peers){
       const p=peers[id]; if(!p?.char) continue;
       if(!p.driving) p.char.update(dt,time,_zeroDir,worldMap);
+      // Update remote name tag
+      p.char.nameTag.position.set(p.char.bodyGroup.position.x, p.char.bodyGroup.position.y+2.6, p.char.bodyGroup.position.z);
     }
 
-    // NPCs — only update nearby
+    // NPCs
     for(const npc of npcs){
       const d2=Math.hypot(npc.position.x-character.position.x,npc.position.z-character.position.z);
       if(d2<70) npc.update(dt,time,worldMap);
@@ -317,7 +318,7 @@ export function startGame({ peer=null, connection=null, isMobile=false, isMultip
 
     camera.updateProjectionMatrix();
     _bcastTimer+=dt;
-    if(_bcastTimer>=.05){ broadcast(); _bcastTimer=0; }
+    if(_bcastTimer>=.05){broadcast();_bcastTimer=0;}
 
     const lT=isDriving?1-Math.pow(.002,dt):1-Math.pow(.001,dt);
     camPos.lerp(desiredPos,lT); camTarget.lerp(desiredTarget,lT);
