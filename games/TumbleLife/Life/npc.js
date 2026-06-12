@@ -1,134 +1,183 @@
 import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
 
+// NPC looks identical to WobblyCharacter but simpler (no dust, no driving)
 export class NPC {
-  constructor(scene, x, z) {
-    this.meshGroup = new THREE.Group();
-    this.meshGroup.position.set(x, 0, z);
-    scene.add(this.meshGroup);
-
+  constructor(scene, x, z, color = null) {
     this.position = new THREE.Vector3(x, 0, z);
-    this.speed = 2.5;
-    this.targetWaypoint = null;
+    this.groundOffset = 0.08;
+    this.speed = 1.8 + Math.random() * 1.2;
     this.waypoints = [];
-    this.changeTargetTime = 0;
-    this.idleWeight = 0;
+    this._wpIdx = 0;
+    this._walkWeight = 0;
+    this._targetRY = 0;
+    this._sq = 1;
+    this._prevW = 0;
+    this._waitTimer = 0;
+    this._waiting = false;
 
-    // Random color
-    const color = new THREE.Color().setHSL(Math.random() * 0.2 + 0.5, 0.6, 0.5);
-    const mat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.7 });
+    // Knockback
+    this.knockbackVel = new THREE.Vector3();
+    this.isKnockedBack = false;
+    this._knockTimer = 0;
 
-    // Body
-    this.torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.35, 0.4, 8, 16), mat);
+    const hue = color ?? Math.random();
+    const c = new THREE.Color().setHSL(hue, 0.55, 0.58);
+    const mat = new THREE.MeshStandardMaterial({ color: c, roughness: 0.55, metalness: 0.05 });
+    this.mat = mat;
+
+    this.bodyGroup = new THREE.Group();
+    scene.add(this.bodyGroup);
+
+    // Round blob body — same as player
+    this.torso = new THREE.Mesh(new THREE.SphereGeometry(0.64, 14, 12), mat);
     this.torso.castShadow = true;
-    this.torso.position.y = 0.9;
-    this.meshGroup.add(this.torso);
+    this.torso.position.y = 0.78;
+    this.bodyGroup.add(this.torso);
 
     // Head
-    this.head = new THREE.Mesh(new THREE.SphereGeometry(0.3, 12, 12), mat);
+    this.head = new THREE.Mesh(new THREE.SphereGeometry(0.44, 14, 12), mat);
+    this.head.scale.set(1, 0.9, 1);
     this.head.castShadow = true;
-    this.head.position.y = 1.55;
-    this.meshGroup.add(this.head);
+    this.head.position.y = 1.66;
+    this.bodyGroup.add(this.head);
 
-    // Eyes
-    const eyeMat = new THREE.MeshBasicMaterial({ color: 0x0a0a0a });
-    const eyeG = new THREE.SphereGeometry(0.06, 6, 6);
-    const eye1 = new THREE.Mesh(eyeG, eyeMat);
-    const eye2 = new THREE.Mesh(eyeG, eyeMat);
-    eye1.position.set(0.12, 0.03, 0.28);
-    eye2.position.set(-0.12, 0.03, 0.28);
-    this.head.add(eye1);
-    this.head.add(eye2);
-
-    // Arms
-    this.leftArm = new THREE.Mesh(new THREE.CapsuleGeometry(0.1, 0.45, 4, 8), mat);
-    this.rightArm = new THREE.Mesh(new THREE.CapsuleGeometry(0.1, 0.45, 4, 8), mat);
-    this.leftArm.position.set(0.4, 1.0, 0);
-    this.rightArm.position.set(-0.4, 1.0, 0);
-    this.meshGroup.add(this.leftArm);
-    this.meshGroup.add(this.rightArm);
-
-    // Legs
-    this.leftLeg = new THREE.Mesh(new THREE.CapsuleGeometry(0.12, 0.5, 4, 8), mat);
-    this.rightLeg = new THREE.Mesh(new THREE.CapsuleGeometry(0.12, 0.5, 4, 8), mat);
-    this.leftLeg.position.set(0.15, 0.4, 0);
-    this.rightLeg.position.set(-0.15, 0.4, 0);
-    this.meshGroup.add(this.leftLeg);
-    this.meshGroup.add(this.rightLeg);
-
-    this.groundOffset = 0.25;
-    this.wobbleTime = 0;
-  }
-
-  // Add waypoints for wandering
-  setWaypoints(wpArray) {
-    this.waypoints = wpArray;
-    this.changeTargetWaypoint();
-  }
-
-  changeTargetWaypoint() {
-    if (!this.waypoints.length) return;
-    this.targetWaypoint = this.waypoints[Math.floor(Math.random() * this.waypoints.length)];
-    this.changeTargetTime = Math.random() * 3 + 2;
-  }
-
-  snapToTerrain(worldMap) {
-    const y = worldMap?.getElevation?.(this.position.x, this.position.z) ?? 0;
-    this.position.y = y + this.groundOffset;
-    this.meshGroup.position.copy(this.position);
-  }
-
-  update(deltaTime, time, worldMap) {
-    this.wobbleTime += deltaTime * 8;
-
-    // Decide if moving or idle
-    const distToTarget = this.targetWaypoint ? 
-      Math.hypot(this.position.x - this.targetWaypoint.x, this.position.z - this.targetWaypoint.z) : 
-      Infinity;
-
-    if (distToTarget < 1.5) {
-      // Reached target, wait then pick new
-      this.changeTargetTime -= deltaTime;
-      if (this.changeTargetTime <= 0) {
-        this.changeTargetWaypoint();
-      }
-      this.idleWeight = 1;
-    } else {
-      // Move toward target
-      const dir = new THREE.Vector3();
-      dir.subVectors(this.targetWaypoint, this.position);
-      dir.y = 0;
-      dir.normalize();
-
-      this.position.addScaledVector(dir, this.speed * deltaTime);
-      this.meshGroup.rotation.y = Math.atan2(dir.x, dir.z);
-      this.idleWeight = 0;
+    // Dot eyes
+    const eyeM = new THREE.MeshBasicMaterial({ color: 0x111111 });
+    const eyeG = new THREE.SphereGeometry(0.082, 7, 7);
+    for (const sx of [.19, -.19]) {
+      const e = new THREE.Mesh(eyeG, eyeM);
+      e.position.set(sx, 0.07, 0.41);
+      this.head.add(e);
     }
 
-    this.snapToTerrain(worldMap);
+    // Arms raised wide
+    this.lArm = this._limb([ .74, 1.0, 0]);
+    this.rArm = this._limb([-.74, 1.0, 0]);
+    const armGeo = new THREE.CapsuleGeometry(0.13, 0.5, 5, 7);
+    this._mesh(this.lArm, armGeo, mat, 0, -.25);
+    this._mesh(this.rArm, armGeo, mat, 0, -.25);
+    this.lArm.rotation.set(-.15, 0,  1.05);
+    this.rArm.rotation.set(-.15, 0, -1.05);
 
-    // Walking animation
-    const walkAmount = (1 - this.idleWeight) * 0.5;
-    const w = Math.sin(this.wobbleTime) * walkAmount;
-    const c = Math.cos(this.wobbleTime) * walkAmount;
+    // Stubby legs
+    this.lLeg = this._limb([ .27, .28, 0]);
+    this.rLeg = this._limb([-.27, .28, 0]);
+    const legGeo = new THREE.CapsuleGeometry(0.155, 0.28, 5, 7);
+    this._mesh(this.lLeg, legGeo, mat, 0, -.14);
+    this._mesh(this.rLeg, legGeo, mat, 0, -.14);
 
-    this.torso.position.y = 0.9 + Math.abs(w) * 0.08;
-    this.meshGroup.rotation.z = w * 0.05;
-    this.head.position.y = 1.55 + c * 0.04;
-    this.leftLeg.rotation.x = w * 0.6;
-    this.rightLeg.rotation.x = -w * 0.6;
-    this.leftArm.rotation.x = -w * 0.4;
-    this.rightArm.rotation.x = w * 0.4;
+    // Radius for collision
+    this.radius = 0.7;
   }
 
-  punch() {
-    // Quick punch animation
-    this.rightArm.rotation.x = -1.5;
-    setTimeout(() => {
-      this.rightArm.rotation.x = 0;
-    }, 200);
+  _limb(pos) {
+    const g = new THREE.Group(); g.position.set(...pos); this.bodyGroup.add(g); return g;
+  }
+  _mesh(parent, geo, mat, x, y, z=0) {
+    const m = new THREE.Mesh(geo, mat); m.position.set(x,y,z); m.castShadow=true; parent.add(m); return m;
   }
 
-  destroy() {
-    scene.remove(this.meshGroup);
+  setWaypoints(wps) {
+    this.waypoints = wps.map(w => new THREE.Vector3(w.x, 0, w.z));
+    // shuffle so NPCs don't all go same place
+    for (let i = this.waypoints.length-1; i>0; i--) {
+      const j = Math.floor(Math.random()*(i+1));
+      [this.waypoints[i],this.waypoints[j]] = [this.waypoints[j],this.waypoints[i]];
+    }
+    this._wpIdx = Math.floor(Math.random()*this.waypoints.length);
+  }
+
+  applyKnockback(dir, force = 8) {
+    this.knockbackVel.copy(dir).normalize().multiplyScalar(force);
+    this.knockbackVel.y = 4;
+    this.isKnockedBack = true;
+    this._knockTimer = 0;
+    // squash on hit
+    this._sq = 0.6;
+  }
+
+  update(dt, time, worldMap) {
+    const gy = worldMap?.getElevation?.(this.position.x, this.position.z) ?? 0;
+
+    // Knockback physics
+    if (this.isKnockedBack) {
+      this._knockTimer += dt;
+      this.position.x += this.knockbackVel.x * dt;
+      this.position.z += this.knockbackVel.z * dt;
+      this.knockbackVel.x *= Math.pow(0.85, dt*60);
+      this.knockbackVel.z *= Math.pow(0.85, dt*60);
+      this.knockbackVel.y -= 12*dt;
+      const groundY = gy + this.groundOffset;
+      this.position.y = Math.max(groundY, this.position.y + this.knockbackVel.y*dt);
+      if (this.position.y <= groundY && this._knockTimer > 0.3) {
+        this.position.y = groundY;
+        this.isKnockedBack = false;
+        this.knockbackVel.set(0,0,0);
+      }
+      this._sq += (1-this._sq)*12*dt;
+      this._applyAnim(time, 0, dt);
+      return;
+    }
+
+    this.position.y = gy + this.groundOffset;
+
+    // Wait randomly
+    if (this._waiting) {
+      this._waitTimer -= dt;
+      if (this._waitTimer <= 0) this._waiting = false;
+      this._walkWeight += (0-this._walkWeight)*8*dt;
+      this._applyAnim(time, 0, dt);
+      return;
+    }
+
+    if (!this.waypoints.length) { this._applyAnim(time, 0, dt); return; }
+
+    const target = this.waypoints[this._wpIdx];
+    const dx = target.x - this.position.x;
+    const dz = target.z - this.position.z;
+    const dist = Math.hypot(dx, dz);
+
+    if (dist < 1.5) {
+      this._wpIdx = (this._wpIdx+1) % this.waypoints.length;
+      // sometimes pause at waypoint
+      if (Math.random() < 0.4) { this._waiting = true; this._waitTimer = 1+Math.random()*3; }
+      return;
+    }
+
+    const nx = dx/dist, nz = dz/dist;
+    this.position.x += nx*this.speed*dt;
+    this.position.z += nz*this.speed*dt;
+    this._targetRY = Math.atan2(nx, nz);
+    this._walkWeight += (1-this._walkWeight)*10*dt;
+    this._applyAnim(time, this._walkWeight, dt);
+  }
+
+  _applyAnim(time, ww, dt) {
+    const w = Math.sin(time*15);
+
+    // squash spring
+    this._sq += (1-this._sq)*15*dt;
+    const inv = 1/Math.max(this._sq,.65);
+
+    if (ww>.4 && w>.55 && this._prevW<=.55) this._sq = 0.82;
+    this._prevW = w;
+
+    const diff = Math.atan2(Math.sin(this._targetRY-this.bodyGroup.rotation.y), Math.cos(this._targetRY-this.bodyGroup.rotation.y));
+    this.bodyGroup.rotation.y += diff*10*dt;
+    this.bodyGroup.rotation.z = w*.05*ww;
+    this.bodyGroup.rotation.x = ww*.12;
+    this.bodyGroup.position.copy(this.position);
+    this.bodyGroup.scale.set(inv*(1+ww*.025), this._sq, inv);
+
+    this.torso.position.y = .78+Math.abs(w)*.08*ww;
+    this.head.position.y = 1.66+Math.abs(w)*.065*ww;
+    this.head.rotation.set(w*.04*ww, this.bodyGroup.rotation.y, -w*.04*ww);
+
+    this.lLeg.rotation.x  =  w*.55*ww;
+    this.rLeg.rotation.x  = -w*.55*ww;
+    this.lLeg.position.y  = .28+(w>0? w*.11*ww:0);
+    this.rLeg.position.y  = .28+(w<0?-w*.11*ww:0);
+    this.lArm.rotation.set(-.15-w*.38*ww, 0,  1.05+Math.abs(w)*.1*ww);
+    this.rArm.rotation.set(-.15+w*.38*ww, 0, -1.05-Math.abs(w)*.1*ww);
   }
 }
