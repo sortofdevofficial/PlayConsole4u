@@ -1,281 +1,217 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no"/>
-  <title>Tumble Life</title>
-  <style>
-    :root{--glass:rgba(243,250,255,.18);--line:rgba(255,255,255,.22);--shadow:0 18px 50px rgba(16,38,52,.18);}
-    *{box-sizing:border-box;margin:0;padding:0}
-    html,body{width:100%;height:100%;overflow:hidden;font-family:'Segoe UI',sans-serif;
-      background:linear-gradient(180deg,#b9d8ea,#8fb9cc 48%,#6f9bb0);color:#f7fbff;}
-    canvas{display:block;width:100vw;height:100vh}
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no"/>
+<title>Tumble Life</title>
+<style>
+:root{--g:rgba(243,250,255,.18);--l:rgba(255,255,255,.22);--sh:0 18px 50px rgba(16,38,52,.18)}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;font-family:'Segoe UI',sans-serif;
+  background:linear-gradient(180deg,#b9d8ea,#8fb9cc 48%,#6f9bb0);color:#f7fbff}
+canvas{display:block;width:100vw;height:100vh}
 
-    /* ── Menu ── */
-    #main-menu{position:fixed;inset:0;z-index:500;display:flex;flex-direction:column;
-      align-items:center;justify-content:center;
-      background:linear-gradient(180deg,rgba(185,216,234,.96),rgba(111,155,176,.97));backdrop-filter:blur(10px);}
-    #main-menu h1{font-size:clamp(28px,5vw,52px);font-weight:900;letter-spacing:-.04em;color:#f8fdff;
-      text-shadow:0 6px 24px rgba(32,54,69,.24);margin-bottom:20px;}
-    .menu-card{width:min(320px,calc(100vw - 40px));padding:18px 16px;border-radius:20px;
-      background:var(--glass);border:1px solid var(--line);box-shadow:var(--shadow);backdrop-filter:blur(16px);}
-    #menu-home,#mp-screen{width:100%;display:flex;flex-direction:column;align-items:center;gap:10px;}
-    #mp-screen{display:none}
-    .menu-btn{width:100%;padding:13px 16px;border-radius:14px;border:1px solid var(--line);
-      font-size:14px;font-weight:700;cursor:pointer;color:#f8fdff;
-      background:linear-gradient(180deg,rgba(111,143,99,.90),rgba(94,127,85,.92));
-      box-shadow:0 10px 22px rgba(33,56,45,.16);transition:transform .15s;}
-    .menu-btn:hover{transform:translateY(-2px);}
-    #mp-screen h2{color:#f8fdff;font-size:16px;font-weight:800;}
-    #mp-screen label{color:rgba(247,251,255,.55);font-size:10px;text-transform:uppercase;letter-spacing:.09em;align-self:flex-start;margin-top:6px;}
-    .code-box{width:100%;background:rgba(255,255,255,.12);border-radius:12px;padding:10px 14px;
-      display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid rgba(255,255,255,.16);}
-    #my-code{font-family:monospace;font-size:26px;font-weight:900;color:#7df9c0;letter-spacing:.22em;}
-    .sm-btn{background:rgba(255,255,255,.10);color:#f8fdff;border:1px solid rgba(255,255,255,.14);
-      border-radius:10px;padding:6px 10px;font-size:11px;font-weight:700;cursor:pointer;}
-    .sm-btn:hover{background:rgba(255,255,255,.2);}
-    #room-input{width:100%;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.16);
-      border-radius:12px;padding:10px 14px;color:#fff;font-size:24px;font-family:monospace;
-      font-weight:900;letter-spacing:.22em;outline:none;text-align:center;text-transform:uppercase;}
-    #room-input::placeholder{color:rgba(255,255,255,.3);font-weight:400;letter-spacing:.05em;font-size:14px;}
-    #btn-join{width:100%;padding:13px;background:linear-gradient(180deg,rgba(111,143,99,.95),rgba(94,127,85,.95));
-      color:#fff;border:1px solid rgba(255,255,255,.12);border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;}
-    #btn-join:disabled{opacity:.5;cursor:default;}
-    #btn-back{background:none;border:none;color:rgba(255,255,255,.6);cursor:pointer;font-size:12px;margin-top:2px;}
-    #btn-back:hover{color:#fff;}
-    .mp-hint{color:rgba(255,255,255,.5);font-size:10px;text-align:center;line-height:1.6;}
-    #mp-status{font-size:12px;font-weight:700;text-align:center;min-height:18px;color:#8fb7ca;}
-    #mp-error{color:#ff8a8a;font-size:12px;font-weight:700;text-align:center;display:none;}
+/* ── Menu ── */
+#menu{position:fixed;inset:0;z-index:500;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;background:linear-gradient(180deg,rgba(185,216,234,.97),rgba(111,155,176,.97));
+  backdrop-filter:blur(10px)}
+#menu h1{font-size:clamp(28px,5vw,52px);font-weight:900;letter-spacing:-.04em;color:#f8fdff;
+  text-shadow:0 6px 24px rgba(32,54,69,.24);margin-bottom:20px}
+.card{width:min(320px,calc(100vw - 40px));padding:18px 16px;border-radius:20px;
+  background:var(--g);border:1px solid var(--l);box-shadow:var(--sh);backdrop-filter:blur(16px)}
+#home,#mp{width:100%;display:flex;flex-direction:column;align-items:center;gap:10px}
+#mp{display:none}
+.btn{width:100%;padding:13px 16px;border-radius:14px;border:1px solid var(--l);font-size:14px;
+  font-weight:700;cursor:pointer;color:#f8fdff;
+  background:linear-gradient(180deg,rgba(111,143,99,.9),rgba(94,127,85,.92));
+  box-shadow:0 10px 22px rgba(33,56,45,.16);transition:transform .15s}
+.btn:hover{transform:translateY(-2px)}
+#mp h2{color:#f8fdff;font-size:16px;font-weight:800}
+#mp label{color:rgba(247,251,255,.55);font-size:10px;text-transform:uppercase;
+  letter-spacing:.09em;align-self:flex-start;margin-top:6px}
+.cbox{width:100%;background:rgba(255,255,255,.12);border-radius:12px;padding:10px 14px;
+  display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid rgba(255,255,255,.16)}
+#mycode{font-family:monospace;font-size:26px;font-weight:900;color:#7df9c0;letter-spacing:.22em}
+.sbtn{background:rgba(255,255,255,.10);color:#f8fdff;border:1px solid rgba(255,255,255,.14);
+  border-radius:10px;padding:6px 10px;font-size:11px;font-weight:700;cursor:pointer}
+.sbtn:hover{background:rgba(255,255,255,.2)}
+#rinput{width:100%;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.16);
+  border-radius:12px;padding:10px 14px;color:#fff;font-size:24px;font-family:monospace;
+  font-weight:900;letter-spacing:.22em;outline:none;text-align:center;text-transform:uppercase}
+#rinput::placeholder{color:rgba(255,255,255,.3);font-weight:400;letter-spacing:.05em;font-size:14px}
+#joinbtn{width:100%;padding:13px;background:linear-gradient(180deg,rgba(111,143,99,.95),rgba(94,127,85,.95));
+  color:#fff;border:1px solid rgba(255,255,255,.12);border-radius:12px;font-size:14px;font-weight:800;cursor:pointer}
+#joinbtn:disabled{opacity:.5;cursor:default}
+.hint{color:rgba(255,255,255,.5);font-size:10px;text-align:center;line-height:1.6}
+#status{font-size:12px;font-weight:700;text-align:center;min-height:18px;color:#8fb7ca}
+#err{color:#ff8a8a;font-size:12px;font-weight:700;text-align:center;display:none}
+.back{background:none;border:none;color:rgba(255,255,255,.6);cursor:pointer;font-size:12px;margin-top:2px}
+.back:hover{color:#fff}
 
-    /* ── HUD ── */
-    #speedometer{position:fixed;bottom:14px;right:14px;background:rgba(32,54,69,.4);backdrop-filter:blur(10px);
-      color:#f8fdff;padding:6px 12px;border-radius:12px;font-size:12px;font-weight:800;letter-spacing:.08em;
-      pointer-events:none;z-index:100;border:1px solid rgba(255,255,255,.12);display:none;}
-    #hint{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);color:rgba(248,253,255,.6);
-      font-size:10px;pointer-events:none;letter-spacing:.05em;z-index:100;white-space:nowrap;}
+/* ── HUD ── */
+#speedometer{position:fixed;bottom:24px;right:24px;background:rgba(15,23,42,.65);
+  backdrop-filter:blur(12px);color:#f8fdff;padding:8px 16px;border-radius:14px;
+  font-size:14px;font-weight:800;letter-spacing:.08em;pointer-events:none;z-index:100;
+  border:1px solid rgba(255,255,255,.15);display:none;box-shadow:0 8px 32px rgba(0,0,0,.2)}
 
-    /* ── Mobile ── */
-    #mobile-ui{display:none;position:fixed;inset:0;pointer-events:none;z-index:150;}
-    #joy-zone{position:absolute;left:16px;bottom:20px;width:96px;height:96px;
-      background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.18);
-      border-radius:50%;pointer-events:all;backdrop-filter:blur(8px);}
-    #joy-knob{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:40px;height:40px;
-      background:rgba(255,255,255,.3);border:1px solid rgba(255,255,255,.3);border-radius:50%;pointer-events:none;}
-    #cam-zone{position:absolute;right:0;top:0;width:55%;height:70%;pointer-events:all;}
-    #mobile-btns{position:absolute;right:16px;bottom:20px;display:flex;flex-direction:column;gap:8px;align-items:flex-end;pointer-events:all;}
-    .m-btn{background:rgba(32,54,69,.35);backdrop-filter:blur(8px);color:#fff;
-      border:1px solid rgba(255,255,255,.18);border-radius:50%;width:52px;height:52px;
-      font-size:9px;font-weight:800;cursor:pointer;display:flex;align-items:center;
-      justify-content:center;text-align:center;line-height:1.2;user-select:none;}
-    .m-btn:active{transform:scale(.94);background:rgba(255,255,255,.2);}
-    @media(max-width:900px){#hint{display:none}}
-  </style>
+/* ── Mobile ── */
+#mobileui{display:none;position:fixed;inset:0;pointer-events:none;z-index:150}
+#joy-zone{position:absolute;left:24px;bottom:24px;width:110px;height:110px;
+  background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.25);
+  border-radius:50%;pointer-events:all;backdrop-filter:blur(12px);box-shadow:0 8px 24px rgba(0,0,0,.15)}
+#joy-knob{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:44px;height:44px;
+  background:rgba(255,255,255,.4);border:1px solid rgba(255,255,255,.6);border-radius:50%;
+  pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+#cam-zone{position:absolute;right:0;top:0;width:55%;height:70%;pointer-events:all}
+#mbtns{position:absolute;right:24px;bottom:24px;display:flex;flex-direction:row-reverse;
+  gap:12px;align-items:flex-end;pointer-events:all}
+.mbtn{background:rgba(15,23,42,.55);backdrop-filter:blur(12px);color:#fff;
+  border:1.5px solid rgba(255,255,255,.22);border-radius:24px;min-width:56px;height:56px;
+  font-size:10px;font-weight:800;cursor:pointer;display:flex;align-items:center;
+  justify-content:center;user-select:none;padding:0 8px;box-shadow:0 8px 24px rgba(0,0,0,.15)}
+.mbtn:active{transform:scale(.92);background:rgba(255,255,255,.25)}
+</style>
 </head>
 <body>
 
-<div id="main-menu">
+<div id="menu">
   <h1>Tumble Life</h1>
-  <div class="menu-card">
-    <div id="menu-home">
-      <button class="menu-btn" id="btn-sp">▶ &nbsp;Singleplayer</button>
-      <button class="menu-btn" id="btn-mp-open">🌐 &nbsp;Multiplayer</button>
+  <div class="card">
+    <div id="home">
+      <button class="btn" id="btnsp">▶ &nbsp;Singleplayer</button>
+      <button class="btn" id="btnmpopen">🌐 &nbsp;Multiplayer</button>
     </div>
-    <div id="mp-screen">
+    <div id="mp">
       <h2>Multiplayer</h2>
-      <label>Your Code — share this</label>
-      <div class="code-box">
-        <span id="my-code">····</span>
-        <button class="sm-btn" id="btn-copy">Copy</button>
-      </div>
-      <div id="mp-status">Getting room code…</div>
+      <label>Your Code</label>
+      <div class="cbox"><span id="mycode">····</span><button class="sbtn" id="btncopy">Copy</button></div>
+      <div id="status">Getting room code…</div>
       <label style="margin-top:8px">Join a Friend</label>
-      <input id="room-input" type="text" placeholder="Their 4-letter code"
-             maxlength="4" autocomplete="off" spellcheck="false" inputmode="text"/>
-      <button id="btn-join">Join</button>
-      <p class="mp-hint">Host shares 4-letter code → Friend types it → Join<br>Both must be on the multiplayer screen at the same time.</p>
-      <div id="mp-error"></div>
-      <button id="btn-back">← Back</button>
+      <input id="rinput" type="text" placeholder="Their 4-letter code" maxlength="4"
+             autocomplete="off" spellcheck="false" inputmode="text"/>
+      <button id="joinbtn">Join</button>
+      <p class="hint">Share code → friend types it → Join<br>Both must be on this screen at the same time.</p>
+      <div id="err"></div>
+      <button class="back" id="btnback">← Back</button>
     </div>
   </div>
 </div>
 
 <div id="speedometer">0 KM/H</div>
-<div id="hint">WASD · F enter car · Space/P punch · Drag camera</div>
 
-<div id="mobile-ui">
+<div id="mobileui">
   <div id="joy-zone"><div id="joy-knob"></div></div>
   <div id="cam-zone"></div>
-  <div id="mobile-btns">
-    <button class="m-btn" id="btn-enter">F<br><span style="font-size:7px">CAR</span></button>
-    <button class="m-btn" id="btn-punch">👊</button>
+  <div id="mbtns">
+    <button class="mbtn" id="btn-punch">👊 STRIKE</button>
+    <button class="mbtn" id="btn-enter">F / CAR</button>
   </div>
 </div>
 
-<script>document.addEventListener('contextmenu',e=>e.preventDefault());</script>
-
-<!--
-  Using PeerJS with a self-hosted fallback config.
-  peerjs@1.5.4 uses metered.ca STUN/TURN by default which is reliable.
--->
+<script>document.addEventListener('contextmenu',e=>e.preventDefault())</script>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-
 <script type="module">
 import { startGame } from './game.js';
 
-const IS_MOBILE = innerWidth<=900 || navigator.maxTouchPoints>0;
-const menu      = document.getElementById('main-menu');
-const menuHome  = document.getElementById('menu-home');
-const mpScreen  = document.getElementById('mp-screen');
-const mpError   = document.getElementById('mp-error');
-const mpStatus  = document.getElementById('mp-status');
-const codeEl    = document.getElementById('my-code');
-const roomInput = document.getElementById('room-input');
-const btnJoin   = document.getElementById('btn-join');
+const IS_MOB = innerWidth<=900 || navigator.maxTouchPoints>0;
+const menu=document.getElementById('menu');
+const home=document.getElementById('home');
+const mpDiv=document.getElementById('mp');
+const errEl=document.getElementById('err');
+const statEl=document.getElementById('status');
+const codeEl=document.getElementById('mycode');
+const rinput=document.getElementById('rinput');
+const joinbtn=document.getElementById('joinbtn');
 
 let peer=null, myId=null, hostConn=null, joining=false;
 
-// Force uppercase, letters only
-roomInput.addEventListener('input',()=>{
-  const pos=roomInput.selectionStart;
-  roomInput.value=roomInput.value.toUpperCase().replace(/[^A-Z]/g,'');
-  try{roomInput.setSelectionRange(pos,pos);}catch{}
+rinput.addEventListener('input',()=>{
+  const p=rinput.selectionStart;
+  rinput.value=rinput.value.toUpperCase().replace(/[^A-Z]/g,'');
+  try{rinput.setSelectionRange(p,p)}catch{}
 });
 
-function setStatus(msg,isErr=false){
-  mpError.style.display='none';
-  mpStatus.textContent=msg;
-  if(isErr){mpError.textContent=msg;mpError.style.display='block';mpStatus.textContent='';}
+function setSt(msg,isErr=false){
+  errEl.style.display='none'; statEl.textContent=msg;
+  if(isErr){errEl.textContent=msg;errEl.style.display='block';statEl.textContent=''}
 }
 
 function randCode(){
-  const L='ABCDEFGHJKLMNPQRSTUVWXYZ'; // no I/O confusion
-  let c=''; for(let i=0;i<4;i++) c+=L[Math.floor(Math.random()*L.length)]; return c;
+  const L='ABCDEFGHJKLMNPQRSTUVWXYZ';
+  return Array.from({length:4},()=>L[Math.random()*L.length|0]).join('');
 }
+
+const PEER_CFG = {
+  host:'0.peerjs.com', port:443, path:'/', secure:true, debug:0,
+  config:{ iceServers:[
+    {urls:'stun:stun.l.google.com:19302'},
+    {urls:'stun:stun1.l.google.com:19302'},
+    // TURN fallback for symmetric NATs
+    {urls:'turn:openrelay.metered.ca:80',username:'openrelayproject',credential:'openrelayproject'},
+  ]}
+};
 
 function initPeer(attempt=0){
   if(peer&&myId) return;
-  if(peer){peer.destroy();peer=null;myId=null;}
+  if(peer){peer.destroy();peer=null;myId=null}
+  setSt('Getting room code…'); codeEl.textContent='····';
+  peer=new Peer(randCode(), PEER_CFG);
 
-  const code=randCode();
-  setStatus('Getting room code…');
-  codeEl.textContent='····';
-
-  // Use the default PeerJS cloud server (peerjs.com)
-  // It's the most reliable free option
-  peer=new Peer(code,{
-    host:'0.peerjs.com',
-    port:443,
-    path:'/',
-    secure:true,
-    debug:0,
-    config:{
-      iceServers:[
-        {urls:'stun:stun.l.google.com:19302'},
-        {urls:'stun:stun1.l.google.com:19302'},
-      ]
-    }
-  });
-
-  peer.on('open',id=>{
-    myId=id; codeEl.textContent=id;
-    setStatus('Share your code with a friend ↑');
-  });
-
+  peer.on('open',id=>{myId=id;codeEl.textContent=id;setSt('Share your code ↑')});
   peer.on('error',e=>{
     if(e.type==='unavailable-id'){
-      peer.destroy(); peer=null; myId=null;
-      if(attempt<8) setTimeout(()=>initPeer(attempt+1),300);
-      else setStatus('Could not get a code. Refresh and try again.',true);
+      peer.destroy();peer=null;myId=null;
+      attempt<8 ? setTimeout(()=>initPeer(attempt+1),300) : setSt('Could not get code. Refresh.',true);
       return;
     }
-    if(e.type==='peer-unavailable'){
-      setStatus('Code not found — check it and try again.',true);
-      resetJoinBtn(); joining=false;
-      return;
-    }
+    if(e.type==='peer-unavailable'){setSt('Code not found — check and retry.',true);resetJoin();joining=false;return}
     console.warn('Peer:',e.type,e.message);
   });
-
-  // HOST: incoming connection
   peer.on('connection',conn=>{
     conn.on('open',()=>{
-      menu.style.display='none';
-      if(IS_MOBILE) document.getElementById('mobile-ui').style.display='block';
-      startGame({peer,connection:conn,isMobile:IS_MOBILE,isMultiplayer:true,isHost:true});
+      hide();
+      startGame({peer,connection:conn,isMobile:IS_MOB,isMultiplayer:true,isHost:true});
     });
-    conn.on('error',e=>console.warn('host conn err',e));
   });
 }
 
-function resetJoinBtn(){
-  btnJoin.textContent='Join'; btnJoin.disabled=false;
-}
+function resetJoin(){joinbtn.textContent='Join';joinbtn.disabled=false}
+function hide(){menu.style.display='none';if(IS_MOB)document.getElementById('mobileui').style.display='block'}
 
-// ── Button handlers ───────────────────────────────────────────────────────
-document.getElementById('btn-sp').addEventListener('click',()=>{
-  menu.style.display='none';
-  if(IS_MOBILE) document.getElementById('mobile-ui').style.display='block';
-  startGame({peer:null,isMobile:IS_MOBILE,isMultiplayer:false});
-});
+document.getElementById('btnsp').onclick=()=>{hide();startGame({isMobile:IS_MOB})};
 
-document.getElementById('btn-mp-open').addEventListener('click',()=>{
-  menuHome.style.display='none';
-  mpScreen.style.display='flex';
-  mpError.style.display='none';
-  initPeer();
-});
+document.getElementById('btnmpopen').onclick=()=>{
+  home.style.display='none'; mpDiv.style.display='flex';
+  errEl.style.display='none'; initPeer();
+};
 
-document.getElementById('btn-back').addEventListener('click',()=>{
-  if(hostConn){hostConn.close();hostConn=null;}
-  if(peer){peer.destroy();peer=null;myId=null;}
-  joining=false;
-  mpScreen.style.display='none';
-  menuHome.style.display='flex';
-  mpError.style.display='none';
-  resetJoinBtn();
-});
+document.getElementById('btnback').onclick=()=>{
+  hostConn?.close(); hostConn=null;
+  if(peer){peer.destroy();peer=null;myId=null}
+  joining=false; mpDiv.style.display='none'; home.style.display='flex';
+  errEl.style.display='none'; resetJoin();
+};
 
-document.getElementById('btn-copy').addEventListener('click',()=>{
-  if(myId) navigator.clipboard?.writeText(myId).then(()=>setStatus('Copied!')).catch(()=>{});
-});
+document.getElementById('btncopy').onclick=()=>{
+  if(myId) navigator.clipboard?.writeText(myId).then(()=>setSt('Copied!')).catch(()=>{});
+};
 
-btnJoin.addEventListener('click',()=>{
-  const code=roomInput.value.trim().toUpperCase();
-  if(!/^[A-Z]{4}$/.test(code)){setStatus('Enter the 4-letter code from the host.',true);return;}
-  if(!peer||!myId){setStatus('Still connecting — wait a moment.',true);return;}
+joinbtn.onclick=()=>{
+  const code=rinput.value.trim().toUpperCase();
+  if(!/^[A-Z]{4}$/.test(code)){setSt('Enter 4-letter code.',true);return}
+  if(!peer||!myId){setSt('Still connecting — wait.',true);return}
   if(joining) return;
-  joining=true; mpError.style.display='none';
-  setStatus('Connecting…');
-  btnJoin.textContent='Joining…'; btnJoin.disabled=true;
+  joining=true; errEl.style.display='none';
+  setSt('Connecting…'); joinbtn.textContent='Joining…'; joinbtn.disabled=true;
 
   hostConn=peer.connect(code,{reliable:true,serialization:'json'});
   let opened=false;
 
-  hostConn.on('open',()=>{
-    opened=true;
-    menu.style.display='none';
-    if(IS_MOBILE) document.getElementById('mobile-ui').style.display='block';
-    startGame({peer,connection:hostConn,isMobile:IS_MOBILE,isMultiplayer:true,isHost:false});
-  });
-
-  hostConn.on('error',e=>{
-    if(opened) return;
-    hostConn.close(); hostConn=null; joining=false; resetJoinBtn();
-    setStatus('Could not connect — check code or try again.',true);
-  });
-
-  hostConn.on('close',()=>{
-    if(!opened){hostConn=null;joining=false;resetJoinBtn();setStatus('Host disconnected.',true);}
-  });
-
-  // 15 second timeout — longer than before
-  setTimeout(()=>{
-    if(!opened){
-      hostConn?.close(); hostConn=null; joining=false; resetJoinBtn();
-      setStatus('Timed out — make sure host is on the multiplayer screen.',true);
-    }
-  },15000);
-});
+  hostConn.on('open',()=>{opened=true;hide();startGame({peer,connection:hostConn,isMobile:IS_MOB,isMultiplayer:true,isHost:false})});
+  hostConn.on('error',()=>{if(!opened){hostConn.close();hostConn=null;joining=false;resetJoin();setSt('Could not connect.',true)}});
+  hostConn.on('close',()=>{if(!opened){hostConn=null;joining=false;resetJoin();setSt('Host disconnected.',true)}});
+  setTimeout(()=>{if(!opened){hostConn?.close();hostConn=null;joining=false;resetJoin();setSt('Timed out — make sure host is on multiplayer screen.',true)}},15000);
+};
 </script>
 </body>
 </html>
