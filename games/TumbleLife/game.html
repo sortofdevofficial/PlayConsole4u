@@ -10,65 +10,37 @@
 html,body{width:100%;height:100%;overflow:hidden;font-family:'Segoe UI',sans-serif;
   background:linear-gradient(180deg,#b9d8ea,#8fb9cc 48%,#6f9bb0);color:#f7fbff}
 canvas{display:block;width:100vw;height:100vh}
-
-/* ── Menu ── */
 #menu{position:fixed;inset:0;z-index:500;display:flex;flex-direction:column;align-items:center;
   justify-content:center;background:linear-gradient(180deg,rgba(185,216,234,.97),rgba(111,155,176,.97));
   backdrop-filter:blur(10px)}
-#menu h1{font-size:clamp(28px,5vw,52px);font-weight:900;letter-spacing:-.04em;color:#f8fdff;
-  text-shadow:0 6px 24px rgba(32,54,69,.24);margin-bottom:20px}
-.card{width:min(320px,calc(100vw - 40px));padding:18px 16px;border-radius:20px;
-  background:var(--g);border:1px solid var(--l);box-shadow:var(--sh);backdrop-filter:blur(16px)}
+#menu h1{font-size:clamp(28px,5vw,52px);font-weight:900;letter-spacing:-.04em;color:#f8fdff;text-shadow:0 6px 24px rgba(32,54,69,.24);margin-bottom:20px}
+.card{width:min(320px,calc(100vw - 40px));padding:18px 16px;border-radius:20px;background:var(--g);border:1px solid var(--l);box-shadow:var(--sh);backdrop-filter:blur(16px)}
 #home,#mp{width:100%;display:flex;flex-direction:column;align-items:center;gap:10px}
 #mp{display:none}
-.btn{width:100%;padding:13px 16px;border-radius:14px;border:1px solid var(--l);font-size:14px;
-  font-weight:700;cursor:pointer;color:#f8fdff;
-  background:linear-gradient(180deg,rgba(111,143,99,.9),rgba(94,127,85,.92));
-  box-shadow:0 10px 22px rgba(33,56,45,.16);transition:transform .15s}
+.btn{width:100%;padding:13px 16px;border-radius:14px;border:1px solid var(--l);font-size:14px;font-weight:700;cursor:pointer;color:#f8fdff;background:linear-gradient(180deg,rgba(111,143,99,.9),rgba(94,127,85,.92));box-shadow:0 10px 22px rgba(33,56,45,.16);transition:transform .15s}
 .btn:hover{transform:translateY(-2px)}
 #mp h2{color:#f8fdff;font-size:16px;font-weight:800}
-#mp label{color:rgba(247,251,255,.55);font-size:10px;text-transform:uppercase;
-  letter-spacing:.09em;align-self:flex-start;margin-top:6px}
-.cbox{width:100%;background:rgba(255,255,255,.12);border-radius:12px;padding:10px 14px;
-  display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid rgba(255,255,255,.16)}
+#mp label{color:rgba(247,251,255,.55);font-size:10px;text-transform:uppercase;letter-spacing:.09em;align-self:flex-start;margin-top:6px}
+.cbox{width:100%;background:rgba(255,255,255,.12);border-radius:12px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid rgba(255,255,255,.16)}
 #mycode{font-family:monospace;font-size:26px;font-weight:900;color:#7df9c0;letter-spacing:.22em}
-.sbtn{background:rgba(255,255,255,.10);color:#f8fdff;border:1px solid rgba(255,255,255,.14);
-  border-radius:10px;padding:6px 10px;font-size:11px;font-weight:700;cursor:pointer}
+.sbtn{background:rgba(255,255,255,.10);color:#f8fdff;border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:6px 10px;font-size:11px;font-weight:700;cursor:pointer}
 .sbtn:hover{background:rgba(255,255,255,.2)}
-#rinput{width:100%;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.16);
-  border-radius:12px;padding:10px 14px;color:#fff;font-size:24px;font-family:monospace;
-  font-weight:900;letter-spacing:.22em;outline:none;text-align:center;text-transform:uppercase}
+#rinput{width:100%;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:10px 14px;color:#fff;font-size:24px;font-family:monospace;font-weight:900;letter-spacing:.22em;outline:none;text-align:center;text-transform:uppercase}
 #rinput::placeholder{color:rgba(255,255,255,.3);font-weight:400;letter-spacing:.05em;font-size:14px}
-#joinbtn{width:100%;padding:13px;background:linear-gradient(180deg,rgba(111,143,99,.95),rgba(94,127,85,.95));
-  color:#fff;border:1px solid rgba(255,255,255,.12);border-radius:12px;font-size:14px;font-weight:800;cursor:pointer}
+#joinbtn{width:100%;padding:13px;background:linear-gradient(180deg,rgba(111,143,99,.95),rgba(94,127,85,.95));color:#fff;border:1px solid rgba(255,255,255,.12);border-radius:12px;font-size:14px;font-weight:800;cursor:pointer}
 #joinbtn:disabled{opacity:.5;cursor:default}
 .hint{color:rgba(255,255,255,.5);font-size:10px;text-align:center;line-height:1.6}
 #status{font-size:12px;font-weight:700;text-align:center;min-height:18px;color:#8fb7ca}
 #err{color:#ff8a8a;font-size:12px;font-weight:700;text-align:center;display:none}
 .back{background:none;border:none;color:rgba(255,255,255,.6);cursor:pointer;font-size:12px;margin-top:2px}
 .back:hover{color:#fff}
-
-/* ── HUD ── */
-#speedometer{position:fixed;bottom:24px;right:24px;background:rgba(15,23,42,.65);
-  backdrop-filter:blur(12px);color:#f8fdff;padding:8px 16px;border-radius:14px;
-  font-size:14px;font-weight:800;letter-spacing:.08em;pointer-events:none;z-index:100;
-  border:1px solid rgba(255,255,255,.15);display:none;box-shadow:0 8px 32px rgba(0,0,0,.2)}
-
-/* ── Mobile ── */
+#speedometer{position:fixed;bottom:24px;right:24px;background:rgba(15,23,42,.65);backdrop-filter:blur(12px);color:#f8fdff;padding:8px 16px;border-radius:14px;font-size:14px;font-weight:800;letter-spacing:.08em;pointer-events:none;z-index:100;border:1px solid rgba(255,255,255,.15);display:none;box-shadow:0 8px 32px rgba(0,0,0,.2)}
 #mobileui{display:none;position:fixed;inset:0;pointer-events:none;z-index:150}
-#joy-zone{position:absolute;left:24px;bottom:24px;width:110px;height:110px;
-  background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.25);
-  border-radius:50%;pointer-events:all;backdrop-filter:blur(12px);box-shadow:0 8px 24px rgba(0,0,0,.15)}
-#joy-knob{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:44px;height:44px;
-  background:rgba(255,255,255,.4);border:1px solid rgba(255,255,255,.6);border-radius:50%;
-  pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+#joy-zone{position:absolute;left:24px;bottom:24px;width:110px;height:110px;background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.25);border-radius:50%;pointer-events:all;backdrop-filter:blur(12px);box-shadow:0 8px 24px rgba(0,0,0,.15)}
+#joy-knob{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:44px;height:44px;background:rgba(255,255,255,.4);border:1px solid rgba(255,255,255,.6);border-radius:50%;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.2)}
 #cam-zone{position:absolute;right:0;top:0;width:55%;height:70%;pointer-events:all}
-#mbtns{position:absolute;right:24px;bottom:24px;display:flex;flex-direction:row-reverse;
-  gap:12px;align-items:flex-end;pointer-events:all}
-.mbtn{background:rgba(15,23,42,.55);backdrop-filter:blur(12px);color:#fff;
-  border:1.5px solid rgba(255,255,255,.22);border-radius:24px;min-width:56px;height:56px;
-  font-size:10px;font-weight:800;cursor:pointer;display:flex;align-items:center;
-  justify-content:center;user-select:none;padding:0 8px;box-shadow:0 8px 24px rgba(0,0,0,.15)}
+#mbtns{position:absolute;right:24px;bottom:24px;display:flex;flex-direction:row-reverse;gap:12px;align-items:flex-end;pointer-events:all}
+.mbtn{background:rgba(15,23,42,.55);backdrop-filter:blur(12px);color:#fff;border:1.5px solid rgba(255,255,255,.22);border-radius:24px;min-width:56px;height:56px;font-size:10px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;user-select:none;padding:0 8px;box-shadow:0 8px 24px rgba(0,0,0,.15)}
 .mbtn:active{transform:scale(.92);background:rgba(255,255,255,.25)}
 </style>
 </head>
@@ -80,6 +52,7 @@ canvas{display:block;width:100vw;height:100vh}
     <div id="home">
       <button class="btn" id="btnsp">▶ &nbsp;Singleplayer</button>
       <button class="btn" id="btnmpopen">🌐 &nbsp;Multiplayer</button>
+      <button class="back" onclick="location.href='index.html'">← Leave Game</button>
     </div>
     <div id="mp">
       <h2>Multiplayer</h2>
@@ -87,8 +60,7 @@ canvas{display:block;width:100vw;height:100vh}
       <div class="cbox"><span id="mycode">····</span><button class="sbtn" id="btncopy">Copy</button></div>
       <div id="status">Getting room code…</div>
       <label style="margin-top:8px">Join a Friend</label>
-      <input id="rinput" type="text" placeholder="Their 4-letter code" maxlength="4"
-             autocomplete="off" spellcheck="false" inputmode="text"/>
+      <input id="rinput" type="text" placeholder="Their 4-letter code" maxlength="4" autocomplete="off" spellcheck="false" inputmode="text"/>
       <button id="joinbtn">Join</button>
       <p class="hint">Share code → friend types it → Join<br>Both must be on this screen at the same time.</p>
       <div id="err"></div>
@@ -110,18 +82,17 @@ canvas{display:block;width:100vw;height:100vh}
 
 <script>document.addEventListener('contextmenu',e=>e.preventDefault())</script>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script src="./firebase.js"></script>
+
 <script type="module">
 import { startGame } from './game.js';
 
 const IS_MOB = innerWidth<=900 || navigator.maxTouchPoints>0;
-const menu=document.getElementById('menu');
-const home=document.getElementById('home');
-const mpDiv=document.getElementById('mp');
-const errEl=document.getElementById('err');
-const statEl=document.getElementById('status');
-const codeEl=document.getElementById('mycode');
-const rinput=document.getElementById('rinput');
-const joinbtn=document.getElementById('joinbtn');
+const menu=document.getElementById('menu'), home=document.getElementById('home'), mpDiv=document.getElementById('mp'), errEl=document.getElementById('err'), statEl=document.getElementById('status'), codeEl=document.getElementById('mycode'), rinput=document.getElementById('rinput'), joinbtn=document.getElementById('joinbtn');
 
 let peer=null, myId=null, hostConn=null, joining=false;
 
@@ -135,7 +106,6 @@ function setSt(msg,isErr=false){
   errEl.style.display='none'; statEl.textContent=msg;
   if(isErr){errEl.textContent=msg;errEl.style.display='block';statEl.textContent=''}
 }
-
 function randCode(){
   const L='ABCDEFGHJKLMNPQRSTUVWXYZ';
   return Array.from({length:4},()=>L[Math.random()*L.length|0]).join('');
@@ -146,7 +116,6 @@ const PEER_CFG = {
   config:{ iceServers:[
     {urls:'stun:stun.l.google.com:19302'},
     {urls:'stun:stun1.l.google.com:19302'},
-    // TURN fallback for symmetric NATs
     {urls:'turn:openrelay.metered.ca:80',username:'openrelayproject',credential:'openrelayproject'},
   ]}
 };
@@ -179,19 +148,16 @@ function resetJoin(){joinbtn.textContent='Join';joinbtn.disabled=false}
 function hide(){menu.style.display='none';if(IS_MOB)document.getElementById('mobileui').style.display='block'}
 
 document.getElementById('btnsp').onclick=()=>{hide();startGame({isMobile:IS_MOB})};
-
 document.getElementById('btnmpopen').onclick=()=>{
   home.style.display='none'; mpDiv.style.display='flex';
   errEl.style.display='none'; initPeer();
 };
-
 document.getElementById('btnback').onclick=()=>{
   hostConn?.close(); hostConn=null;
   if(peer){peer.destroy();peer=null;myId=null}
   joining=false; mpDiv.style.display='none'; home.style.display='flex';
   errEl.style.display='none'; resetJoin();
 };
-
 document.getElementById('btncopy').onclick=()=>{
   if(myId) navigator.clipboard?.writeText(myId).then(()=>setSt('Copied!')).catch(()=>{});
 };
