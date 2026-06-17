@@ -4,12 +4,7 @@ import { Grass } from './Life/grass.js';
 import { Road } from './Life/road.js';
 import { Building } from './Life/building.js';
 
-// ── Materials (created once, shared) ──────────────────────────────────────
-const _grassMat = new THREE.MeshStandardMaterial({ color:0x5fa845, roughness:1, flatShading:true });
-const _rockMat  = new THREE.MeshStandardMaterial({ color:0x8a7f72, roughness:0.95, flatShading:true });
-const _sandMat  = new THREE.MeshStandardMaterial({ color:0xd4b97a, roughness:1, flatShading:true });
-
-// Patch Grass instances to sit on terrain Y after each update
+// Patch Grass to sit on terrain Y after each update
 const _origGrassUpdate = Grass.prototype.update;
 Grass.prototype.update = function(time, targetPos=null) {
   _origGrassUpdate.call(this, time, targetPos);
@@ -38,7 +33,6 @@ export class WorldMap {
     Grass.reset(scene);
 
     this._buildTerrain(scene, cityRadius);
-    this._buildWater(scene);
     this._buildRoad(scene);
     this._buildBuildings(scene);
     this._buildTrees(scene, treeDensity);
@@ -47,40 +41,31 @@ export class WorldMap {
     Grass.build();
   }
 
-  // ── SINGLE SOURCE OF TRUTH ──────────────────────────────────────────────
-  // All terrain height queries go through here — mesh vertices use this too.
-  // Uses cosine-bell hills so edges blend smoothly to 0 (no cliffs at border).
+  // ── SINGLE SOURCE OF TRUTH for height ──────────────────────────────────
   static getElevation(x, z) {
     if (!Number.isFinite(x) || !Number.isFinite(z)) return 0;
-
-    // Cosine bell: smooth bump, zero at edge, zero derivative at peak
     const bell = (dx, dz, radius, peak) => {
       const d = Math.sqrt(dx*dx + dz*dz);
       if (d >= radius) return 0;
       return peak * 0.5 * (1 + Math.cos((d / radius) * Math.PI));
     };
-
     let h = 0;
-    h += bell(x-45,  z-40,  58, 14);   // main hill (NE)
-    h += bell(x+52,  z+38,  48,  9);   // west hill (SW)
-    h += bell(x-18,  z+82,  40,  7);   // far south hill
-    h += bell(x+10,  z-90,  35,  8);   // far north hill
-    h += bell(x-80,  z+10,  30,  6);   // far west hill
-    h += bell(x+70,  z-20,  28,  5);   // far east bump
-
-    // Clamp so terrain never goes negative (no underwater ground)
+    h += bell(x-45,  z-40,  58, 14);
+    h += bell(x+52,  z+38,  48,  9);
+    h += bell(x-18,  z+82,  40,  7);
+    h += bell(x+10,  z-90,  35,  8);
+    h += bell(x-80,  z+10,  30,  6);
+    h += bell(x+70,  z-20,  28,  5);
     return Math.max(0, Number.isFinite(h) ? h : 0);
   }
 
   getElevation(x, z) { return WorldMap.getElevation(x, z); }
 
-  // ── TERRAIN MESH ─────────────────────────────────────────────────────────
+  // ── TERRAIN MESH (optimized: fewer segments, no water, opaque mat) ──────
   _buildTerrain(scene, cityRadius) {
     const SIZE = Math.max(cityRadius * 3, 500);
-    const SEGS = 120; // enough for smooth hills without excess triangles
+    const SEGS = 64; // down from 120 — ~4x fewer triangles, smooth hills still fine at this scale
 
-    // Build geometry in world space directly — avoids ALL rotation/offset confusion.
-    // We create a flat grid of vertices at the right world XZ, set Y to elevation.
     const geo    = new THREE.BufferGeometry();
     const vCount = (SEGS+1) * (SEGS+1);
     const positions = new Float32Array(vCount * 3);
@@ -103,7 +88,6 @@ export class WorldMap {
       }
     }
 
-    // Build index buffer (two triangles per quad)
     const idxCount = SEGS * SEGS * 6;
     const indices  = new Uint32Array(idxCount);
     let ii = 0;
@@ -120,44 +104,30 @@ export class WorldMap {
     geo.setIndex(new THREE.BufferAttribute(indices, 1));
     geo.computeVertexNormals();
 
-    // Vertex colors: tint by height for visual richness
+    // Vertex colors by height — cheap (per-vertex, not per-pixel shader work)
     const colors = new Float32Array(vCount * 3);
-    vi = 0;
     for (let i = 0; i < vCount; i++) {
       const wy = positions[i*3+1];
       let r, g, b;
-      if (wy < 0.5) {
-        // flat ground — bright grass green
-        r=0.38; g=0.67; b=0.27;
-      } else if (wy < 5) {
-        // mid slope — darker green
+      if (wy < 0.5) { r=0.38; g=0.67; b=0.27; }
+      else if (wy < 5) {
         const t = wy/5;
-        r=THREE.MathUtils.lerp(0.38,0.30,t);
-        g=THREE.MathUtils.lerp(0.67,0.55,t);
-        b=THREE.MathUtils.lerp(0.27,0.22,t);
+        r=THREE.MathUtils.lerp(0.38,0.30,t); g=THREE.MathUtils.lerp(0.67,0.55,t); b=THREE.MathUtils.lerp(0.27,0.22,t);
       } else if (wy < 10) {
-        // upper slope — olive/rock
         const t = (wy-5)/5;
-        r=THREE.MathUtils.lerp(0.30,0.52,t);
-        g=THREE.MathUtils.lerp(0.55,0.50,t);
-        b=THREE.MathUtils.lerp(0.22,0.42,t);
+        r=THREE.MathUtils.lerp(0.30,0.52,t); g=THREE.MathUtils.lerp(0.55,0.50,t); b=THREE.MathUtils.lerp(0.22,0.42,t);
       } else {
-        // peak — light rock/snow tint
         const t = Math.min((wy-10)/6, 1);
-        r=THREE.MathUtils.lerp(0.52,0.80,t);
-        g=THREE.MathUtils.lerp(0.50,0.78,t);
-        b=THREE.MathUtils.lerp(0.42,0.76,t);
+        r=THREE.MathUtils.lerp(0.52,0.80,t); g=THREE.MathUtils.lerp(0.50,0.78,t); b=THREE.MathUtils.lerp(0.42,0.76,t);
       }
-      colors[vi++]=r; colors[vi++]=g; colors[vi++]=b;
+      colors[i*3]=r; colors[i*3+1]=g; colors[i*3+2]=b;
     }
     geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
-    // Use vertex colors for beautiful height-based shading with zero extra draw calls
     const mat = new THREE.MeshStandardMaterial({
       vertexColors: true,
       roughness: 0.95,
       flatShading: true,
-      // polygonOffset pushes terrain back in depth buffer — prevents z-fighting with road
       polygonOffset: true,
       polygonOffsetFactor: 2,
       polygonOffsetUnits:  2,
@@ -165,31 +135,10 @@ export class WorldMap {
 
     const mesh = new THREE.Mesh(geo, mat);
     mesh.receiveShadow = true;
-    mesh.castShadow    = false; // terrain doesn't need to cast (just receive)
-    // NO position or rotation offset — vertices are already in world space
+    mesh.castShadow    = false;
     scene.add(mesh);
     this.terrainMesh = mesh;
-  }
-
-  // ── WATER PLANE ──────────────────────────────────────────────────────────
-  _buildWater(scene) {
-    const waterMat = new THREE.MeshStandardMaterial({
-      color: 0x2389da,
-      roughness: 0.05,
-      metalness: 0.35,
-      transparent: true,
-      opacity: 0.78,
-      // polygonOffset pulls water in FRONT of terrain so no z-fight
-      polygonOffset: true,
-      polygonOffsetFactor: -1,
-      polygonOffsetUnits:  -1,
-    });
-    const water = new THREE.Mesh(new THREE.PlaneGeometry(600, 600), waterMat);
-    water.rotation.x = -Math.PI/2;
-    water.position.y = 0.18; // just above sea level
-    water.receiveShadow = true;
-    scene.add(water);
-    this.waterMesh = water;
+    this.groundGeo = geo; // road.js flattenTerrain expects this
   }
 
   // ── ROAD ─────────────────────────────────────────────────────────────────
@@ -221,10 +170,10 @@ export class WorldMap {
   // ── GRASS ─────────────────────────────────────────────────────────────────
   _buildGrass(scene) {
     const clusters = [
-      [-15,15,120,1.8],[22,-18,100,1.6],[-30,-10,90,1.5],[10,28,110,1.7],
-      [-48,-5,80,1.4],[38,30,95,1.6],[5,-35,85,1.5],[-20,45,70,1.3],
-      [50,-12,100,1.7],[-55,35,80,1.4],
-    ];
+      [-15,15,90,1.8],[22,-18,75,1.6],[-30,-10,70,1.5],[10,28,85,1.7],
+      [-48,-5,60,1.4],[38,30,70,1.6],[5,-35,65,1.5],[-20,45,55,1.3],
+      [50,-12,75,1.7],[-55,35,60,1.4],
+    ]; // reduced counts ~30% — grass is the single biggest instance count in the scene
     for (const [cx,cz,count,radius] of clusters) {
       for (let b=0; b<count; b++) {
         const a  = Math.random()*Math.PI*2;
@@ -287,8 +236,6 @@ export class WorldMap {
 
   // ── FRAME UPDATE ─────────────────────────────────────────────────────────
   update(time, playerPos=null) {
-    // Gentle water shimmer
-    if (this.waterMesh) this.waterMesh.position.y = 0.18 + Math.sin(time*0.8)*0.04;
     for (const t of this.trees)      t.update(time);
     for (const g of this.grassTufts) g.update(time, playerPos);
   }

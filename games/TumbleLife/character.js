@@ -1,12 +1,13 @@
 import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
 
-// Floating name tag sprite above player
-function makeNameTag(scene, label, color='#ffffff') {
+// Floating name tag sprite above player — texture can be redrawn via setLabel()
+function makeNameTagCanvas(label, color) {
   const canvas = document.createElement('canvas');
   canvas.width = 256; canvas.height = 64;
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, 256, 64);
   ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  ctx.beginPath();
   ctx.roundRect(4, 16, 248, 40, 10);
   ctx.fill();
   ctx.font = 'bold 26px Segoe UI, sans-serif';
@@ -14,10 +15,17 @@ function makeNameTag(scene, label, color='#ffffff') {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(label, 128, 36);
+  return canvas;
+}
+
+function makeNameTag(scene, label, color='#ffffff') {
+  const canvas = makeNameTagCanvas(label, color);
   const tex = new THREE.CanvasTexture(canvas);
   const mat = new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true });
   const sprite = new THREE.Sprite(mat);
   sprite.scale.set(2.2, 0.55, 1);
+  sprite.userData.canvas = canvas;
+  sprite.userData.color  = color;
   scene.add(sprite);
   return sprite;
 }
@@ -34,7 +42,7 @@ export class WobblyCharacter {
     this.punchTime = 0;
 
     const mat = new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.6, metalness: 0.1 });
-    this.mat = mat; 
+    this.mat = mat;
     this.bodyGroup = new THREE.Group();
     scene.add(this.bodyGroup);
 
@@ -51,7 +59,7 @@ export class WobblyCharacter {
     const legGeo = new THREE.CapsuleGeometry(0.16, 0.45, 6, 12);
     this.addMesh(this.leftLegPivot,  legGeo, mat, 0, -0.22);
     this.addMesh(this.rightLegPivot, legGeo, mat, 0, -0.22);
-    
+
     const armGeo = new THREE.CapsuleGeometry(0.18, 0.68, 6, 12);
     this.addMesh(this.leftArmPivot,  armGeo, mat, 0, -0.34);
     this.addMesh(this.rightArmPivot, armGeo, mat, 0, -0.34);
@@ -82,6 +90,19 @@ export class WobblyCharacter {
     m.castShadow = true;
     parent.add(m);
     return m;
+  }
+
+  // Redraw the name tag with a new label/color — call this once the real
+  // username resolves from Firebase (auth is async, so the tag starts as
+  // "Player"/"You" and updates in place when the profile loads).
+  setLabel(label, color = null) {
+    const useColor = color || this.nameTag.userData.color || '#ffffff';
+    const canvas = makeNameTagCanvas(label, useColor);
+    this.nameTag.material.map.dispose();
+    this.nameTag.material.map = new THREE.CanvasTexture(canvas);
+    this.nameTag.material.needsUpdate = true;
+    this.nameTag.userData.canvas = canvas;
+    this.nameTag.userData.color = useColor;
   }
 
   snapToTerrain(worldMap) {
@@ -133,6 +154,14 @@ export class WobblyCharacter {
   }
 
   update(deltaTime, time, moveDirection, worldMap = null) {
+    // Name tag follows body every frame regardless of state
+    this.nameTag.position.set(
+      this.bodyGroup.position.x,
+      this.bodyGroup.position.y + 2.6,
+      this.bodyGroup.position.z
+    );
+    this.nameTag.visible = !this.isDriving;
+
     if (this.isDriving) return;
 
     const moving = moveDirection.lengthSq() > 0;
@@ -153,21 +182,15 @@ export class WobblyCharacter {
     this.bodyGroup.rotation.y += diff * 14 * deltaTime;
     this.bodyGroup.position.copy(this.position);
 
-    // --- GTA Style Punch Animation ---
+    // GTA-style punch animation
     if (this.isPunching) {
-      this.punchTime += deltaTime * 4.0; // Controls the total speed of the punch
-      
+      this.punchTime += deltaTime * 4.0;
       if (this.punchTime <= 1.0) {
-        // Creates a snappy impact and a slightly slower recovery
-        let strike = this.punchTime < 0.35 
-          ? Math.sin((this.punchTime / 0.35) * Math.PI / 2) 
+        const strike = this.punchTime < 0.35
+          ? Math.sin((this.punchTime / 0.35) * Math.PI / 2)
           : Math.pow(1 - ((this.punchTime - 0.35) / 0.65), 2);
-
-        // Right arm throws a heavy cross across the body
         this.rightArmPivot.rotation.set(-1.8 * strike, -0.7 * strike, 0.2);
-        // Left arm comes up tightly to guard the face
         this.leftArmPivot.rotation.set(-1.2 * strike, 0.4 * strike, 0.2);
-        // Torso twists into the punch and leans forward for momentum
         this.torsoMesh.rotation.set(0.25 * strike, -0.6 * strike, 0);
       } else {
         this.isPunching = false;
@@ -186,8 +209,7 @@ export class WobblyCharacter {
     this.rightLegPivot.rotation.x = -w * 0.5 * this.walkWeight;
     this.leftLegPivot.position.y  = 0.65 + (w > 0 ?  w * 0.12 * this.walkWeight : 0);
     this.rightLegPivot.position.y = 0.65 + (w < 0 ? -w * 0.12 * this.walkWeight : 0);
-    
-    // Only apply walk arm-swings if he's NOT currently punching
+
     if (!this.isPunching) {
       this.leftArmPivot.rotation.x  = -w * 0.4 * this.walkWeight;
       this.rightArmPivot.rotation.x =  w * 0.4 * this.walkWeight;
