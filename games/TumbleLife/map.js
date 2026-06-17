@@ -41,40 +41,33 @@ export class WorldMap {
   }
 
   // ── SINGLE SOURCE OF TRUTH FOR ELEVATION ──────────────────────────────────
-  // Replaced the blocky/cone math with a beautiful, smooth rolling-hills profile.
+  // 100% Flat world, except for one isolated, perfectly smooth little hill.
   static getElevation(x, z) {
     if (!Number.isFinite(x) || !Number.isFinite(z)) return 0;
     
-    // Smooth multi-layered mathematical noise approximation
-    const d1 = Math.sin(x * 0.015) * Math.cos(z * 0.015) * 12;
-    const d2 = Math.sin(x * 0.04 + 2.0) * Math.sin(z * 0.035) * 4;
-    const d3 = Math.cos(x * 0.005) * Math.sin(z * 0.007) * 8;
+    // Position and size of your single hill
+    const HILL_X = 45;
+    const HILL_Z = 40;
+    const HILL_RADIUS = 50;
+    const HILL_PEAK = 12;
+
+    const d = Math.hypot(x - HILL_X, z - HILL_Z);
     
-    let baseElevation = d1 + d2 + d3;
+    // If we are outside the hill radius, the ground is perfectly flat (0)
+    if (d >= HILL_RADIUS) return 0;
 
-    // Smooth blending flat-zone for the spawn city/roads hub center point
-    const centerDist = Math.hypot(x, z);
-    const flatRadius = 60;
-    const falloffRadius = 160;
-
-    if (centerDist < flatRadius) {
-      return 0; // Perfectly flat urban center
-    } else if (centerDist < falloffRadius) {
-      // Eased transitional slope from the city out into the rolling hills
-      const t = (centerDist - flatRadius) / (falloffRadius - flatRadius);
-      const smoothFactor = t * t * (3 - 2 * t); // Smoothstep curve
-      return baseElevation * smoothFactor;
-    }
-
-    return baseElevation;
+    // Inside the radius, ease the slope up into a rounded hill
+    const t = 1.0 - (d / HILL_RADIUS); // 0 at edge, 1 at center peak
+    const smoothFactor = t * t * (3 - 2 * t); // Smoothstep math
+    return HILL_PEAK * smoothFactor;
   }
 
   getElevation(x, z) { return WorldMap.getElevation(x, z); }
 
   // ── TERRAIN MESH ─────────────────────────────────────────────────────────
   _buildTerrain(scene, cityRadius) {
-    const SIZE = Math.max(cityRadius * 4, 800); // Increased bounds to prevent horizon clipping
-    const SEGS = 160; // Bumped resolution density for ultra-smooth hill contours
+    const SIZE = Math.max(cityRadius * 4, 800);
+    const SEGS = 160;
 
     const geo    = new THREE.BufferGeometry();
     const vCount = (SEGS+1) * (SEGS+1);
@@ -85,7 +78,6 @@ export class WorldMap {
     const step = SIZE / SEGS;
     let vi = 0, ui = 0;
 
-    // Generate Vertex Structural Maps
     for (let row = 0; row <= SEGS; row++) {
       for (let col = 0; col <= SEGS; col++) {
         const wx = -half + col * step;
@@ -101,7 +93,7 @@ export class WorldMap {
       }
     }
 
-    // Generate Face Indices (CRITICAL FIX: Changed winding layout from CW to CCW)
+    // Fixed index buffer winding order (CCW) so the map never turns invisible
     const idxCount = SEGS * SEGS * 6;
     const indices  = new Uint32Array(idxCount);
     let ii = 0;
@@ -113,15 +105,8 @@ export class WorldMap {
         const c = a + (SEGS + 1);
         const d = c + 1;
         
-        // Triangle 1 (Counter-Clockwise)
-        indices[ii++] = a;
-        indices[ii++] = b;
-        indices[ii++] = c;
-        
-        // Triangle 2 (Counter-Clockwise)
-        indices[ii++] = b;
-        indices[ii++] = d;
-        indices[ii++] = c;
+        indices[ii++] = a; indices[ii++] = b; indices[ii++] = c;
+        indices[ii++] = b; indices[ii++] = d; indices[ii++] = c;
       }
     }
 
@@ -130,21 +115,21 @@ export class WorldMap {
     geo.setIndex(new THREE.BufferAttribute(indices, 1));
     geo.computeVertexNormals(); 
 
-    // Procedural Vertex Height-Color Interpolation
+    // Vertex colors: Flat ground stays green, the hill fades into a warm dirt color
     const colors = new Float32Array(vCount * 3);
     for (let i = 0; i < vCount; i++) {
       const wy = positions[i*3+1];
       let r, g, b;
       
-      if (wy <= 0.5) {
-        // Lush lowland green
-        r = 0.32; g = 0.62; b = 0.28;
+      if (wy < 0.2) {
+        // Flat green grass
+        r = 0.36; g = 0.66; b = 0.27;
       } else {
-        // Organic transition gradient scaling up to rocky mountain heights
-        const t = THREE.MathUtils.clamp(wy / 22, 0, 1);
-        r = THREE.MathUtils.lerp(0.32, 0.48, t);
-        g = THREE.MathUtils.lerp(0.62, 0.44, t);
-        b = THREE.MathUtils.lerp(0.28, 0.32, t);
+        // Hill dirt blend
+        const t = THREE.MathUtils.clamp(wy / 12, 0, 1);
+        r = THREE.MathUtils.lerp(0.36, 0.55, t);
+        g = THREE.MathUtils.lerp(0.66, 0.52, t);
+        b = THREE.MathUtils.lerp(0.27, 0.34, t);
       }
       
       colors[i*3] = r; 
@@ -153,13 +138,11 @@ export class WorldMap {
     }
     geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
-    // Material definitions setup with DoubleSide configuration for safety
     const mat = new THREE.MeshStandardMaterial({
       vertexColors: true,
       roughness: 0.9,
-      metalness: 0.05,
-      flatShading: false,
-      side: THREE.DoubleSide, // Guarantees surface visibility from any camera vector
+      flatShading: false, // Keeps the hill looking round, not blocky
+      side: THREE.DoubleSide, // Ensures the ground is always visible
       polygonOffset: true,
       polygonOffsetFactor: 1,
       polygonOffsetUnits:  1,
