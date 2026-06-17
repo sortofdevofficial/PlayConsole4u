@@ -4,7 +4,6 @@ import { Grass } from './Life/grass.js';
 import { Road } from './Life/road.js';
 import { Building } from './Life/building.js';
 
-// Patch Grass to sit on terrain Y after each update
 const _origGrassUpdate = Grass.prototype.update;
 Grass.prototype.update = function(time, targetPos=null) {
   _origGrassUpdate.call(this, time, targetPos);
@@ -42,29 +41,22 @@ export class WorldMap {
   }
 
   // ── SINGLE SOURCE OF TRUTH for height ──────────────────────────────────
+  // ONE hill only. Flat everywhere else — no invisible bumps player can't see.
   static getElevation(x, z) {
     if (!Number.isFinite(x) || !Number.isFinite(z)) return 0;
-    const bell = (dx, dz, radius, peak) => {
-      const d = Math.sqrt(dx*dx + dz*dz);
-      if (d >= radius) return 0;
-      return peak * 0.5 * (1 + Math.cos((d / radius) * Math.PI));
-    };
-    let h = 0;
-    h += bell(x-45,  z-40,  58, 14);
-    h += bell(x+52,  z+38,  48,  9);
-    h += bell(x-18,  z+82,  40,  7);
-    h += bell(x+10,  z-90,  35,  8);
-    h += bell(x-80,  z+10,  30,  6);
-    h += bell(x+70,  z-20,  28,  5);
-    return Math.max(0, Number.isFinite(h) ? h : 0);
+    const HILL_X = 45, HILL_Z = 40, HILL_RADIUS = 55, HILL_PEAK = 16;
+    const d = Math.hypot(x - HILL_X, z - HILL_Z);
+    if (d >= HILL_RADIUS) return 0;
+    const h = HILL_PEAK * 0.5 * (1 + Math.cos((d / HILL_RADIUS) * Math.PI));
+    return Number.isFinite(h) ? h : 0;
   }
 
   getElevation(x, z) { return WorldMap.getElevation(x, z); }
 
-  // ── TERRAIN MESH (optimized: fewer segments, no water, opaque mat) ──────
+  // ── TERRAIN MESH ─────────────────────────────────────────────────────────
   _buildTerrain(scene, cityRadius) {
     const SIZE = Math.max(cityRadius * 3, 500);
-    const SEGS = 64; // down from 120 — ~4x fewer triangles, smooth hills still fine at this scale
+    const SEGS = 64;
 
     const geo    = new THREE.BufferGeometry();
     const vCount = (SEGS+1) * (SEGS+1);
@@ -104,21 +96,18 @@ export class WorldMap {
     geo.setIndex(new THREE.BufferAttribute(indices, 1));
     geo.computeVertexNormals();
 
-    // Vertex colors by height — cheap (per-vertex, not per-pixel shader work)
+    // Vertex colors by height — flat ground green, hill fades to lighter rock tone
     const colors = new Float32Array(vCount * 3);
     for (let i = 0; i < vCount; i++) {
       const wy = positions[i*3+1];
       let r, g, b;
       if (wy < 0.5) { r=0.38; g=0.67; b=0.27; }
-      else if (wy < 5) {
-        const t = wy/5;
-        r=THREE.MathUtils.lerp(0.38,0.30,t); g=THREE.MathUtils.lerp(0.67,0.55,t); b=THREE.MathUtils.lerp(0.27,0.22,t);
-      } else if (wy < 10) {
-        const t = (wy-5)/5;
-        r=THREE.MathUtils.lerp(0.30,0.52,t); g=THREE.MathUtils.lerp(0.55,0.50,t); b=THREE.MathUtils.lerp(0.22,0.42,t);
+      else if (wy < 8) {
+        const t = wy/8;
+        r=THREE.MathUtils.lerp(0.38,0.32,t); g=THREE.MathUtils.lerp(0.67,0.56,t); b=THREE.MathUtils.lerp(0.27,0.24,t);
       } else {
-        const t = Math.min((wy-10)/6, 1);
-        r=THREE.MathUtils.lerp(0.52,0.80,t); g=THREE.MathUtils.lerp(0.50,0.78,t); b=THREE.MathUtils.lerp(0.42,0.76,t);
+        const t = Math.min((wy-8)/8, 1);
+        r=THREE.MathUtils.lerp(0.32,0.62,t); g=THREE.MathUtils.lerp(0.56,0.60,t); b=THREE.MathUtils.lerp(0.24,0.54,t);
       }
       colors[i*3]=r; colors[i*3+1]=g; colors[i*3+2]=b;
     }
@@ -138,7 +127,7 @@ export class WorldMap {
     mesh.castShadow    = false;
     scene.add(mesh);
     this.terrainMesh = mesh;
-    this.groundGeo = geo; // road.js flattenTerrain expects this
+    this.groundGeo = geo;
   }
 
   // ── ROAD ─────────────────────────────────────────────────────────────────
@@ -173,7 +162,7 @@ export class WorldMap {
       [-15,15,90,1.8],[22,-18,75,1.6],[-30,-10,70,1.5],[10,28,85,1.7],
       [-48,-5,60,1.4],[38,30,70,1.6],[5,-35,65,1.5],[-20,45,55,1.3],
       [50,-12,75,1.7],[-55,35,60,1.4],
-    ]; // reduced counts ~30% — grass is the single biggest instance count in the scene
+    ];
     for (const [cx,cz,count,radius] of clusters) {
       for (let b=0; b<count; b++) {
         const a  = Math.random()*Math.PI*2;
