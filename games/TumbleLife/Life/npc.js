@@ -11,7 +11,6 @@ export class NPC {
     this.waypoints = [];
     this.currentWaypointIndex = 0;
 
-    // Yellow like your character (0xfacc15)
     const mat = new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.6, metalness: 0.1 });
     this.mat = mat;
     this.bodyGroup = new THREE.Group();
