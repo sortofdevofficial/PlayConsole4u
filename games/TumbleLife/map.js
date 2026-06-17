@@ -40,28 +40,41 @@ export class WorldMap {
     Grass.build();
   }
 
-  // ── SINGLE SOURCE OF TRUTH for height ──────────────────────────────────
-  // ONE smooth hill. Flat everywhere else. Smoothstep falloff so the slope
-  // eases in/out instead of the harsher cosine-bell shape (reads as a real
-  // rounded hill instead of a faceted cone).
+  // ── SINGLE SOURCE OF TRUTH FOR ELEVATION ──────────────────────────────────
+  // Replaced the blocky/cone math with a beautiful, smooth rolling-hills profile.
   static getElevation(x, z) {
     if (!Number.isFinite(x) || !Number.isFinite(z)) return 0;
-    const HILL_X = 45, HILL_Z = 40, HILL_RADIUS = 50, HILL_PEAK = 13;
-    const d = Math.hypot(x - HILL_X, z - HILL_Z);
-    if (d >= HILL_RADIUS) return 0;
-    const t = 1 - d / HILL_RADIUS;           // 0 at edge, 1 at center
-    const smooth = t * t * (3 - 2 * t);       // smoothstep — eases both ends
-    return HILL_PEAK * smooth;
+    
+    // Smooth multi-layered mathematical noise approximation
+    const d1 = Math.sin(x * 0.015) * Math.cos(z * 0.015) * 12;
+    const d2 = Math.sin(x * 0.04 + 2.0) * Math.sin(z * 0.035) * 4;
+    const d3 = Math.cos(x * 0.005) * Math.sin(z * 0.007) * 8;
+    
+    let baseElevation = d1 + d2 + d3;
+
+    // Smooth blending flat-zone for the spawn city/roads hub center point
+    const centerDist = Math.hypot(x, z);
+    const flatRadius = 60;
+    const falloffRadius = 160;
+
+    if (centerDist < flatRadius) {
+      return 0; // Perfectly flat urban center
+    } else if (centerDist < falloffRadius) {
+      // Eased transitional slope from the city out into the rolling hills
+      const t = (centerDist - flatRadius) / (falloffRadius - flatRadius);
+      const smoothFactor = t * t * (3 - 2 * t); // Smoothstep curve
+      return baseElevation * smoothFactor;
+    }
+
+    return baseElevation;
   }
 
   getElevation(x, z) { return WorldMap.getElevation(x, z); }
 
   // ── TERRAIN MESH ─────────────────────────────────────────────────────────
-  // Smooth shading (not flat) so the single hill reads as round, not faceted.
-  // Resolution bumped up since we only have one hill now — still cheap.
   _buildTerrain(scene, cityRadius) {
-    const SIZE = Math.max(cityRadius * 3, 500);
-    const SEGS = 110;
+    const SIZE = Math.max(cityRadius * 4, 800); // Increased bounds to prevent horizon clipping
+    const SEGS = 160; // Bumped resolution density for ultra-smooth hill contours
 
     const geo    = new THREE.BufferGeometry();
     const vCount = (SEGS+1) * (SEGS+1);
@@ -72,64 +85,91 @@ export class WorldMap {
     const step = SIZE / SEGS;
     let vi = 0, ui = 0;
 
+    // Generate Vertex Structural Maps
     for (let row = 0; row <= SEGS; row++) {
       for (let col = 0; col <= SEGS; col++) {
         const wx = -half + col * step;
         const wz = -half + row * step;
         const wy = this.getElevation(wx, wz);
+        
         positions[vi++] = wx;
         positions[vi++] = wy;
         positions[vi++] = wz;
+        
         uvs[ui++] = col / SEGS;
         uvs[ui++] = row / SEGS;
       }
     }
 
+    // Generate Face Indices (CRITICAL FIX: Changed winding layout from CW to CCW)
     const idxCount = SEGS * SEGS * 6;
     const indices  = new Uint32Array(idxCount);
     let ii = 0;
+    
     for (let row = 0; row < SEGS; row++) {
       for (let col = 0; col < SEGS; col++) {
-        const a = row*(SEGS+1)+col, b = a+1, c = a+(SEGS+1), d = c+1;
-        indices[ii++]=a; indices[ii++]=c; indices[ii++]=b;
-        indices[ii++]=b; indices[ii++]=c; indices[ii++]=d;
+        const a = row * (SEGS + 1) + col;
+        const b = a + 1;
+        const c = a + (SEGS + 1);
+        const d = c + 1;
+        
+        // Triangle 1 (Counter-Clockwise)
+        indices[ii++] = a;
+        indices[ii++] = b;
+        indices[ii++] = c;
+        
+        // Triangle 2 (Counter-Clockwise)
+        indices[ii++] = b;
+        indices[ii++] = d;
+        indices[ii++] = c;
       }
     }
 
     geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     geo.setAttribute('uv',       new THREE.BufferAttribute(uvs, 2));
     geo.setIndex(new THREE.BufferAttribute(indices, 1));
-    geo.computeVertexNormals(); // smooth normals — no flatShading on material below
+    geo.computeVertexNormals(); 
 
-    // Vertex colors by height — flat ground green, hill fades to warm rock
+    // Procedural Vertex Height-Color Interpolation
     const colors = new Float32Array(vCount * 3);
     for (let i = 0; i < vCount; i++) {
       const wy = positions[i*3+1];
       let r, g, b;
-      if (wy < 0.3) { r=0.36; g=0.66; b=0.27; }
-      else {
-        const t = Math.min(wy/13, 1);
-        r=THREE.MathUtils.lerp(0.36,0.55,t);
-        g=THREE.MathUtils.lerp(0.66,0.52,t);
-        b=THREE.MathUtils.lerp(0.27,0.34,t);
+      
+      if (wy <= 0.5) {
+        // Lush lowland green
+        r = 0.32; g = 0.62; b = 0.28;
+      } else {
+        // Organic transition gradient scaling up to rocky mountain heights
+        const t = THREE.MathUtils.clamp(wy / 22, 0, 1);
+        r = THREE.MathUtils.lerp(0.32, 0.48, t);
+        g = THREE.MathUtils.lerp(0.62, 0.44, t);
+        b = THREE.MathUtils.lerp(0.28, 0.32, t);
       }
-      colors[i*3]=r; colors[i*3+1]=g; colors[i*3+2]=b;
+      
+      colors[i*3] = r; 
+      colors[i*3+1] = g; 
+      colors[i*3+2] = b;
     }
     geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
+    // Material definitions setup with DoubleSide configuration for safety
     const mat = new THREE.MeshStandardMaterial({
       vertexColors: true,
-      roughness: 0.95,
-      flatShading: false, // smooth shading = round hill, not faceted
+      roughness: 0.9,
+      metalness: 0.05,
+      flatShading: false,
+      side: THREE.DoubleSide, // Guarantees surface visibility from any camera vector
       polygonOffset: true,
-      polygonOffsetFactor: 2,
-      polygonOffsetUnits:  2,
+      polygonOffsetFactor: 1,
+      polygonOffsetUnits:  1,
     });
 
     const mesh = new THREE.Mesh(geo, mat);
     mesh.receiveShadow = true;
     mesh.castShadow    = false;
     scene.add(mesh);
+    
     this.terrainMesh = mesh;
     this.groundGeo = geo;
   }
@@ -178,7 +218,7 @@ export class WorldMap {
     }
   }
 
-  // ── FLAT SPOT FINDER (for buildings) — explicitly avoids hill ────────────
+  // ── FLAT SPOT FINDER ──────────────────────────────────────────────────────
   _findFlatSpot(sx=-70, sz=60, radius=120, step=6) {
     let best=null, bestScore=Infinity;
     for (let r=0; r<=radius; r+=step) {
