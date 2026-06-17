@@ -20,21 +20,23 @@ export function startGame({ peer=null, connection=null, isMobile=false, isMultip
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.1;
+  renderer.toneMappingExposure = 1.15; // Slightly enhanced visibility
   document.body.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0xbfdfff);
-  scene.fog = new THREE.Fog(0xbfdfff, isMobile ? 60 : 85, isMobile ? 200 : 320);
-  scene.add(new THREE.HemisphereLight(0xeaf4ff, 0x97b36a, 1.35));
-  const sun = new THREE.DirectionalLight(0xffe2b0, 1.7);
-  sun.position.set(60, 90, 30);
+  scene.fog = new THREE.Fog(0xbfdfff, isMobile ? 60 : 100, isMobile ? 200 : 350);
+  scene.add(new THREE.HemisphereLight(0xeaf4ff, 0x97b36a, 1.4));
+  
+  const sun = new THREE.DirectionalLight(0xffe2b0, 1.8);
+  sun.position.set(80, 110, 40);
   sun.castShadow = !isMobile;
   if (!isMobile) {
-    sun.shadow.mapSize.set(512, 512);
-    Object.assign(sun.shadow.camera, { left:-120,right:120,top:120,bottom:-120,near:1,far:220 });
-    sun.shadow.bias = -0.00015;
-    sun.shadow.normalBias = 0.02;
+    // GRAPHICS UPGRADE: Crisp, gorgeous 2048x2048 real-time shadows
+    sun.shadow.mapSize.set(2048, 2048);
+    Object.assign(sun.shadow.camera, { left:-150, right:150, top:150, bottom:-150, near:1, far:250 });
+    sun.shadow.bias = -0.0001;
+    sun.shadow.normalBias = 0.03;
   }
   scene.add(sun);
 
@@ -46,9 +48,6 @@ export function startGame({ peer=null, connection=null, isMobile=false, isMultip
 
   const worldMap = new WorldMap(scene, { cityRadius: 130, treeDensity: 2 });
 
-  // ── Local player — username resolved from Firebase auth in game.html ────
-  // Starts as "You" / yellow tag immediately (no waiting on network), then
-  // setLabel() is called once window.FB resolves the real profile.
   const character = new WobblyCharacter(scene, 'You', '#facc15');
   let myUsername = 'You';
 
@@ -88,7 +87,6 @@ export function startGame({ peer=null, connection=null, isMobile=false, isMultip
   const joy = { active:false, id:-1, startX:0, startY:0, dx:0, dy:0 };
   const camDrag = { active:false, id:-1, startX:0, startY:0 };
 
-  const _remoteCarPos = new THREE.Vector3();
   const _zeroDir = new THREE.Vector3();
 
   window.addEventListener('mousedown', e => {
@@ -187,15 +185,14 @@ export function startGame({ peer=null, connection=null, isMobile=false, isMultip
     conns.push(conn);
 
     const onOpen = () => {
-      if (!peers[conn.peer]) peers[conn.peer] = { char: makeRemoteChar(), driving: false, rx: 0, rs: 0 };
-      // Send my username immediately on connect
+      if (!peers[conn.peer]) peers[conn.peer] = { char: makeRemoteChar(), driving: false, rx: 0, rs: 0, carPos: new THREE.Vector3() };
       try { conn.send({ type: 'name', name: myUsername }); } catch {}
     };
     if (conn.open) onOpen(); else conn.on('open', onOpen);
 
     conn.on('data', d => {
       if (!d) return;
-      if (!peers[conn.peer]) peers[conn.peer] = { char: makeRemoteChar(), driving: false, rx: 0, rs: 0 };
+      if (!peers[conn.peer]) peers[conn.peer] = { char: makeRemoteChar(), driving: false, rx: 0, rs: 0, carPos: new THREE.Vector3() };
       const p = peers[conn.peer];
 
       if (d.type === 'name') {
@@ -217,8 +214,12 @@ export function startGame({ peer=null, connection=null, isMobile=false, isMultip
           }
           p.rx = d.carAngle ?? 0;
           p.rs = d.carSteer ?? 0;
-          _remoteCarPos.set(d.carX, d.carY, d.carZ);
-          p.char.setDrivingState(true, _remoteCarPos, p.rx, p.rs, 0, null, 1);
+          p.carPos.set(d.carX, d.carY, d.carZ);
+          
+          // Keep peer character tracking their independent car values seamlessly
+          p.char.position.copy(p.carPos);
+          p.char.bodyGroup.position.copy(p.carPos);
+          p.char.setDrivingState(true, p.carPos, p.rx, p.rs, 0, null, 1);
         } else {
           p.char.position.set(d.x, d.y, d.z);
           p.char.bodyGroup.position.set(d.x, d.y, d.z);
@@ -243,9 +244,6 @@ export function startGame({ peer=null, connection=null, isMobile=false, isMultip
     if (isHost) peer.on('connection', conn => setupConn(conn));
   }
 
-  // Re-send my username to all peers once it resolves (covers the case
-  // where Firebase auth finishes after connections are already open)
-  const _origResolve = resolveMyUsername;
   function broadcastNameIfReady() {
     if (myUsername === 'You') return;
     for (const c of conns) if (c.open) try { c.send({ type:'name', name: myUsername }); } catch {}
@@ -314,6 +312,11 @@ export function startGame({ peer=null, connection=null, isMobile=false, isMultip
         : keys;
       updateVehicle(car, dk, dt, worldMap);
       updateVehicleCollision(car, worldMap.getNearbyObstacles(car.meshGroup.position.x, car.meshGroup.position.z), worldMap);
+      
+      // FIX: Lock local character transforms to the car matrix so the username overhead tag updates smoothly
+      character.position.copy(car.meshGroup.position);
+      character.bodyGroup.position.copy(car.meshGroup.position);
+      
       character.setDrivingState(true, car.meshGroup.position, car.angle, car.steer, time);
       updateCam(car.meshGroup.position, 4.5, 14, car.angle, true);
       document.getElementById('speedometer').textContent = `${Math.round(Math.abs(car.speed) * 8)} KM/H`;
@@ -335,11 +338,18 @@ export function startGame({ peer=null, connection=null, isMobile=false, isMultip
       camera.fov = THREE.MathUtils.lerp(camera.fov, 60, .08);
     }
 
+    // Process Multiplayer Peers positions accurately
     for (const id in peers) {
       const p = peers[id];
       if (!p?.char) continue;
-      if (p.driving) p.char.setDrivingState(true, car.meshGroup.position, p.rx, p.rs, time, null, 1);
-      else p.char.update(dt, time, _zeroDir, worldMap);
+      if (p.driving) {
+        // FIX: Bound peer components directly to their respective independent vehicle metrics rather than local car references
+        p.char.position.copy(p.carPos);
+        p.char.bodyGroup.position.copy(p.carPos);
+        p.char.setDrivingState(true, p.carPos, p.rx, p.rs, time, null, 1);
+      } else {
+        p.char.update(dt, time, _zeroDir, worldMap);
+      }
     }
 
     for (const npc of npcs) {
