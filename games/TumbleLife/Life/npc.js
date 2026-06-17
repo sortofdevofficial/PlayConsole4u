@@ -11,8 +11,8 @@ export class NPC {
     this.waypoints = [];
     this.currentWaypointIndex = 0;
 
-    // Matches exactly the WobblyCharacter styling parameters
-    const mat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.5, metalness: 0.1 }); // Distinct blue hue for NPCs
+    // Yellow like your character (0xfacc15)
+    const mat = new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.6, metalness: 0.1 });
     this.mat = mat;
     this.bodyGroup = new THREE.Group();
     scene.add(this.bodyGroup);
@@ -45,6 +45,16 @@ export class NPC {
     this.addMesh(this.head, eyeG, eyeMat,  0.22, 0.05, 0.7);
     this.addMesh(this.head, eyeG, eyeMat, -0.22, 0.05, 0.7);
     
+    this.nameTag = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: new THREE.CanvasTexture(document.createElement('canvas')),
+      depthTest: false,
+      transparent: true
+    }));
+    this.nameTag.scale.set(2.2, 0.55, 1);
+    this.nameTag.position.y = 2.6;
+    this.bodyGroup.add(this.nameTag);
+    this.setLabel('NPC');
+
     this.knockbackDir = new THREE.Vector3();
     this.knockbackTimer = 0;
   }
@@ -68,8 +78,26 @@ export class NPC {
     this.waypoints = waypoints;
   }
 
+  setLabel(label) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256; canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, 256, 64);
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.beginPath();
+    ctx.roundRect(4, 16, 248, 40, 10);
+    ctx.fill();
+    ctx.font = 'bold 26px Segoe UI, sans-serif';
+    ctx.fillStyle = '#facc15';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(label, 128, 36);
+    this.nameTag.material.map = new THREE.CanvasTexture(canvas);
+    this.nameTag.material.needsUpdate = true;
+  }
+
   applyKnockback(dir, force) {
-    this.knockbackDir.copy(dir).multiplyScalar(force);
+    this.knockbackDir.set(dir.x, 0, dir.z).normalize().multiplyScalar(force);
     this.knockbackTimer = 0.35;
   }
 
@@ -93,7 +121,8 @@ export class NPC {
 
     if (this.knockbackTimer > 0) {
       this.knockbackTimer -= deltaTime;
-      this.position.addScaledVector(this.knockbackDir, deltaTime);
+      this.position.x += this.knockbackDir.x * deltaTime;
+      this.position.z += this.knockbackDir.z * deltaTime;
     }
 
     const y = worldMap?.getElevation?.(this.position.x, this.position.z);
@@ -106,7 +135,6 @@ export class NPC {
     this.bodyGroup.rotation.y += diff * 6 * deltaTime;
     this.bodyGroup.position.copy(this.position);
 
-    // Wobbly Walking Animation (Synchronized with Character Logic)
     const w = Math.sin(time * 12), c = Math.cos(time * 12);
     this.torsoMesh.position.y = 1.1 + Math.abs(w) * 0.08;
     this.bodyGroup.rotation.z = w * 0.04;
