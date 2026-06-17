@@ -41,25 +41,9 @@ export class WorldMap {
   }
 
   // ── SINGLE SOURCE OF TRUTH FOR ELEVATION ──────────────────────────────────
-  // 100% Flat world, except for one isolated, perfectly smooth little hill.
+  // 100% Flat world. Always returns 0.
   static getElevation(x, z) {
-    if (!Number.isFinite(x) || !Number.isFinite(z)) return 0;
-    
-    // Position and size of your single hill
-    const HILL_X = 45;
-    const HILL_Z = 40;
-    const HILL_RADIUS = 50;
-    const HILL_PEAK = 12;
-
-    const d = Math.hypot(x - HILL_X, z - HILL_Z);
-    
-    // If we are outside the hill radius, the ground is perfectly flat (0)
-    if (d >= HILL_RADIUS) return 0;
-
-    // Inside the radius, ease the slope up into a rounded hill
-    const t = 1.0 - (d / HILL_RADIUS); // 0 at edge, 1 at center peak
-    const smoothFactor = t * t * (3 - 2 * t); // Smoothstep math
-    return HILL_PEAK * smoothFactor;
+    return 0; 
   }
 
   getElevation(x, z) { return WorldMap.getElevation(x, z); }
@@ -67,7 +51,8 @@ export class WorldMap {
   // ── TERRAIN MESH ─────────────────────────────────────────────────────────
   _buildTerrain(scene, cityRadius) {
     const SIZE = Math.max(cityRadius * 4, 800);
-    const SEGS = 160;
+    // Dropped SEGS to 32 to save massive performance since it's completely flat
+    const SEGS = 32;
 
     const geo    = new THREE.BufferGeometry();
     const vCount = (SEGS+1) * (SEGS+1);
@@ -93,7 +78,7 @@ export class WorldMap {
       }
     }
 
-    // Fixed index buffer winding order (CCW) so the map never turns invisible
+    // Fixed index buffer winding order (CCW)
     const idxCount = SEGS * SEGS * 6;
     const indices  = new Uint32Array(idxCount);
     let ii = 0;
@@ -115,34 +100,20 @@ export class WorldMap {
     geo.setIndex(new THREE.BufferAttribute(indices, 1));
     geo.computeVertexNormals(); 
 
-    // Vertex colors: Flat ground stays green, the hill fades into a warm dirt color
+    // Vertex colors: Pure flat green everywhere
     const colors = new Float32Array(vCount * 3);
     for (let i = 0; i < vCount; i++) {
-      const wy = positions[i*3+1];
-      let r, g, b;
-      
-      if (wy < 0.2) {
-        // Flat green grass
-        r = 0.36; g = 0.66; b = 0.27;
-      } else {
-        // Hill dirt blend
-        const t = THREE.MathUtils.clamp(wy / 12, 0, 1);
-        r = THREE.MathUtils.lerp(0.36, 0.55, t);
-        g = THREE.MathUtils.lerp(0.66, 0.52, t);
-        b = THREE.MathUtils.lerp(0.27, 0.34, t);
-      }
-      
-      colors[i*3] = r; 
-      colors[i*3+1] = g; 
-      colors[i*3+2] = b;
+      colors[i*3]   = 0.36; // R
+      colors[i*3+1] = 0.66; // G
+      colors[i*3+2] = 0.27; // B
     }
     geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
     const mat = new THREE.MeshStandardMaterial({
       vertexColors: true,
       roughness: 0.9,
-      flatShading: false, // Keeps the hill looking round, not blocky
-      side: THREE.DoubleSide, // Ensures the ground is always visible
+      flatShading: false,
+      side: THREE.DoubleSide, 
       polygonOffset: true,
       polygonOffsetFactor: 1,
       polygonOffsetUnits:  1,
