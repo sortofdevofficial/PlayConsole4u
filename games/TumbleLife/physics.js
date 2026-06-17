@@ -12,8 +12,13 @@ function getY(worldMap, x, z) {
 function getRadius(obj, fallback = 1) {
   if (obj?.radius) return obj.radius;
   const root = obj?.meshGroup || obj?.mesh || obj?.bodyGroup || obj;
-  if (!root) return fallback;
+  
+  // FIX: Added strict object checks to prevent bounding box crashes
+  if (!root || !root.isObject3D) return fallback;
+  
   _boxA.setFromObject(root);
+  if (_boxA.isEmpty()) return fallback;
+  
   const size = _boxA.getSize(_v);
   return Math.max(size.x, size.z) * 0.5 || fallback;
 }
@@ -26,9 +31,6 @@ export function collision(a, b, type = 'box') {
 }
 
 // ── VEHICLE PHYSICS ─────────────────────────────────────────────────────
-// Pure local-frame physics: takes a generic `keys` map (works for keyboard
-// AND mobile joystick — game.js maps joystick axes to the same w/s/a/d keys
-// before calling this, so this function never needs to know about input source).
 export function updateVehicle(car, keys, dt, worldMap) {
   const w = keys.w || keys.arrowup;
   const s = keys.s || keys.arrowdown;
@@ -58,9 +60,13 @@ export function updateVehicle(car, keys, dt, worldMap) {
   car.meshGroup.rotation.set(0, car.angle, 0);
 
   const spin = (car.speed / (Math.PI * 0.88)) * dt * 60;
-  for (let i = 0; i < car.wheels.length; i++) {
-    if (car.wheels[i].userData.isFront) car.wheels[i].rotation.y = car.steer * 0.32;
-    car.wheelSpinPivots[i].rotation.x += spin;
+  
+  // FIX: Added safe checks in case wheels haven't loaded yet
+  if (car.wheels && car.wheelSpinPivots) {
+    for (let i = 0; i < car.wheels.length; i++) {
+      if (car.wheels[i]?.userData?.isFront) car.wheels[i].rotation.y = car.steer * 0.32;
+      if (car.wheelSpinPivots[i]) car.wheelSpinPivots[i].rotation.x += spin;
+    }
   }
 }
 
@@ -118,8 +124,6 @@ export function updateCharacterPosition(pos, dir, speed, dt, obstacles = [], rad
 }
 
 // ── PUNCH / KNOCKBACK PHYSICS ───────────────────────────────────────────
-// Returns true if `target` is within punch range and angle of `attacker`,
-// so game.js can decide hit/miss without duplicating the math.
 const _toTarget = new THREE.Vector3();
 const _facing   = new THREE.Vector3();
 
@@ -137,15 +141,11 @@ export function checkPunchHit(attackerPos, attackerFacingAngle, targetPos, range
   return { dist, dir: _toTarget.clone() };
 }
 
-// Apply a knockback impulse to any object with .position and a
-// .knockbackVel-style velocity (used by NPC and can be reused for players).
 export function applyKnockbackImpulse(velocityVec, dirVec, force = 9, upForce = 5) {
   velocityVec.copy(dirVec).normalize().multiplyScalar(force);
   velocityVec.y = upForce;
 }
 
-// Steps a knockback velocity for one frame: gravity + ground friction.
-// Returns true once it has settled back on the ground.
 export function stepKnockback(position, velocityVec, dt, worldMap, groundOffset = 0.08, gravity = 14, friction = 0.82) {
   position.x += velocityVec.x * dt;
   position.z += velocityVec.z * dt;
@@ -158,7 +158,7 @@ export function stepKnockback(position, velocityVec, dt, worldMap, groundOffset 
 
   if (position.y <= groundY) {
     position.y = groundY;
-    return true; // settled
+    return true; 
   }
   return false;
 }
