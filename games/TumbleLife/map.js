@@ -51,7 +51,6 @@ export class WorldMap {
   // ── TERRAIN MESH ─────────────────────────────────────────────────────────
   _buildTerrain(scene, cityRadius) {
     const SIZE = Math.max(cityRadius * 4, 800);
-    // Dropped SEGS to 32 to save massive performance since it's completely flat
     const SEGS = 32;
 
     const geo    = new THREE.BufferGeometry();
@@ -98,7 +97,11 @@ export class WorldMap {
     geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     geo.setAttribute('uv',       new THREE.BufferAttribute(uvs, 2));
     geo.setIndex(new THREE.BufferAttribute(indices, 1));
+    
+    // Safely compute normals and bounds so the camera never clips it out
     geo.computeVertexNormals(); 
+    geo.computeBoundingBox();
+    geo.computeBoundingSphere();
 
     // Vertex colors: Pure flat green everywhere
     const colors = new Float32Array(vCount * 3);
@@ -132,7 +135,10 @@ export class WorldMap {
   _buildRoad(scene) {
     this.road       = new Road(scene, this);
     this.roadPoints = (this.road.points||[]).map(p => new THREE.Vector3(p.x, p.y??0, p.z));
-    this.road.flattenTerrain();
+    
+    // FIX: Removed this.road.flattenTerrain(); 
+    // Since the world is 100% flat now, trying to flatten it was breaking the 
+    // center vertices and causing the blue void.
   }
 
   // ── BUILDINGS ─────────────────────────────────────────────────────────────
