@@ -1,43 +1,39 @@
 import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
 
-function getY(worldMap, x, z) {
-  return worldMap?.getElevation ? worldMap.getElevation(x, z) : 0;
-}
-
+// ── Shared scratch objects — avoid GC churn every frame ───────────────────
+const _v = new THREE.Vector3();
 const _boxA = new THREE.Box3();
 const _boxB = new THREE.Box3();
-const _sphereA = new THREE.Sphere();
-const _sphereB = new THREE.Sphere();
-const _v = new THREE.Vector3();
 
-export function collision(a, b, type = 'box') {
-  if (!a || !b) return false;
-
-  if (type === 'sphere') {
-    const sa = a.isSphere ? a : _sphereA.setFromObject(a);
-    const sb = b.isSphere ? b : _sphereB.setFromObject(b);
-    return sa.intersectsSphere(sb);
-  }
-
-  const ba = a.isBox3 ? a : _boxA.setFromObject(a);
-  const bb = b.isBox3 ? b : _boxB.setFromObject(b);
-  return ba.intersectsBox(bb);
+function getY(worldMap, x, z) {
+  return worldMap?.getElevation ? worldMap.getElevation(x, z) : 0;
 }
 
 function getRadius(obj, fallback = 1) {
   if (obj?.radius) return obj.radius;
   const root = obj?.meshGroup || obj?.mesh || obj?.bodyGroup || obj;
   if (!root) return fallback;
-  const box = new THREE.Box3().setFromObject(root);
-  const size = box.getSize(_v);
+  _boxA.setFromObject(root);
+  const size = _boxA.getSize(_v);
   return Math.max(size.x, size.z) * 0.5 || fallback;
 }
 
+export function collision(a, b, type = 'box') {
+  if (!a || !b) return false;
+  const ba = a.isBox3 ? a : _boxA.setFromObject(a);
+  const bb = b.isBox3 ? b : _boxB.setFromObject(b);
+  return ba.intersectsBox(bb);
+}
+
+// ── VEHICLE PHYSICS ─────────────────────────────────────────────────────
+// Pure local-frame physics: takes a generic `keys` map (works for keyboard
+// AND mobile joystick — game.js maps joystick axes to the same w/s/a/d keys
+// before calling this, so this function never needs to know about input source).
 export function updateVehicle(car, keys, dt, worldMap) {
-  const w = keys['w'] || keys['arrowup'];
-  const s = keys['s'] || keys['arrowdown'];
-  const a = keys['a'] || keys['arrowleft'];
-  const d = keys['d'] || keys['arrowright'];
+  const w = keys.w || keys.arrowup;
+  const s = keys.s || keys.arrowdown;
+  const a = keys.a || keys.arrowleft;
+  const d = keys.d || keys.arrowright;
 
   if (w) car.speed += car.acceleration * dt;
   else if (s) car.speed -= car.braking * dt;
@@ -93,6 +89,7 @@ export function updateVehicleCollision(car, obstacles = [], worldMap = null) {
   }
 }
 
+// ── CHARACTER MOVEMENT ──────────────────────────────────────────────────
 export function updateCharacterPosition(pos, dir, speed, dt, obstacles = [], radius = 0.45, worldMap = null) {
   let nx = pos.x + dir.x * speed * dt;
   let nz = pos.z + dir.z * speed * dt;
@@ -118,4 +115,50 @@ export function updateCharacterPosition(pos, dir, speed, dt, obstacles = [], rad
   pos.x = nx;
   pos.z = nz;
   pos.y = getY(worldMap, nx, nz);
+}
+
+// ── PUNCH / KNOCKBACK PHYSICS ───────────────────────────────────────────
+// Returns true if `target` is within punch range and angle of `attacker`,
+// so game.js can decide hit/miss without duplicating the math.
+const _toTarget = new THREE.Vector3();
+const _facing   = new THREE.Vector3();
+
+export function checkPunchHit(attackerPos, attackerFacingAngle, targetPos, range = 2.2, coneDeg = 80) {
+  _toTarget.set(targetPos.x - attackerPos.x, 0, targetPos.z - attackerPos.z);
+  const dist = _toTarget.length();
+  if (dist > range || dist < 0.001) return null;
+
+  _toTarget.normalize();
+  _facing.set(Math.sin(attackerFacingAngle), 0, Math.cos(attackerFacingAngle));
+  const dot = THREE.MathUtils.clamp(_facing.dot(_toTarget), -1, 1);
+  const angleDeg = THREE.MathUtils.radToDeg(Math.acos(dot));
+  if (angleDeg > coneDeg / 2) return null;
+
+  return { dist, dir: _toTarget.clone() };
+}
+
+// Apply a knockback impulse to any object with .position and a
+// .knockbackVel-style velocity (used by NPC and can be reused for players).
+export function applyKnockbackImpulse(velocityVec, dirVec, force = 9, upForce = 5) {
+  velocityVec.copy(dirVec).normalize().multiplyScalar(force);
+  velocityVec.y = upForce;
+}
+
+// Steps a knockback velocity for one frame: gravity + ground friction.
+// Returns true once it has settled back on the ground.
+export function stepKnockback(position, velocityVec, dt, worldMap, groundOffset = 0.08, gravity = 14, friction = 0.82) {
+  position.x += velocityVec.x * dt;
+  position.z += velocityVec.z * dt;
+  velocityVec.x *= Math.pow(friction, dt * 60);
+  velocityVec.z *= Math.pow(friction, dt * 60);
+  velocityVec.y -= gravity * dt;
+
+  const groundY = getY(worldMap, position.x, position.z) + groundOffset;
+  position.y = Math.max(groundY, position.y + velocityVec.y * dt);
+
+  if (position.y <= groundY) {
+    position.y = groundY;
+    return true; // settled
+  }
+  return false;
 }

@@ -41,22 +41,27 @@ export class WorldMap {
   }
 
   // ── SINGLE SOURCE OF TRUTH for height ──────────────────────────────────
-  // ONE hill only. Flat everywhere else — no invisible bumps player can't see.
+  // ONE smooth hill. Flat everywhere else. Smoothstep falloff so the slope
+  // eases in/out instead of the harsher cosine-bell shape (reads as a real
+  // rounded hill instead of a faceted cone).
   static getElevation(x, z) {
     if (!Number.isFinite(x) || !Number.isFinite(z)) return 0;
-    const HILL_X = 45, HILL_Z = 40, HILL_RADIUS = 55, HILL_PEAK = 16;
+    const HILL_X = 45, HILL_Z = 40, HILL_RADIUS = 50, HILL_PEAK = 13;
     const d = Math.hypot(x - HILL_X, z - HILL_Z);
     if (d >= HILL_RADIUS) return 0;
-    const h = HILL_PEAK * 0.5 * (1 + Math.cos((d / HILL_RADIUS) * Math.PI));
-    return Number.isFinite(h) ? h : 0;
+    const t = 1 - d / HILL_RADIUS;           // 0 at edge, 1 at center
+    const smooth = t * t * (3 - 2 * t);       // smoothstep — eases both ends
+    return HILL_PEAK * smooth;
   }
 
   getElevation(x, z) { return WorldMap.getElevation(x, z); }
 
   // ── TERRAIN MESH ─────────────────────────────────────────────────────────
+  // Smooth shading (not flat) so the single hill reads as round, not faceted.
+  // Resolution bumped up since we only have one hill now — still cheap.
   _buildTerrain(scene, cityRadius) {
     const SIZE = Math.max(cityRadius * 3, 500);
-    const SEGS = 64;
+    const SEGS = 110;
 
     const geo    = new THREE.BufferGeometry();
     const vCount = (SEGS+1) * (SEGS+1);
@@ -94,20 +99,19 @@ export class WorldMap {
     geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     geo.setAttribute('uv',       new THREE.BufferAttribute(uvs, 2));
     geo.setIndex(new THREE.BufferAttribute(indices, 1));
-    geo.computeVertexNormals();
+    geo.computeVertexNormals(); // smooth normals — no flatShading on material below
 
-    // Vertex colors by height — flat ground green, hill fades to lighter rock tone
+    // Vertex colors by height — flat ground green, hill fades to warm rock
     const colors = new Float32Array(vCount * 3);
     for (let i = 0; i < vCount; i++) {
       const wy = positions[i*3+1];
       let r, g, b;
-      if (wy < 0.5) { r=0.38; g=0.67; b=0.27; }
-      else if (wy < 8) {
-        const t = wy/8;
-        r=THREE.MathUtils.lerp(0.38,0.32,t); g=THREE.MathUtils.lerp(0.67,0.56,t); b=THREE.MathUtils.lerp(0.27,0.24,t);
-      } else {
-        const t = Math.min((wy-8)/8, 1);
-        r=THREE.MathUtils.lerp(0.32,0.62,t); g=THREE.MathUtils.lerp(0.56,0.60,t); b=THREE.MathUtils.lerp(0.24,0.54,t);
+      if (wy < 0.3) { r=0.36; g=0.66; b=0.27; }
+      else {
+        const t = Math.min(wy/13, 1);
+        r=THREE.MathUtils.lerp(0.36,0.55,t);
+        g=THREE.MathUtils.lerp(0.66,0.52,t);
+        b=THREE.MathUtils.lerp(0.27,0.34,t);
       }
       colors[i*3]=r; colors[i*3+1]=g; colors[i*3+2]=b;
     }
@@ -116,7 +120,7 @@ export class WorldMap {
     const mat = new THREE.MeshStandardMaterial({
       vertexColors: true,
       roughness: 0.95,
-      flatShading: true,
+      flatShading: false, // smooth shading = round hill, not faceted
       polygonOffset: true,
       polygonOffsetFactor: 2,
       polygonOffsetUnits:  2,
@@ -174,13 +178,13 @@ export class WorldMap {
     }
   }
 
-  // ── FLAT SPOT FINDER (for buildings) ─────────────────────────────────────
+  // ── FLAT SPOT FINDER (for buildings) — explicitly avoids hill ────────────
   _findFlatSpot(sx=-70, sz=60, radius=120, step=6) {
     let best=null, bestScore=Infinity;
     for (let r=0; r<=radius; r+=step) {
       for (let ang=0; ang<Math.PI*2; ang+=Math.PI/6) {
         const x=sx+Math.cos(ang)*r, z=sz+Math.sin(ang)*r;
-        if (!this._isFlatArea(x,z,7,0.45) || this._nearRoad(x,z,18)) continue;
+        if (!this._isFlatArea(x,z,7,0.4) || this._nearRoad(x,z,18)) continue;
         const s=Math.abs(x)+Math.abs(z);
         if (s<bestScore){bestScore=s; best={x,z};}
       }
@@ -188,7 +192,7 @@ export class WorldMap {
     return best||{x:-85,z:75};
   }
 
-  _isFlatArea(x, z, r=6, maxDelta=0.55) {
+  _isFlatArea(x, z, r=6, maxDelta=0.4) {
     if (!Number.isFinite(x)||!Number.isFinite(z)) return false;
     const c = this.getElevation(x,z);
     for (const ox of [-r,0,r]) for (const oz of [-r,0,r]) {
