@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>sortofdev | Server Status & Auth Matrix</title>
+    <!-- Tailwind CSS v4 Engine -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        body {
+            background-color: #0b0f19; /* Ultra Deep Cyber Dark */
+            color: #f1f5f9;
+        }
+        .glow-green:hover {
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
+        }
+    </style>
+</head>
+<body class="font-sans antialiased min-h-screen pb-16">
+
+    <!-- Glowing Top Navigation Bar -->
+    <header class="border-b border-slate-900 bg-slate-950/70 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></div>
+                <span class="font-black text-xl tracking-wider bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">SORTOFDEV NETWORK</span>
+            </div>
+            <span class="text-xs font-mono bg-slate-900 text-slate-400 px-3 py-1 rounded-md border border-slate-800">Core Engine: HybridAuth.jar</span>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 mt-10 space-y-12">
+
+        <!-- LIVE SERVER MONITOR SUITE -->
+        <section class="bg-slate-900/40 p-6 rounded-2xl border border-slate-800/80 backdrop-blur-sm relative overflow-hidden">
+            <!-- Decorative corner accent -->
+            <div class="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-3xl"></div>
+            
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between mb-8 pb-6 border-b border-slate-800/60 gap-6">
+                <div>
+                    <h2 class="text-2xl font-black text-white tracking-tight">Live Server Monitor</h2>
+                    <p class="text-xs text-slate-400 mt-1">Real-time status metrics pulled straight from the server cluster.</p>
+                </div>
+                
+                <!-- Advanced IP Interactive Box -->
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-slate-950 p-2 rounded-xl border border-slate-800/80">
+                    <div class="flex items-center px-3 py-1.5 font-mono text-sm text-emerald-400 bg-slate-900/50 rounded-lg border border-slate-800">
+                        <span id="serverIp">sortofdev.ddnsfree.com</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="copyIpAddress()" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-xs font-bold px-4 py-2 rounded-lg transition active:scale-95 cursor-pointer flex items-center space-x-1 shadow-lg shadow-emerald-900/20">
+                            <span id="copyText">Copy IP</span>
+                        </button>
+                        <button onclick="updateLiveStats()" class="bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold px-4 py-2 rounded-lg transition cursor-pointer">
+                            Refresh
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Status Stats Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Card 1: Connection State -->
+                <div class="bg-slate-950/40 p-4 rounded-xl border border-slate-800/40">
+                    <span class="text-[10px] text-slate-500 uppercase font-black tracking-widest block mb-1">Network State</span>
+                    <div id="statusText" class="text-base font-bold text-slate-400">Pinging Core...</div>
+                </div>
+                <!-- Card 2: Player Metrics -->
+                <div class="bg-slate-950/40 p-4 rounded-xl border border-slate-800/40">
+                    <span class="text-[10px] text-slate-500 uppercase font-black tracking-widest block mb-1">Active Sessions</span>
+                    <div id="playerCount" class="text-3xl font-mono font-black text-white">-- / --</div>
+                </div>
+                <!-- Card 3: System Engine -->
+                <div class="bg-slate-950/40 p-4 rounded-xl border border-slate-800/40">
+                    <span class="text-[10px] text-slate-500 uppercase font-black tracking-widest block mb-1">Server Software</span>
+                    <div id="serverVersion" class="text-sm font-semibold text-slate-300 truncate">Loading...</div>
+                </div>
+                <!-- Card 4: Motd Broadcast -->
+                <div class="bg-slate-950/40 p-4 rounded-xl border border-slate-800/40">
+                    <span class="text-[10px] text-slate-500 uppercase font-black tracking-widest block mb-1">Network Broadcast</span>
+                    <div id="serverMotd" class="text-xs text-slate-400 italic line-clamp-2 leading-relaxed">Reading connection packets...</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- THE 6-WAY COMBINATION AUTH MATRIX -->
+        <section class="space-y-6">
+            <div>
+                <h2 class="text-2xl font-black text-white tracking-tight">The 6-Way Matrix Architecture</h2>
+                <p class="text-xs text-slate-400 mt-1">How your backend plugin treats separate account profiles to ensure zero database collisions.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                
+                <!-- 1. JAVA PREMIUM -->
+                <div class="bg-slate-900/20 border border-slate-800 rounded-2xl p-5 hover:border-emerald-500/30 transition duration-300 flex flex-col justify-between group">
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded-md uppercase tracking-wider">Java Desktop</span>
+                            <span class="text-xs text-slate-600 font-mono">Matrix-01</span>
+                        </div>
+                        <h3 class="text-lg font-bold text-white mb-1 group-hover:text-emerald-400 transition">Java Premium</h3>
+                        <p class="text-xs text-slate-400 leading-relaxed mb-4">Desktop players using paid official Microsoft accounts. Automatically bypasses all login screens.</p>
+                        <div class="space-y-1.5 text-xs bg-slate-950/70 p-3 rounded-xl font-mono border border-slate-950">
+                            <div class="flex justify-between"><span class="text-slate-500">Prefix:</span> <span class="text-slate-300">None</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500">In-Game Display:</span> <span class="text-emerald-400">sortofdev</span></div>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-slate-800/60 text-[11px] text-slate-500 flex justify-between">
+                        <span>Database Route:</span> <span class="text-emerald-400 font-medium">Auto-Skipped</span>
+                    </div>
+                </div>
+
+                <!-- 2. JAVA CRACKED -->
+                <div class="bg-slate-900/20 border border-slate-800 rounded-2xl p-5 hover:border-amber-500/30 transition duration-300 flex flex-col justify-between group">
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2.5 py-1 rounded-md uppercase tracking-wider">Java Desktop</span>
+                            <span class="text-xs text-slate-600 font-mono">Matrix-02</span>
+                        </div>
+                        <h3 class="text-lg font-bold text-white mb-1 group-hover:text-amber-400 transition">Java Cracked</h3>
+                        <p class="text-xs text-slate-400 leading-relaxed mb-4">Desktop players connecting via offline launchers. Held secure by military-grade PBKDF2 database hashing.</p>
+                        <div class="space-y-1.5 text-xs bg-slate-950/70 p-3 rounded-xl font-mono border border-slate-950">
+                            <div class="flex justify-between"><span class="text-slate-500">Prefix:</span> <span class="text-amber-400 font-bold">*</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500">In-Game Display:</span> <span class="text-amber-400">*sortofdev</span></div>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-slate-800/60 text-[11px] text-slate-500 flex justify-between">
+                        <span>Database Route:</span> <span class="text-amber-400 font-medium">Requires /login</span>
+                    </div>
+                </div>
+
+                <!-- 3. BEDROCK PC PREMIUM -->
+                <div class="bg-slate-900/20 border border-slate-800 rounded-2xl p-5 hover:border-cyan-500/30 transition duration-300 flex flex-col justify-between group">
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-[10px] font-bold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 px-2.5 py-1 rounded-md uppercase tracking-wider">Bedrock Windows</span>
+                            <span class="text-xs text-slate-600 font-mono">Matrix-03</span>
+                        </div>
+                        <h3 class="text-lg font-bold text-white mb-1 group-hover:text-cyan-400 transition">Bedrock Premium PC</h3>
+                        <p class="text-xs text-slate-400 leading-relaxed mb-4">Windows 10/11 or Console setups joining through Geyser with an authentic Xbox Live identity token.</p>
+                        <div class="space-y-1.5 text-xs bg-slate-950/70 p-3 rounded-xl font-mono border border-slate-950">
+                            <div class="flex justify-between"><span class="text-slate-500">Prefix:</span> <span class="text-cyan-400 font-bold">.</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500">In-Game Display:</span> <span class="text-cyan-400">.sortofdev</span></div>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-slate-800/60 text-[11px] text-slate-500 flex justify-between">
+                        <span>Database Route:</span> <span class="text-emerald-400 font-medium">Auto-Skipped</span>
+                    </div>
+                </div>
+
+                <!-- 4. BEDROCK PC CRACKED -->
+                <div class="bg-slate-900/20 border border-slate-800 rounded-2xl p-5 hover:border-indigo-500/30 transition duration-300 flex flex-col justify-between group">
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-[10px] font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2.5 py-1 rounded-md uppercase tracking-wider">Bedrock Windows</span>
+                            <span class="text-xs text-slate-600 font-mono">Matrix-04</span>
+                        </div>
+                        <h3 class="text-lg font-bold text-white mb-1 group-hover:text-indigo-400 transition">Bedrock Cracked PC</h3>
+                        <p class="text-xs text-slate-400 leading-relaxed mb-4">Windows edition players operating bypass patches with an empty Xbox Live network profile.</p>
+                        <div class="space-y-1.5 text-xs bg-slate-950/70 p-3 rounded-xl font-mono border border-slate-950">
+                            <div class="flex justify-between"><span class="text-slate-500">Prefix:</span> <span class="text-indigo-400 font-bold">.*</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500">In-Game Display:</span> <span class="text-indigo-400">.*sortofdev</span></div>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-slate-800/60 text-[11px] text-slate-500 flex justify-between">
+                        <span>Database Route:</span> <span class="text-amber-400 font-medium">Requires /login</span>
+                    </div>
+                </div>
+
+                <!-- 5. POCKET EDITION PREMIUM -->
+                <div class="bg-slate-900/20 border border-slate-800 rounded-2xl p-5 hover:border-purple-500/30 transition duration-300 flex flex-col justify-between group">
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-[10px] font-bold bg-purple-500/10 text-purple-400 border border-purple-500/20 px-2.5 py-1 rounded-md uppercase tracking-wider">Pocket Mobile</span>
+                            <span class="text-xs text-slate-600 font-mono">Matrix-05</span>
+                        </div>
+                        <h3 class="text-lg font-bold text-white mb-1 group-hover:text-purple-400 transition">Pocket Premium Mobile</h3>
+                        <p class="text-xs text-slate-400 leading-relaxed mb-4">iOS or Android users verified by their portable Xbox profile layer. Swapped automatically to an underscore.</p>
+                        <div class="space-y-1.5 text-xs bg-slate-950/70 p-3 rounded-xl font-mono border border-slate-950">
+                            <div class="flex justify-between"><span class="text-slate-500">Prefix:</span> <span class="text-purple-400 font-bold">_</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500">In-Game Display:</span> <span class="text-purple-400 font-dev">_sortofdev</span></div>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-slate-800/60 text-[11px] text-slate-500 flex justify-between">
+                        <span>Database Route:</span> <span class="text-emerald-400 font-medium">Auto-Skipped</span>
+                    </div>
+                </div>
+
+                <!-- 6. POCKET EDITION CRACKED -->
+                <div class="bg-slate-900/20 border border-slate-800 rounded-2xl p-5 hover:border-pink-500/30 transition duration-300 flex flex-col justify-between group">
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-[10px] font-bold bg-pink-500/10 text-pink-400 border border-pink-500/20 px-2.5 py-1 rounded-md uppercase tracking-wider">Pocket Mobile</span>
+                            <span class="text-xs text-slate-600 font-mono">Matrix-06</span>
+                        </div>
+                        <h3 class="text-lg font-bold text-white mb-1 group-hover:text-pink-400 transition">Pocket Cracked Mobile</h3>
+                        <p class="text-xs text-slate-400 leading-relaxed mb-4">Mobile client app instances joining without account safety checks. Sorted securely to prevent name collision kicks.</p>
+                        <div class="space-y-1.5 text-xs bg-slate-950/70 p-3 rounded-xl font-mono border border-slate-950">
+                            <div class="flex justify-between"><span class="text-slate-500">Prefix:</span> <span class="text-pink-400 font-bold">_*</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500">In-Game Display:</span> <span class="text-pink-400">_*sortofdev</span></div>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-slate-800/60 text-[11px] text-slate-500 flex justify-between">
+                        <span>Database Route:</span> <span class="text-amber-400 font-medium">Requires /login</span>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+    </main>
+
+    <!-- Async API Data Fetcher JavaScript Engine -->
+    <script>
+        async function updateLiveStats() {
+            const ip = "sortofdev.ddnsfree.com";
+            
+            const statusText = document.getElementById('statusText');
+            const playerCount = document.getElementById('playerCount');
+            const serverVersion = document.getElementById('serverVersion');
+            const serverMotd = document.getElementById('serverMotd');
+
+            statusText.innerText = "Querying Matrix...";
+            statusText.className = "text-base font-bold text-amber-500 animate-pulse";
+
+            try {
+                // Fetch query packet variables asynchronously
+                const response = await fetch(`https://api.mcsrvstat.us/2/${ip}`);
+                const data = await response.json();
+
+                if (data.online) {
+                    statusText.innerText = "ONLINE & SECURE";
+                    statusText.className = "text-base font-bold text-emerald-400";
+                    
+                    playerCount.innerText = `${data.players.online} / ${data.players.max}`;
+                    serverVersion.innerText = data.version || "Purpur Multi-Core";
+                    
+                    if (data.motd && data.motd.clean) {
+                        serverMotd.innerText = data.motd.clean.join(' ');
+                    } else {
+                        serverMotd.innerText = "Welcome to SortOfDev Network!";
+                    }
+                } else {
+                    statusText.innerText = "OFFLINE LINK";
+                    statusText.className = "text-base font-bold text-rose-500";
+                    playerCount.innerText = "0 / 0";
+                    serverVersion.innerText = "Engine Stopped";
+                    serverMotd.innerText = "Server cluster is not emitting packets right now.";
+                }
+            } catch (error) {
+                statusText.innerText = "API PACKET DROP";
+                statusText.className = "text-base font-bold text-rose-500";
+                console.error("Payload read failure:", error);
+            }
+        }
+
+        // Action script to copy domain ip seamlessly
+        function copyIpAddress() {
+            const ipText = "sortofdev.ddnsfree.com";
+            const buttonText = document.getElementById('copyText');
+            
+            navigator.clipboard.writeText(ipText).then(() => {
+                buttonText.innerText = "Copied!";
+                setTimeout(() => {
+                    buttonText.innerText = "Copy IP";
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy text string: ', err);
+            });
+        }
+
+        // Initialize script sequence instantly on screen render
+        window.onload = updateLiveStats;
+    </script>
+</body>
+</html>
