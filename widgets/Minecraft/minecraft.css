@@ -1,122 +1,96 @@
-/* --- APP LAYOUT DEFINITION --- */
 body, html {
-    margin: 0;
-    padding: 0;
-    width: 100%;
-    height: 100%;
+    margin: 0; padding: 0; width: 100%; height: 100%;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background-color: #6da4ff; 
-    color: #f8fafc;
-    overflow: hidden;
+    background-color: #050810; /* Darker tech base */
+    color: #f8fafc; overflow: hidden;
 }
 
-#canvas-container {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 1;
-    cursor: grab; /* Shows users they can drag the screen */
+#canvas-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; cursor: grab; }
+#canvas-container:active { cursor: grabbing; }
+
+/* Subtle Tech Grid overlay */
+.cyber-grid-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none;
+    background-image: 
+        linear-gradient(rgba(56, 189, 248, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(56, 189, 248, 0.05) 1px, transparent 1px);
+    background-size: 40px 40px;
 }
 
-#canvas-container:active {
-    cursor: grabbing;
-}
+.scroll-wrapper { position: relative; width: 100%; height: 100%; overflow-y: auto; z-index: 10; pointer-events: none; }
+.content-container { max-width: 1040px; margin: 0 auto; padding: 40px 20px; pointer-events: auto; }
 
-.scroll-wrapper {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    overflow-y: auto;
-    z-index: 10;
-    /* Prevent dragging UI from spinning the camera */
-    pointer-events: none; 
-}
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+.fade-in-up { opacity: 0; animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 
-.content-container {
-    max-width: 1040px;
-    margin: 0 auto;
-    padding: 40px 20px;
-    box-sizing: border-box;
-    /* Re-enable clicks for the UI */
-    pointer-events: auto; 
-}
-
-/* --- UI ANIMATIONS --- */
-@keyframes fadeInUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.fade-in-up {
-    opacity: 0;
-    animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-/* --- SLEEK DARK GLASSMORPHISM CARD --- */
+/* Glass Cards - Upgraded Cyber Look */
 .glass-card {
-    background: rgba(15, 23, 42, 0.6);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 16px;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-    transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+    background: rgba(10, 15, 29, 0.7);
+    backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(56, 189, 248, 0.2);
+    border-radius: 12px;
+    box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(56, 189, 248, 0.05);
+    transition: all 0.3s ease;
 }
+.glass-card:hover { border-color: rgba(56, 189, 248, 0.5); box-shadow: 0 15px 50px -10px rgba(56, 189, 248, 0.15); }
 
-.glass-card:hover {
-    border-color: rgba(255, 255, 255, 0.2);
-    box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.6);
-}
-
-/* --- LIVE SERVER MONITOR --- */
+/* Monitor HUD */
 .monitor-hud { padding: 24px 32px; margin-bottom: 48px; }
 .hud-row { display: flex; justify-content: space-between; align-items: center; }
 .main-line { border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 16px; margin-bottom: 16px; }
 .server-node { display: flex; align-items: center; gap: 12px; }
 
 .pulse-dot { width: 10px; height: 10px; background-color: #ef4444; border-radius: 50%; box-shadow: 0 0 10px #ef4444; }
-.pulse-dot.online { background-color: #10b981; box-shadow: 0 0 15px #10b981; }
+.pulse-dot.online { background-color: #34d399; box-shadow: 0 0 15px #34d399; }
 
-.domain { font-size: 20px; font-weight: 800; cursor: pointer; transition: color 0.2s; }
+.domain { font-size: 20px; font-weight: 800; cursor: pointer; transition: color 0.2s; text-shadow: 0 0 10px rgba(56, 189, 248, 0.3); }
 .domain:hover { color: #38bdf8; }
 
-.status-badge { font-size: 12px; font-weight: 900; letter-spacing: 1.5px; color: #ef4444; background: rgba(239, 68, 68, 0.15); padding: 6px 14px; border-radius: 20px; }
-.status-badge.online { color: #10b981; background: rgba(16, 185, 129, 0.15); }
+.status-badge { font-size: 12px; font-weight: 900; letter-spacing: 1.5px; color: #ef4444; background: rgba(239, 68, 68, 0.15); padding: 6px 14px; border-radius: 4px; border: 1px solid rgba(239, 68, 68, 0.3); }
+.status-badge.online { color: #34d399; background: rgba(16, 185, 129, 0.1); border-color: rgba(52, 211, 153, 0.3); }
 
 .stats-line { font-size: 15px; color: #94a3b8; }
-.highlight { color: #ffffff; font-weight: 700; }
-.motd-node { font-style: italic; opacity: 0.9; max-width: 50%; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.highlight { color: #38bdf8; font-weight: 700; }
+.motd-node { font-style: italic; opacity: 0.9; max-width: 50%; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #cbd5e1; }
 
-/* --- PIPELINE GRID --- */
+/* NEW Player List UI */
+.player-roster-container { margin-top: 24px; padding-top: 24px; border-top: 1px dashed rgba(255, 255, 255, 0.1); }
+.roster-title { margin: 0 0 16px 0; font-size: 12px; letter-spacing: 2px; color: #64748b; font-weight: 700; }
+.player-grid { display: flex; flex-wrap: wrap; gap: 12px; }
+.empty-roster { font-size: 14px; color: #64748b; font-style: italic; }
+
+.player-card {
+    display: flex; align-items: center; gap: 10px;
+    background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 6px 14px 6px 6px; border-radius: 40px;
+    font-size: 14px; font-weight: 600; color: #e2e8f0; transition: all 0.2s;
+}
+.player-card:hover { border-color: rgba(56, 189, 248, 0.4); background: rgba(56, 189, 248, 0.05); }
+.player-card img { width: 24px; height: 24px; border-radius: 50%; }
+
+/* Matrix Grid */
 .section-header { margin-bottom: 32px; text-align: center; }
-.section-header h2 { font-size: 32px; font-weight: 800; margin: 0 0 8px 0; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
-.section-header p { font-size: 16px; color: #cbd5e1; margin: 0; }
+.section-header h2 { font-size: 32px; font-weight: 800; margin: 0 0 8px 0; text-shadow: 0 0 20px rgba(56, 189, 248, 0.4); color: #f8fafc; }
+.section-header p { font-size: 16px; color: #94a3b8; margin: 0; }
 
-.matrix-grid { display: grid; grid-template-cols: 1fr; gap: 24px; }
-@media (min-width: 768px) { .matrix-grid { grid-template-cols: repeat(2, 1fr); } }
-@media (min-width: 1024px) { .matrix-grid { grid-template-cols: repeat(3, 1fr); } }
+.matrix-grid { display: grid; grid-template-columns: 1fr; gap: 24px; }
+@media (min-width: 768px) { .matrix-grid { grid-template-columns: repeat(2, 1fr); } }
 
-.matrix-card { padding: 24px; display: flex; flex-direction: column; justify-content: space-between; }
-.matrix-card:hover { transform: translateY(-5px); }
-.matrix-card h3 { margin: 16px 0 8px 0; font-size: 22px; font-weight: 700; }
-.matrix-card p { font-size: 14px; color: #94a3b8; line-height: 1.6; margin: 0 0 20px 0; height: 65px; overflow: hidden; }
+.matrix-card { padding: 24px; display: flex; flex-direction: column; }
+.matrix-card h3 { margin: 16px 0 8px 0; font-size: 20px; font-weight: 700; color: #e2e8f0; }
+.matrix-card p { font-size: 14px; color: #94a3b8; line-height: 1.5; margin: 0 0 20px 0; }
 
 .card-header { display: flex; justify-content: space-between; align-items: center; }
-.badge { font-size: 11px; font-weight: 800; letter-spacing: 0.5px; padding: 4px 10px; border-radius: 6px; }
-.badge-secure { background: rgba(16, 185, 129, 0.15); color: #34d399; }
-.badge-auth { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
-.sys-id { font-size: 12px; font-family: monospace; color: #64748b; }
+.badge { font-size: 10px; font-weight: 800; letter-spacing: 1px; padding: 4px 8px; border-radius: 4px; border: 1px solid transparent; }
+.badge-secure { background: rgba(52, 211, 153, 0.1); color: #34d399; border-color: rgba(52, 211, 153, 0.2); }
+.badge-auth { background: rgba(251, 191, 36, 0.1); color: #fbbf24; border-color: rgba(251, 191, 36, 0.2); }
+.sys-id { font-size: 12px; font-family: monospace; color: #475569; }
 
-.code-box { background: rgba(0, 0, 0, 0.3); border-radius: 8px; padding: 14px; font-family: monospace; font-size: 14px; line-height: 1.6; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.05); }
-.card-footer { border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 16px; font-size: 13px; font-weight: 600; color: #94a3b8; }
+.code-box { background: rgba(0, 0, 0, 0.5); border-radius: 6px; padding: 12px; font-family: monospace; font-size: 14px; color: #94a3b8; border: 1px solid rgba(255, 255, 255, 0.05); }
 
-.val-none { color: #94a3b8; }
-.val-green { color: #34d399; }
-.val-gold { color: #fbbf24; }
-.val-blue { color: #38bdf8; }
-.val-pink { color: #f472b6; }
+.val-green { color: #34d399; font-weight: 600; }
+.val-gold { color: #fbbf24; font-weight: 600; }
+.val-blue { color: #38bdf8; font-weight: 600; }
 
 @media (max-width: 600px) {
     .stats-line { flex-direction: column; gap: 8px; align-items: flex-start; }

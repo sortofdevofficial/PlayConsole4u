@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>sortofdev | Advanced 3D Core Node</title>
+    <title>sortofdev | Advanced Core Node</title>
     <link rel="stylesheet" href="minecraft.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -11,8 +11,7 @@
 <body>
 
     <div id="canvas-container"></div>
-
-    <div class="scroll-wrapper">
+    <div class="cyber-grid-overlay"></div> <div class="scroll-wrapper">
         <main class="content-container">
 
             <section class="glass-card monitor-hud fade-in-up" style="animation-delay: 0.1s;">
@@ -29,100 +28,49 @@
                     <div class="stat-node">Engine: <span id="serverVersion" class="highlight">--</span></div>
                     <div class="stat-node motd-node" id="serverMotd">Establishing secure packet stream...</div>
                 </div>
+                
+                <div class="player-roster-container">
+                    <h4 class="roster-title">ACTIVE CONNECTIONS</h4>
+                    <div id="playerList" class="player-grid">
+                        <div class="empty-roster">Scanning matrix for entities...</div>
+                    </div>
+                </div>
             </section>
 
             <section class="matrix-section">
                 <div class="section-header fade-in-up" style="animation-delay: 0.2s;">
-                    <h2>Authentication Pipeline Matrix</h2>
+                    <h2>Authentication Pipeline</h2>
                     <p>Dynamic profile splitting architecture with zero database collisions.</p>
                 </div>
 
                 <div class="matrix-grid">
-                    
                     <div class="glass-card matrix-card card-secure fade-in-up" style="animation-delay: 0.3s;">
-                        <div class="card-header">
-                            <span class="badge badge-secure">JAVA PREMIUM</span>
-                            <span class="sys-id">SYS-01</span>
-                        </div>
+                        <div class="card-header"><span class="badge badge-secure">JAVA PREMIUM</span><span class="sys-id">SYS-01</span></div>
                         <h3>Official Desktop</h3>
-                        <p>Verified through Mojang. Bypasses custom password registries.</p>
-                        <div class="code-box">
-                            <div>Prefix: <span class="val-none">None</span></div>
-                            <div>Display: <span class="val-green">sortofdev</span></div>
-                        </div>
-                        <div class="card-footer">Route: <span class="val-green">Auto-Bypassed</span></div>
+                        <p>Verified through Mojang. Bypasses custom registries.</p>
+                        <div class="code-box">Display: <span class="val-green">sortofdev</span></div>
                     </div>
 
                     <div class="glass-card matrix-card card-auth fade-in-up" style="animation-delay: 0.4s;">
-                        <div class="card-header">
-                            <span class="badge badge-auth">JAVA CRACKED</span>
-                            <span class="sys-id">SYS-02</span>
-                        </div>
+                        <div class="card-header"><span class="badge badge-auth">JAVA CRACKED</span><span class="sys-id">SYS-02</span></div>
                         <h3>Offline Desktop</h3>
-                        <p>Alternative launchers held secure via PBKDF2 database hashing.</p>
-                        <div class="code-box">
-                            <div>Prefix: <span class="val-gold">*</span></div>
-                            <div>Display: <span class="val-gold">*sortofdev</span></div>
-                        </div>
-                        <div class="card-footer">Route: <span class="val-gold">Requires /login</span></div>
+                        <p>Alternative launchers held secure via PBKDF2 hashing.</p>
+                        <div class="code-box">Display: <span class="val-gold">c_sortofdev</span></div>
                     </div>
 
                     <div class="glass-card matrix-card card-secure fade-in-up" style="animation-delay: 0.5s;">
-                        <div class="card-header">
-                            <span class="badge badge-secure">BEDROCK PC</span>
-                            <span class="sys-id">SYS-03</span>
-                        </div>
+                        <div class="card-header"><span class="badge badge-secure">BEDROCK PC</span><span class="sys-id">SYS-03</span></div>
                         <h3>Xbox Premium PC</h3>
-                        <p>Routed through Geyser with an authentic Xbox Live token.</p>
-                        <div class="code-box">
-                            <div>Prefix: <span class="val-blue">.</span></div>
-                            <div>Display: <span class="val-blue">.sortofdev</span></div>
-                        </div>
-                        <div class="card-footer">Route: <span class="val-green">Auto-Bypassed</span></div>
+                        <p>Routed through Geyser with an authentic Xbox token.</p>
+                        <div class="code-box">Display: <span class="val-blue">b_sortofdev</span></div>
                     </div>
 
                     <div class="glass-card matrix-card card-auth fade-in-up" style="animation-delay: 0.6s;">
-                        <div class="card-header">
-                            <span class="badge badge-auth">BEDROCK CRACKED</span>
-                            <span class="sys-id">SYS-04</span>
-                        </div>
+                        <div class="card-header"><span class="badge badge-auth">BEDROCK CRACKED</span><span class="sys-id">SYS-04</span></div>
                         <h3>Xbox Offline PC</h3>
                         <p>Windows clients bypassing authentication tokens.</p>
-                        <div class="code-box">
-                            <div>Prefix: <span class="val-gold">.*</span></div>
-                            <div>Display: <span class="val-gold">.*sortofdev</span></div>
-                        </div>
-                        <div class="card-footer">Route: <span class="val-gold">Requires /login</span></div>
+                        <div class="code-box">Display: <span class="val-gold">bc_sortofdev</span></div>
                     </div>
-
-                    <div class="glass-card matrix-card card-secure fade-in-up" style="animation-delay: 0.7s;">
-                        <div class="card-header">
-                            <span class="badge badge-secure">POCKET EDITION</span>
-                            <span class="sys-id">SYS-05</span>
-                        </div>
-                        <h3>Mobile Premium</h3>
-                        <p>iOS/Android platforms verified through mobile Xbox clients.</p>
-                        <div class="code-box">
-                            <div>Prefix: <span class="val-pink">_</span></div>
-                            <div>Display: <span class="val-pink">_sortofdev</span></div>
-                        </div>
-                        <div class="card-footer">Route: <span class="val-green">Auto-Bypassed</span></div>
-                    </div>
-
-                    <div class="glass-card matrix-card card-auth fade-in-up" style="animation-delay: 0.8s;">
-                        <div class="card-header">
-                            <span class="badge badge-auth">POCKET CRACKED</span>
-                            <span class="sys-id">SYS-06</span>
-                        </div>
-                        <h3>Mobile Offline</h3>
-                        <p>Modified mobile apps isolated to prevent username overlap kicks.</p>
-                        <div class="code-box">
-                            <div>Prefix: <span class="val-gold">_*</span></div>
-                            <div>Display: <span class="val-gold">_*sortofdev</span></div>
-                        </div>
-                        <div class="card-footer">Route: <span class="val-gold">Requires /login</span></div>
-                    </div>
-
                 </div>
             </section>
         </main>
