@@ -70,8 +70,8 @@ function initClouds() {
 var P, B;
 
 function initE() {
-  P = new S(200,     '#38bdf8', false);
-  B = new S(W - 200, '#f43f5e', true);
+  P = new S(200,     '#1a4a8a', false);
+  B = new S(W - 200, '#8b1a1a', true);
 }
 
 // ── Pickup spawner ────────────────────────────────────────────────────────────
@@ -93,7 +93,6 @@ function resize() {
   if (gs !== 'MENU') g('mob-ctrl').style.display = mob ? 'flex' : 'none';
   if (P) { P.gy = H - 100; if (P.y > P.gy) P.y = P.gy; }
   if (B) { B.gy = H - 100; if (B.y > B.gy) B.y = B.gy; }
-  if (typeof initStars === 'function') initStars();
 }
 addEventListener('resize', resize);
 
@@ -154,10 +153,10 @@ function jump() {
   if (P.rd || (gs !== 'BOT_MODE' && gs !== 'ONLINE_MODE')) return;
   if (P.gr) {
     P.vy = -13.5; P.gr = false; P.jc = 1; P.sq = 1.28;
-    fx(P.x, H - 100, '#94a3b8', 3, { spread: 4, rise: 1 });
+    fx(P.x, H - 100, '#a8956a', 3, { spread: 4, rise: 1 });
   } else if (P.jc === 1) {
     P.vy = -10; P.jc = 2; P.flp = true; P.fa = 0;
-    fx(P.x, P.y - 30, '#cbd5e1', 4, { spread: 5, rise: 2 });
+    fx(P.x, P.y - 30, '#d4c89a', 4, { spread: 5, rise: 2 });
   }
 }
 
@@ -275,7 +274,7 @@ function loop() {
       if (!tgt.rd && b.x > tgt.x - 30 && b.x < tgt.x + 30 && b.y < tgt.y && b.y > tgt.y - 68) {
         const dmg = 12, kb = b.vx > 0 ? 1 : -1;
         tgt.hit(dmg, kb);
-        fx(b.x, b.y, '#fbbf24', 4, { glow: true, spread: 4, rise: 2 });
+        fx(b.x, b.y, '#f97316', 4, { glow: true, spread: 4, rise: 2 });
         if (gs === 'ONLINE_MODE' && !b.bot) send({ type: 'hit', amt: dmg, kb });
         bul.splice(bi, 1);
       }
@@ -291,7 +290,7 @@ function loop() {
         if (!ent.rd && Math.hypot(ent.x - pk.x, (ent.y - 30) - pk.y) < 40) {
           ent.wp = pk.type;
           g(isB ? 'b-weapon' : 'p-weapon').textContent = pk.type.toUpperCase();
-          fx(pk.x, pk.y, '#fbbf24', 8, { glow: true, spread: 6, rise: 3 });
+          fx(pk.x, pk.y, '#f59e0b', 8, { glow: true, spread: 6, rise: 3 });
           if (gs === 'ONLINE_MODE' && isHost) send({ type: 'pickup_taken', i: qi, bot: isB, wt: pk.type });
           pku.splice(qi, 1); picked = true; break;
         }
@@ -330,6 +329,8 @@ function loop() {
 // ── Boot ──────────────────────────────────────────────────────────────────────
 resize();
 initClouds();
-initStars();
+initBirds();
+initLeaves();
 initE();
+
 requestAnimationFrame(loop);

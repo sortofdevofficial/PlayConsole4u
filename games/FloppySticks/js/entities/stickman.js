@@ -58,8 +58,8 @@ class S {
     this.vx += kb * 6;
     this.vy -= 2.5;
     shk      = 9;
-    fx(this.x, this.y - 40, '#ffffff', 5);
-    fx(this.x, this.y - 40, '#fbbf24', 3);
+    fx(this.x, this.y - 40, '#fff8e0', 5);
+    fx(this.x, this.y - 40, '#f59e0b', 3);
     fx(this.x, this.y - 40, this.c,    3);
     this._hud();
     // flash the screen overlay
@@ -78,8 +78,8 @@ class S {
     else          { bs++; g('o-score').textContent = bs + ' pts'; }
 
     // Burst of death particles
-    fx(this.x, this.y - 40, '#fbbf24', 12);
-    fx(this.x, this.y - 40, '#ef4444', 8);
+    fx(this.x, this.y - 40, '#f59e0b', 12);
+    fx(this.x, this.y - 40, '#dc2626', 8);
     fx(this.x, this.y - 40, '#fff',    6);
 
     [
@@ -422,7 +422,7 @@ class S {
       const r = (6 - this.stmp) * 6;
       ctx.save();
       ctx.globalAlpha = this.stmp / 6 * .35;
-      ctx.strokeStyle = '#94a3b8';
+      ctx.strokeStyle = '#c8a870';
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.ellipse(this.x, this.y, r, r * .3, 0, 0, Math.PI * 2);
