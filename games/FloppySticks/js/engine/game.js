@@ -1,6 +1,6 @@
 /**
- * FloppySticks — game.js v3.0 (COMPLETE & FIXED)
- * Framerate decoupling using standard runtime clock step increments.
+ * FloppySticks — game.js v3.1
+ * Framerate decoupling using standard runtime clock step increments & cutscene bindings.
  */
 
 'use strict';
@@ -28,6 +28,8 @@ var pku    = [];
 var ptl    = [];
 var clouds = [];
 
+window.cutsceneActive = false;
+
 function g(id) { return document.getElementById(id); }
 
 function fx(x, y, c, n, opts) {
@@ -43,6 +45,7 @@ function fx(x, y, c, n, opts) {
       vx:  Math.cos(ang) * sp * (opts.spread || 1),
       vy:  Math.sin(ang) * sp - (opts.rise || 0),
       lf:  opts.glow ? (Math.random() * 25 + 15) : (Math.random() * 30 + 20),
+      mx:  opts.glow ? 25 : 30,
       c:   c,
       sz:  opts.glow ? (Math.random() * 4 + 3) : (Math.random() * 3 + 2),
       gl:  !!opts.glow
@@ -55,7 +58,7 @@ function initClouds() {
   for (let i = 0; i < 5; i++) {
     clouds.push({
       x:  Math.random() * window.innerWidth,
-      y:  Math.random() * (window.innerHeight * 0.4) + 20,
+      y:  Math.random() * (window.innerHeight * 0.3) + 20,
       sp: Math.random() * 0.2 + 0.05,
       sz: Math.random() * 50 + 40
     });
@@ -98,6 +101,11 @@ function startBot() {
   g('mode-badge').style.display = 'none';
   g('hud').style.display = 'flex';
   wasOnline = false;
+
+  window.cutsceneActive = true;
+  if (typeof window.startFightCutscene === 'function') {
+    window.startFightCutscene(() => { window.cutsceneActive = false; });
+  }
 }
 
 function startOnline() {
@@ -117,10 +125,16 @@ function startOnline() {
   window.closeOnlineModal();
   wasOnline = true;
   sv = false;
+
+  window.cutsceneActive = true;
+  if (typeof window.startFightCutscene === 'function') {
+    window.startFightCutscene(() => { window.cutsceneActive = false; });
+  }
 }
 
 function quitToMenu() {
   gs = 'MENU';
+  window.cutsceneActive = false;
   g('hud').style.display = 'none';
   g('menu').style.display = 'flex';
   setTimeout(() => g('menu').style.opacity = 1, 10);
@@ -136,7 +150,7 @@ async function _save() {
 
 let spawnTimer = 0;
 function processPickups(delta) {
-  if (gs === 'MATCH_OVER' || (gs === 'ONLINE_MODE' && !window.isHost)) return;
+  if (gs === 'MATCH_OVER' || window.cutsceneActive || (gs === 'ONLINE_MODE' && !window.isHost)) return;
   spawnTimer += delta;
   if (spawnTimer >= 10.0) {
     spawnTimer = 0;
@@ -156,11 +170,12 @@ function spawnP(type, x) {
 }
 
 window.addEventListener('keydown', e => {
-  if (gs === 'MENU') return;
+  if (gs === 'MENU' || window.cutsceneActive) return;
   if (e.key.toLowerCase() === 'a' || e.key === 'ArrowLeft')  keys.a = 1;
   if (e.key.toLowerCase() === 'd' || e.key === 'ArrowRight') keys.d = 1;
   if ((e.key.toLowerCase() === 'w' || e.key === 'ArrowUp') && P) P.jump();
   if ((e.key === ' ' || e.key.toLowerCase() === 'f') && P) P.attack();
+  if (gs === 'MATCH_OVER' && e.key === 'Enter') quitToMenu();
 });
 
 window.addEventListener('keyup', e => {
@@ -171,7 +186,7 @@ window.addEventListener('keyup', e => {
 function setupTouch(id, action) {
   const e = g(id);
   if (!e) return;
-  const start = (ev) => { ev.preventDefault(); action(true); };
+  const start = (ev) => { ev.preventDefault(); if (gs === 'MATCH_OVER') { quitToMenu(); return; } action(true); };
   const end = (ev) => { ev.preventDefault(); action(false); };
   e.addEventListener('touchstart', start, { passive: false });
   e.addEventListener('touchend', end, { passive: false });
@@ -184,6 +199,10 @@ setTimeout(() => {
   setupTouch('btn-jump', (v) => { if (v && P) P.jump(); });
   setupTouch('btn-attack', (v) => { if (v && P) P.attack(); });
 }, 600);
+
+window.addEventListener('click', () => {
+  if (gs === 'MATCH_OVER' && mob) quitToMenu();
+});
 
 let lastFrameTime = 0;
 let _nt = 0;
@@ -198,7 +217,6 @@ function loop(timestamp) {
   if (delta > 0.1) delta = 0.1;
   dt = delta;
 
-  // Run Room Token Expiration Checks
   if (typeof window.checkCodeExpiration === 'function') {
     window.checkCodeExpiration();
   }
@@ -287,6 +305,10 @@ function loop(timestamp) {
     }
     if (P) P.draw();
     if (B) B.draw();
+
+    if (typeof window.drawCutscene === 'function') {
+      window.drawCutscene(delta);
+    }
 
     if (gs === 'ONLINE_MODE' && conn && conn.open && ++_nt >= 2) {
       _nt = 0;
