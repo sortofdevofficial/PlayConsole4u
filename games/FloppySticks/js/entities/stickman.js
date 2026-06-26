@@ -1,8 +1,8 @@
 /**
- * FloppySticks — stickman.js v2.1
- * Stickman physics, AI, combat, rendering.
- * Globals from game.js: W,H,GV,MXP,ptl,bul,pku,gs,P,B,keys,shk,ps,bs,MX,WPS,fx,_save,g
- * Globals from network.js: send,isHost,conn
+ * FloppySticks — stickman.js v3.0 (COMPLETE & FIXED)
+ * Stickman animations, input physics calculations, behavior rules, rendering pathways.
+ * Globals from game.js: W, H, GV, MXP, ptl, bul, pku, gs, P, B, keys, shk, ps, bs, MX, WPS, fx(), _save(), g()
+ * Globals from network.js: send(), isHost, conn
  */
 
 class S {
@@ -28,224 +28,228 @@ class S {
     this.atk = false;    this.ff  = 0;
     this.rd  = false;    this.rp  = [];
     this.nx  = null;     this.ny  = null;
-    this.trl = [];
-    this.stmp = 0;
-    this.airT = 0;
   }
 
   respawn() {
-    if (gs === 'MATCH_OVER') return;
     this._i();
-    this.sx = this.bot ? W - 200 : 200;
-    this.x  = this.sx;
-    this._hud();
+    this.hp = 100;
+    const hpUi = g(this.bot ? 'b-hp' : 'p-hp');
+    if (hpUi) hpUi.style.width = '100%';
+    const wpUi = g(this.bot ? 'b-weapon' : 'p-weapon');
+    if (wpUi) wpUi.textContent = 'NONE';
   }
 
-  _hud() {
-    if (!this.bot) {
-      g('p-hp').style.width     = this.hp + '%';
-      g('p-weapon').textContent = this.wp ? this.wp.toUpperCase() : 'NONE';
-    } else {
-      g('b-hp').style.width     = this.hp + '%';
-      g('b-weapon').textContent = this.wp ? this.wp.toUpperCase() : 'NONE';
-    }
-  }
-
-  hit(a, kb) {
+  jump() {
     if (this.rd || gs === 'MATCH_OVER') return;
-    this.hp  = Math.max(0, this.hp - a);
-    this.ff  = 8;
-    this.vx += kb * 6;
-    this.vy -= 2.5;
-    shk      = 9;
-    fx(this.x, this.y - 40, '#fff8e0', 4);
-    fx(this.x, this.y - 40, '#f59e0b', 3);
-    fx(this.x, this.y - 40, this.c,    2);
-    this._hud();
-    // Screen flash on player hit
-    var ov = g('dmg-overlay');
-    if (ov && !this.bot) {
-      ov.classList.add('flash');
-      setTimeout(function(){ ov.classList.remove('flash'); }, 130);
-    }
-    if (this.hp <= 0) this._rag(kb);
-  }
-
-  _rag(f) {
-    this.rd = true;
-
-    if (this.bot) { ps++; g('p-score').textContent = ps + ' pts'; }
-    else          { bs++; g('o-score').textContent = bs + ' pts'; }
-
-    fx(this.x, this.y - 40, '#f59e0b', 10);
-    fx(this.x, this.y - 40, '#dc2626', 6);
-    fx(this.x, this.y - 40, '#fff8e0', 5);
-
-    var self = this;
-    [
-      [0,  -65, 11, 'c'],
-      [0,  -42, 24, 'l'],
-      [-8, -48, 18, 'l'],
-      [8,  -48, 18, 'l'],
-      [-6, -18, 20, 'l'],
-      [6,  -18, 20, 'l']
-    ].forEach(function(r) {
-      self.rp.push({
-        x:   self.x + r[0], y:   self.y + r[1],
-        vx:  f * 5.5 + (Math.random() - .5) * 5,
-        vy:  -4 + (Math.random() - 1.5) * 3,
-        ang: Math.random() * Math.PI,
-        va:  (Math.random() - .5) * .25,
-        t: r[3], s: r[2]
-      });
-    });
-
-    // FIX: send score BEFORE changing gs
-    var wasOnlineMode = (gs === 'ONLINE_MODE');
-    if (wasOnlineMode && typeof conn !== 'undefined' && conn && conn.open)
-      send({ type: 'score', hs: isHost ? ps : bs, gs: isHost ? bs : ps });
-
-    if (ps >= MX || bs >= MX) {
-      // FIX: send 'over' BEFORE setting gs = MATCH_OVER
-      if (wasOnlineMode && typeof conn !== 'undefined' && conn && conn.open)
-        send({ type: 'over' });
-      gs = 'MATCH_OVER';
-      _save();
-    } else {
-      setTimeout(function() {
-        self.respawn();
-        if (gs === 'ONLINE_MODE' && typeof send !== 'undefined') send({ type: 'ropp' });
-      }, 1800);
+    if (this.gr) {
+      this.vy = -14.5;
+      this.gr = false;
+      this.sq = 1.4;
+      this.jc = 1;
+      fx(this.x, this.gy, '#6a824e', 4);
+    } else if (this.jc < 2) {
+      this.vy = -12.5;
+      this.jc = 2;
+      this.sq = 1.3;
+      fx(this.x, this.y, '#e2e8f0', 5, { glow: true });
     }
   }
 
   attack() {
-    if (this.ac > 0 || !this.wp || this.rd) return;
-    if (gs !== 'BOT_MODE' && gs !== 'ONLINE_MODE') return;
+    if (this.rd || gs === 'MATCH_OVER' || this.ac > 0) return;
+    if (!this.wp) return;
 
-    this.atk = true;
-    this.ac  = this.wp === 'Assault Rifle' ? 12 : 22;
-    var d    = this.fl ? -1 : 1;
-
-    if (this.wp === 'Assault Rifle') {
-      var bx = this.x + 28 * d, by = this.y - 46;
-      bul.push({ x: bx, y: by, vx: d * 16, bot: this.bot });
-      fx(bx, by, '#f97316', 3);
-      shk = 3;
-      if (gs === 'ONLINE_MODE' && !this.bot && typeof send !== 'undefined')
-        send({ type: 'bullet', x: bx, y: by, vx: d * 16 });
-    } else {
-      this.asw = -Math.PI / 2.2;
-      var foe = this.bot ? P : B;
-      if (!foe.rd) {
-        var sep = Math.abs(this.x - foe.x);
-        var fwd = (this.fl && foe.x < this.x) || (!this.fl && foe.x > this.x);
-        if (sep < 130 && fwd && Math.abs(this.y - foe.y) < 75) {
-          var dmg = this.wp === 'Buster Sword' ? 26 : 38;
-          shk = 12;
-          if (gs === 'ONLINE_MODE' && !this.bot && typeof send !== 'undefined')
-            send({ type: 'hit', amt: dmg, kb: d });
-          else
-            foe.hit(dmg, d);
+    if (this.wp === 'Buster Sword' || this.wp === 'Smasher Club') {
+      this.atk = true;
+      this.asw = -0.5;
+      this.ac = this.wp === 'Buster Sword' ? 24 : 35;
+      
+      const op = this.bot ? P : B;
+      if (op && !op.rd) {
+        const range = this.wp === 'Buster Sword' ? 75 : 60;
+        const damage = this.wp === 'Buster Sword' ? 22 : 30;
+        const dir = this.fl ? -1 : 1;
+        const reached = dir > 0 ? (op.x > this.x && op.x < this.x + range) : (op.x < this.x && op.x > this.x - range);
+        
+        if (reached && Math.abs(op.y - this.y) < 45) {
+          op.hit(damage, dir);
+          if (gs === 'ONLINE_MODE' && !this.bot) {
+            send({ type: 'hit', amt: damage, kb: dir });
+          }
         }
+      }
+    } else if (this.wp === 'Assault Rifle') {
+      this.ac = 8;
+      this.atk = true;
+      const fX = this.x + (this.fl ? -30 : 30);
+      const fY = this.y - 36;
+      const bVx = this.fl ? -750 : 750;
+      
+      bul.push({ x: fX, y: fY, vx: bVx, bot: this.bot });
+      if (gs === 'ONLINE_MODE' && !this.bot) {
+        send({ type: 'bullet', x: fX, y: fY, vx: bVx });
       }
     }
   }
 
-  update() {
+  hit(amt, kbDir) {
+    if (this.rd || gs === 'MATCH_OVER') return;
+    this.hp = Math.max(0, this.hp - amt);
+    this.ff = 6;
+    this.vx += kbDir * 350;
+    this.vy -= 4.5;
+    shk = 12;
+    
+    fx(this.x, this.y - 35, '#ffffff', 6);
+    fx(this.x, this.y - 35, this.c, 12);
+    this._hud();
+    if (this.hp <= 0) this._rag(kbDir);
+  }
+
+  _hud() {
+    const hpUi = g(this.bot ? 'b-hp' : 'p-hp');
+    if (hpUi) hpUi.style.width = this.hp + '%';
+  }
+
+  _rag(dir) {
+    this.rd = true;
+    this.rp = [];
+    const pts = [
+      { n: 'hd', o: [0, -54],  r: 9 },
+      { n: 'bd', o: [0, -32],  r: 12 },
+      { n: 'lh', o: [-14, -32], r: 6 },
+      { n: 'rh', o: [14, -32], r: 6 },
+      { n: 'lf', o: [-10, -6],  r: 7 },
+      { n: 'rf', o: [10, -6],  r: 7 }
+    ];
+    pts.forEach(p => {
+      this.rp.push({
+        x:   this.x + p.o[0],
+        y:   this.y + p.o[1],
+        vx:  this.vx * 0.4 + (Math.random() - 0.5) * 4 + dir * 3,
+        vy:  this.vy * 0.4 - Math.random() * 5 - 2,
+        r:   p.r,
+        ang: Math.random() * Math.PI,
+        va:  (Math.random() - 0.5) * 0.2
+      });
+    });
+
+    if (gs === 'ONLINE_MODE' && window.isHost) {
+      setTimeout(() => this._scoreRule(), 1200);
+    } else if (gs === 'BOT_MODE') {
+      setTimeout(() => this._scoreRule(), 1200);
+    }
+  }
+
+  _scoreRule() {
+    if (gs === 'MATCH_OVER') return;
+    if (this.bot) ps++; else bs++;
+    
+    const psUi = g('p-score');
+    const osUi = g('o-score');
+    if (psUi) psUi.textContent = ps + ' pts';
+    if (osUi) osUi.textContent = bs + ' pts';
+
+    if (gs === 'ONLINE_MODE' && window.isHost) {
+      send({ type: 'score', hs: ps, gs: bs });
+    }
+
+    if (ps >= MX || bs >= MX) {
+      gs = 'MATCH_OVER';
+      if (gs === 'ONLINE_MODE' && window.isHost) send({ type: 'over' });
+      _save();
+    } else {
+      if (gs === 'ONLINE_MODE' && window.isHost) {
+        this.respawn();
+        send({ type: 'ropp' });
+      } else if (gs === 'BOT_MODE') {
+        P.respawn();
+        B.respawn();
+      }
+    }
+  }
+
+  // AI Brain
+  _ai(dt) {
+    if (!this.bot || this.rd || gs !== 'BOT_MODE' || !P) return;
+    const dist = P.x - this.x;
+    this.fl = dist < 0;
+
+    // Tactical positioning
+    if (Math.abs(dist) > (this.wp ? 50 : 120)) {
+      this.vx = dist > 0 ? 170 : -170;
+    } else {
+      this.vx *= Math.pow(0.2, dt * 60);
+    }
+
+    // Auto jumper tracking
+    if (P.y < this.y - 60 && Math.random() < 0.03) this.jump();
+
+    // Combat initiation tracking
+    if (this.wp && Math.abs(dist) < (this.wp === 'Assault Rifle' ? 320 : 70) && Math.random() < 0.07) {
+      this.attack();
+    }
+  }
+
+  update(dt) {
     this.gy = H - 100;
 
     if (this.rd) {
-      for (var i = 0; i < this.rp.length; i++) {
-        var p = this.rp[i];
-        p.vx *= .97; p.vy += GV * 1.1;
-        p.x  += p.vx; p.y  += p.vy;
-        p.ang += p.va;
-        if (p.y >= this.gy) {
-          p.y  = this.gy;
-          p.vy = -p.vy * .22;
-          p.va *= .45;
-          p.vx *= .82;
+      this.rp.forEach(p => {
+        p.vx *= Math.pow(0.96, dt * 60);
+        p.vy += GV * dt;
+        p.x  += p.vx * 60 * dt;
+        p.y  += p.vy * 60 * dt;
+        p.ang += p.va * 60 * dt;
+        if (p.y >= this.gy - p.r) {
+          p.y = this.gy - p.r;
+          p.vy = -p.vy * 0.2;
+          p.vx *= 0.8;
+          p.va *= 0.5;
         }
-      }
+      });
       return;
     }
 
-    if (gs === 'MATCH_OVER') { this.vx *= .82; return; }
+    if (gs === 'MATCH_OVER') {
+      this.vx *= Math.pow(0.7, dt * 60);
+      this.vy += GV * dt;
+      this.y += this.vy * 60 * dt;
+      if (this.y >= this.gy) { this.y = this.gy; this.vy = 0; }
+      return;
+    }
 
-    if (this.ac > 0) this.ac--;
+    // Active action step tracking logic loops
+    if (this.ac > 0) this.ac -= 60 * dt;
+    if (this.ff > 0) this.ff -= 60 * dt;
+    
     if (this.atk) {
-      this.asw += .3;
-      if (this.asw >= Math.PI / 2) { this.atk = false; this.asw = 0; }
-    }
-    if (this.flp) {
-      this.fa += this.fl ? -.24 : .24;
-      if (Math.abs(this.fa) >= Math.PI * 2) { this.flp = false; this.fa = 0; }
-    }
-    this.sq += (1 - this.sq) * .16;
-
-    // Motion trail
-    this.trl.unshift({ x: this.x, y: this.y });
-    if (this.trl.length > 6) this.trl.pop();
-
-    // Bot AI
-    if (this.bot && gs === 'BOT_MODE') {
-      var dist = Math.abs(this.x - P.x);
-      this.fl = P.x < this.x;
-
-      if (!P.rd) {
-        for (var bi = 0; bi < bul.length; bi++) {
-          var b = bul[bi];
-          if (!b.bot && Math.abs(this.x - b.x) < 150 && this.gr) {
-            this.vy = -13; this.gr = false; this.jc = 1; break;
-          }
-        }
-
-        if (this.hp < 35 && dist < 220) {
-          this.vx = P.x < this.x ? 4.2 : -4.2;
-        } else {
-          var tx = P.x;
-          if (!this.wp && pku.length) {
-            var best = Infinity;
-            for (var pi = 0; pi < pku.length; pi++) {
-              var dd = Math.abs(this.x - pku[pi].x);
-              if (dd < best) { best = dd; tx = pku[pi].x; }
-            }
-          }
-          if      (this.x < tx - 50) this.vx =  4;
-          else if (this.x > tx + 50) this.vx = -4;
-          else                        this.vx *= .5;
-
-          if (this.gr && this.jc === 0 && dist < 200 && Math.random() < .014) {
-            this.vy = -13; this.gr = false; this.jc = 1;
-          }
-        }
-        if (dist < 90 || (this.wp === 'Assault Rifle' && dist < 360)) this.attack();
-      }
+      this.asw += 7.5 * dt;
+      if (this.asw >= 0.9) { this.atk = false; this.asw = 0; }
     }
 
-    // Player input
-    if (!this.bot) {
-      if      (keys.a) { this.vx = -5.8; this.fl = true;  }
-      else if (keys.d) { this.vx =  5.8; this.fl = false; }
-      else              this.vx *= .78;
+    if (this.bot) {
+      this._ai(dt);
+    } else {
+      if (keys.a) { this.vx = -220; this.fl = true; }
+      else if (keys.d) { this.vx = 220; this.fl = false; }
+      else { this.vx *= Math.pow(0.18, dt * 60); }
     }
 
-    // Physics
-    this.vy += GV;
-    this.x  += this.vx;
-    this.y  += this.vy;
+    // Universal Environmental Vector Updates
+    this.vy += GV * dt;
+    this.x  += this.vx * dt;
+    this.y  += this.vy * 60 * dt;
 
-    if (!this.gr) this.airT++;
-    else          this.airT = 0;
+    // Restrict map limit constraints
+    this.x = Math.max(22, Math.min(W - 22, this.x));
 
     if (this.y >= this.gy) {
-      if (!this.gr) {
-        this.sq   = .72;
-        this.stmp = 6;
-        fx(this.x, this.gy, '#a89060', Math.min(4, Math.floor(this.airT / 10) + 2));
+      if (!this.gr) { 
+        this.sq = 0.65; 
+        fx(this.x, this.gy, '#6a824e', 4); 
       }
-      this.y  = this.gy;
+      this.y = this.gy;
       this.vy = 0;
       this.gr = true;
       this.jc = 0;
@@ -253,152 +257,110 @@ class S {
       this.gr = false;
     }
 
-    if (this.stmp > 0) this.stmp--;
-    this.x = Math.max(28, Math.min(W - 28, this.x));
-
-    if (Math.abs(this.vx) > .5 && this.gr) this.at += .3;
-    else if (!this.gr)                       this.at  = 1.1;
-    else                                     this.at  *= .72;
+    // Body squash/stretch structural restoration steps
+    this.sq += (1 - this.sq) * 10 * dt;
+    this.fa += 0.15 * (this.vx / 15 - this.fa);
   }
 
   draw() {
-    // Ragdoll
+    ctx.save();
+    ctx.translate(this.x, this.y);
+
     if (this.rd) {
-      ctx.lineWidth = 4; ctx.lineCap = 'round';
-      ctx.strokeStyle = this.c; ctx.fillStyle = this.c;
-      for (var i = 0; i < this.rp.length; i++) {
-        var p = this.rp[i];
+      ctx.restore();
+      ctx.save();
+      this.rp.forEach(p => {
         ctx.save();
         ctx.translate(p.x, p.y);
         ctx.rotate(p.ang);
-        ctx.globalAlpha = Math.max(.15, 1 - p.y / (H + 80));
+        ctx.fillStyle = this.ff > 0 ? '#ffffff' : this.c;
         ctx.beginPath();
-        if (p.t === 'c') { ctx.arc(0, 0, p.s, 0, Math.PI * 2); ctx.fill(); }
-        else              { ctx.moveTo(0, -p.s/2); ctx.lineTo(0, p.s/2); }
-        ctx.stroke();
+        if (p.r === 9) ctx.arc(0, 0, p.r, 0, Math.PI * 2);
+        else ctx.fillRect(-p.r, -p.r/2, p.r*2, p.r);
+        ctx.fill();
         ctx.restore();
-      }
-      ctx.globalAlpha = 1;
+      });
+      ctx.restore();
       return;
     }
 
-    ctx.save();
+    // Apply active movement transformations
+    ctx.scale(this.fl ? -1 : 1, 1);
+    ctx.scale(2 - this.sq, this.sq);
 
-    // Motion trail
-    var spd = Math.abs(this.vx);
-    if (spd > 2) {
-      for (var ti = 1; ti < this.trl.length; ti++) {
-        var tr = this.trl[ti];
-        ctx.globalAlpha = (1 - ti / this.trl.length) * .1;
-        ctx.strokeStyle = this.c;
-        ctx.lineWidth   = 3;
-        ctx.beginPath(); ctx.arc(tr.x, tr.y - 55, 10, 0, Math.PI * 2); ctx.stroke();
-      }
-      ctx.globalAlpha = 1;
-    }
+    ctx.lineWidth = 4.5;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = this.ff > 0 ? '#ffffff' : this.c;
 
-    // Squash/stretch
-    ctx.translate(this.x, this.y);
-    ctx.scale(1, this.sq);
-    ctx.translate(-this.x, -this.y);
-    ctx.lineWidth = 4; ctx.lineCap = 'round';
+    // Render configuration variables
+    const hY = -54, bY = -32, fY = 0;
+    const walk = Math.sin(Date.now() * 0.0095) * (Math.abs(this.vx) > 20 ? 1 : 0);
 
-    var dc = this.c;
-    if (this.ff > 0) { this.ff--; if (this.ff % 2 === 0) dc = '#fff8e8'; }
-    ctx.strokeStyle = dc; ctx.fillStyle = dc;
-
-    // Torso tilt
-    ctx.save();
-    ctx.translate(this.x, this.y - 30);
-    if (this.gr && Math.abs(this.vx) > .5) ctx.rotate(this.vx * .022);
-    if (this.flp) ctx.rotate(this.fa);
-    ctx.translate(-this.x, -(this.y - 30));
-
-    // Idle bob
-    var bob = (this.gr && Math.abs(this.vx) <= .5) ? Math.sin(Date.now() * .005) * 1.5 : 0;
-    var ny  = this.y - 55 + bob;
-    var hy  = this.y - 25;
-    var hy2 = ny - 12;
-
-    // Head
-    ctx.beginPath(); ctx.arc(this.x, hy2, 11, 0, Math.PI * 2);
-    ctx.fill(); ctx.stroke();
-
-    // Spine
-    ctx.beginPath(); ctx.moveTo(this.x, ny); ctx.lineTo(this.x, hy); ctx.stroke();
-
-    var sw = Math.sin(this.at) * 17;
-    var fl = this.fl ? -1 : 1;
-
-    // Legs
-    ctx.beginPath(); ctx.moveTo(this.x, hy); ctx.lineTo(this.x + sw * fl, this.y); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(this.x, hy); ctx.lineTo(this.x - sw * fl, this.y); ctx.stroke();
-
-    // Left arm
+    // 1. Spine/Torso
     ctx.beginPath();
-    ctx.moveTo(this.x, ny + 4);
-    ctx.lineTo(this.x - 14 * fl - sw * .1 * fl, ny + 14 + sw);
+    ctx.moveTo(0, bY);
+    ctx.lineTo(0, -14);
     ctx.stroke();
 
-    // Right arm + weapon hand
-    var hx  = this.x + 18 * fl;
-    var hy3 = ny + 12 - sw;
-    if (this.atk && this.wp !== 'Assault Rifle') { hx = this.x + 26 * fl; hy3 = ny + 4; }
-    ctx.beginPath(); ctx.moveTo(this.x, ny + 4); ctx.lineTo(hx, hy3); ctx.stroke();
+    // 2. Head
+    ctx.fillStyle = this.ff > 0 ? '#ffffff' : this.c;
+    ctx.beginPath();
+    ctx.arc(0, hY, 8.5, 0, Math.PI * 2);
+    ctx.fill();
 
-    // Weapon
+    // 3. Legs
+    ctx.beginPath();
+    ctx.moveTo(0, -14);
+    ctx.lineTo(-8 + walk * 6, fY);
+    ctx.moveTo(0, -14);
+    ctx.lineTo(8 - walk * 6, fY);
+    ctx.stroke();
+
+    // 4. Combat Weapons Layer Rendering
+    ctx.save();
+    ctx.translate(5, bY + 4);
+    if (this.wp && !this.bot) {
+      this.flp = false;
+    }
+    
+    if (this.atk) {
+      ctx.rotate(this.asw);
+    } else {
+      ctx.rotate(walk * 0.12);
+    }
+
+    if (this.wp === 'Buster Sword') {
+      ctx.strokeStyle = '#78909c'; ctx.fillStyle = '#b0bec5'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.rect(0, -7, 44, 14); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = '#4e342e'; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-9, 0); ctx.stroke();
+      ctx.fillStyle = '#d97706'; ctx.fillRect(-1, -9, 3, 18);
+    } else if (this.wp === 'Assault Rifle') {
+      ctx.fillStyle = '#3d2b1f'; ctx.fillRect(0, -5, 34, 10);
+      ctx.fillStyle = '#57342a'; ctx.fillRect(10, 3, 6, 8);
+      ctx.fillStyle = '#6b5a50'; ctx.fillRect(34, -2, 8, 4);
+      ctx.fillStyle = '#b45309'; ctx.fillRect(14, -7, 8, 3);
+    } else if (this.wp === 'Smasher Club') {
+      ctx.strokeStyle = '#92400e'; ctx.lineWidth = 6;
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(38, -3); ctx.stroke();
+      ctx.lineWidth = 10; ctx.strokeStyle = '#b45309';
+      ctx.beginPath(); ctx.moveTo(32, -4); ctx.lineTo(38, -3); ctx.stroke();
+    }
+    ctx.restore();
+
+    // 5. Arms
+    ctx.beginPath();
     if (this.wp) {
-      ctx.save();
-      ctx.translate(hx, hy3);
-      if (this.fl) ctx.scale(-1, 1);
-      if (this.atk) {
-        if (this.wp === 'Assault Rifle') ctx.translate(-(Math.random() * 2), (Math.random() - .5) * 1.2);
-        else ctx.rotate(this.asw);
-      } else {
-        ctx.rotate(Math.sin(Date.now() * .003) * .04);
-      }
-
-      if (this.wp === 'Buster Sword') {
-        ctx.strokeStyle = '#78716c'; ctx.fillStyle = '#a8a29e'; ctx.lineWidth = 3;
-        ctx.beginPath(); ctx.rect(0, -7, 48, 14); ctx.fill(); ctx.stroke();
-        ctx.fillStyle = 'rgba(255,255,255,.3)';
-        ctx.fillRect(4, -6, 40, 4);
-        ctx.strokeStyle = '#92400e'; ctx.lineWidth = 5;
-        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-9, 0); ctx.stroke();
-        ctx.fillStyle = '#d97706';
-        ctx.fillRect(-1, -9, 3, 18);
-      } else if (this.wp === 'Assault Rifle') {
-        ctx.fillStyle = '#3d2b1f'; ctx.fillRect(0, -5, 34, 10);
-        ctx.fillStyle = '#57342a'; ctx.fillRect(10, 3, 6, 8);
-        ctx.fillStyle = '#6b5a50'; ctx.fillRect(34, -2, 8, 4);
-        ctx.fillStyle = '#b45309'; ctx.fillRect(14, -7, 8, 3);
-        if (this.atk) {
-          ctx.fillStyle = 'rgba(255,200,80,.7)';
-          ctx.beginPath(); ctx.arc(42, 0, 5 + Math.random() * 3, 0, Math.PI * 2); ctx.fill();
-        }
-      } else {
-        // Smasher Club
-        ctx.strokeStyle = '#92400e'; ctx.lineWidth = 7;
-        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(40, -3); ctx.stroke();
-        ctx.lineWidth = 11; ctx.strokeStyle = '#b45309';
-        ctx.beginPath(); ctx.moveTo(34, -4); ctx.lineTo(40, -2); ctx.stroke();
-        ctx.fillStyle = '#e2e8f0';
-        [[26,-7],[32,-5],[38,-3]].forEach(function(s) { ctx.fillRect(s[0], s[1], 3, 3); });
-      }
-      ctx.restore();
+      ctx.moveTo(0, bY + 2);
+      ctx.lineTo(14, bY + 6);
+    } else {
+      ctx.moveTo(0, bY + 2);
+      ctx.lineTo(-6 - walk * 3, -18);
+      ctx.moveTo(0, bY + 2);
+      ctx.lineTo(6 + walk * 3, -18);
     }
+    ctx.stroke();
 
-    // Stomp dust
-    if (this.stmp > 0) {
-      ctx.save();
-      ctx.globalAlpha = (this.stmp / 6) * .3;
-      ctx.strokeStyle = '#c8a870'; ctx.lineWidth = 2;
-      var r = (6 - this.stmp) * 6;
-      ctx.beginPath(); ctx.ellipse(this.x, this.y, r, r * .3, 0, 0, Math.PI * 2); ctx.stroke();
-      ctx.restore();
-    }
-
-    ctx.restore(); // torso
-    ctx.restore(); // squash
+    ctx.restore();
   }
 }

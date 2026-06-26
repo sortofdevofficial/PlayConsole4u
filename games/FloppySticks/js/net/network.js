@@ -1,7 +1,7 @@
 /**
- * FloppySticks — network.js v2.0 (FIXED)
- * PeerJS peer-to-peer multiplayer.
- * Depends on game.js globals: gs,P,B,ps,bs,MX,bul,pku,WPS,spawnP,startOnline,_save,g,mob
+ * FloppySticks — network.js v3.0 (COMPLETE & FIXED)
+ * PeerJS peer-to-peer multiplayer networking module.
+ * Globals from game.js: gs, P, B, ps, bs, MX, bul, pku, WPS, spawnP(), startOnline(), _save(), g(), mob
  */
 
 'use strict';
@@ -9,7 +9,7 @@
 let isHost = false;
 let conn   = null;
 let peer   = null;
-let joinTimeout = null; // Added global tracker to clear timeouts properly
+let joinTimeout = null;
 
 const CC = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
@@ -27,18 +27,22 @@ function send(o) {
 
 function setH(c, h) {
   const e = g('host-status');
-  e.className = 'om-status ' + c;
-  e.innerHTML = h;
+  if (e) {
+    e.className = 'om-status ' + c;
+    e.innerHTML = h;
+  }
 }
 
 function setJ(c, h) {
   const e = g('join-status');
-  e.style.display = 'block';
-  e.className = 'om-status ' + c;
-  e.innerHTML = h;
+  if (e) {
+    e.style.display = 'block';
+    e.className = 'om-status ' + c;
+    e.innerHTML = h;
+  }
 }
 
-// ── Modal UI ─────────────────────────────────────────────────────────────────
+// ── Modal UI Controls ────────────────────────────────────────────────────────
 function openOM() {
   g('online-modal').classList.add('open');
   switchTab('host');
@@ -47,28 +51,34 @@ function openOM() {
 
 function closeOM() {
   g('online-modal').classList.remove('open');
-  if (joinTimeout) clearTimeout(joinTimeout);
+  if (joinTimeout) { clearTimeout(joinTimeout); joinTimeout = null; }
   if (conn) { try { conn.close();   } catch(e) {} conn = null; }
   if (peer) { try { peer.destroy(); } catch(e) {} peer = null; }
 }
 
 function switchTab(t) {
   ['host','join'].forEach(x => {
-    g('tab-'   + x).classList.toggle('active', x === t);
-    g('panel-' + x).classList.toggle('active', x === t);
+    const tab = g('tab-' + x);
+    const panel = g('panel-' + x);
+    if (tab) tab.classList.toggle('active', x === t);
+    if (panel) panel.classList.toggle('active', x === t);
   });
   if (t === 'host' && !peer) initHost();
 }
 
-// ── Host ─────────────────────────────────────────────────────────────────────
+// ── Host Room System ─────────────────────────────────────────────────────────
 function initHost() {
   if (peer && !peer.destroyed) return;
-  isHost = true; window.isHost = true;
+  isHost = true; 
+  window.isHost = true;
   const code = genCode();
 
-  g('host-code-box').innerHTML =
-    `<div class="code-val">${code}</div>` +
-    `<div class="code-hint">Share this code with your friend</div>`;
+  const box = g('host-code-box');
+  if (box) {
+    box.innerHTML =
+      `<div class="code-val">${code}</div>` +
+      `<div class="code-hint">Share this code with your friend</div>`;
+  }
   setH('waiting', '<span class="spin"></span>Waiting for opponent…');
 
   peer = new Peer('floppy-' + code, {
@@ -81,12 +91,14 @@ function initHost() {
     ]}
   });
 
-  // FIX: Removed the 15-second timeout entirely. 
-  // The host should wait indefinitely for a friend to join the lobby.
-
   peer.on('error', e => {
-    if (e.type === 'unavailable-id') { peer.destroy(); peer = null; setTimeout(initHost, 600); return; }
-    setH('error', '❌ Error — try again');
+    if (e.type === 'unavailable-id') { 
+      peer.destroy(); 
+      peer = null; 
+      setTimeout(initHost, 600); 
+      return; 
+    }
+    setH('error', '❌ Error creating room — try again');
   });
 
   peer.on('connection', c => {
@@ -96,13 +108,16 @@ function initHost() {
   });
 }
 
-// ── Join ─────────────────────────────────────────────────────────────────────
+// ── Joiner System ────────────────────────────────────────────────────────────
 function joinGame() {
-  const raw = g('join-input').value.trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
+  const inputEl = g('join-input');
+  if (!inputEl) return;
+  const raw = inputEl.value.trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
   if (raw.length !== 4) { setJ('error', '❌ Enter a 4-letter code'); return; }
 
   if (peer && !peer.destroyed) { peer.destroy(); peer = null; }
-  isHost = false; window.isHost = false;
+  isHost = false; 
+  window.isHost = false;
   setJ('connecting', '<span class="spin"></span>Connecting…');
 
   peer = new Peer(undefined, {
@@ -117,9 +132,8 @@ function joinGame() {
 
   if (joinTimeout) clearTimeout(joinTimeout);
 
-  // FIX: Joiner still has a timeout, but we will properly clear it upon success
   joinTimeout = setTimeout(() => {
-    setJ('error', '❌ Timeout — check code');
+    setJ('error', '❌ Timeout — check code or connection');
     if (peer) { try { peer.destroy(); } catch(e){} peer = null; }
   }, 15000);
 
@@ -130,18 +144,16 @@ function joinGame() {
   });
 
   peer.on('error', e => { 
-    if (joinTimeout) clearTimeout(joinTimeout); 
-    setJ('error', '❌ ' + (e.message || 'Failed')); 
+    if (joinTimeout) { clearTimeout(joinTimeout); joinTimeout = null; }
+    setJ('error', '❌ Connection failed'); 
   });
 }
 
-// ── Connection ────────────────────────────────────────────────────────────────
+// ── Connection Lifecycles ────────────────────────────────────────────────────
 function setupConn(c, joiner) {
   c.on('open', () => {
-    // FIX: Clear the joiner's timeout now that they actually connected!
-    if (joinTimeout) clearTimeout(joinTimeout);
-
-    if (joiner) setJ('connected', '✅ Connected! Starting…');
+    if (joinTimeout) { clearTimeout(joinTimeout); joinTimeout = null; }
+    if (joiner) setJ('connected', '✅ Connected! Starting match…');
     send({ type: 'ready' });
   });
 
@@ -150,7 +162,8 @@ function setupConn(c, joiner) {
   c.on('close', () => {
     if (gs === 'ONLINE_MODE') {
       ps = MX;
-      g('p-score').textContent = ps + ' pts';
+      const scoreEl = g('p-score');
+      if (scoreEl) scoreEl.textContent = ps + ' pts';
       gs = 'MATCH_OVER';
       _save();
     }
@@ -158,39 +171,49 @@ function setupConn(c, joiner) {
   });
 
   c.on('error', e => {
-    const m = '❌ ' + (e.message || 'Connection error');
+    if (joinTimeout) { clearTimeout(joinTimeout); joinTimeout = null; }
+    const m = '❌ Connection error occurred';
     joiner ? setJ('error', m) : setH('error', m);
   });
 }
 
-// ── Message handler ───────────────────────────────────────────────────────────
+// ── Network Message Processor ────────────────────────────────────────────────
 function onMsg(d) {
   if (!d?.type) return;
   switch (d.type) {
 
     case 'ready':
-      if (isHost) setH('connected', '✅ Connected! Starting…');
+      if (isHost) setH('connected', '✅ Connected! Starting match…');
       setTimeout(startOnline, 600);
       break;
 
     case 'state':
-      if (gs !== 'ONLINE_MODE') return;
+      if (gs !== 'ONLINE_MODE' || !B) return;
       B.nx  = d.x;
       B.ny  = B.gy + (d.yRel ?? 0);
-      B.vx  = d.vx;  B.vy  = d.vy;
-      B.fl  = d.fl;  B.at  = d.at;
-      B.gr  = d.gr;  B.sq  = d.sy;
-      B.atk = d.ia;  B.asw = d.as;
-      B.flp = d.if;  B.fa  = d.fa;
+      B.vx  = d.vx;  
+      B.vy  = d.vy;
+      B.fl  = d.fl;  
+      B.at  = d.at;
+      B.gr  = d.gr;  
+      B.sq  = d.sy;
+      B.atk = d.ia;  
+      B.asw = d.as;
+      B.flp = d.if;  
+      B.fa  = d.fa;
       B.wp  = d.wp || null;
-      B.rd  = d.rd;  B.ff  = d.ff || 0;
+      B.rd  = d.rd;  
+      B.ff  = d.ff || 0;
       if (d.rd && !B.rp.length && d.rp) B.rp = d.rp;
-      g('b-hp').style.width     = (d.hp || 0) + '%';
-      g('b-weapon').textContent = d.wp || 'NONE';
+      
+      const bhp = g('b-hp');
+      const bwp = g('b-weapon');
+      if (bhp) bhp.style.width = (d.hp || 0) + '%';
+      if (bwp) bwp.textContent = d.wp || 'NONE';
       break;
 
     case 'hit':
-      if (gs === 'ONLINE_MODE') P.hit(d.amt, d.kb);
+      if (gs === 'ONLINE_MODE' && P) P.hit(d.amt, d.kb);
       break;
 
     case 'bullet':
@@ -203,7 +226,11 @@ function onMsg(d) {
 
     case 'pickup_taken':
       if (pku[d.i]) {
-        if (!isHost && d.bot) { B.wp = d.wt; g('b-weapon').textContent = d.wt; }
+        if (!isHost && d.bot && B) { 
+          B.wp = d.wt; 
+          const bwpEl = g('b-weapon');
+          if (bwpEl) bwpEl.textContent = d.wt; 
+        }
         pku.splice(d.i, 1);
       }
       break;
@@ -211,8 +238,10 @@ function onMsg(d) {
     case 'score':
       ps = isHost ? d.hs : d.gs;
       bs = isHost ? d.gs : d.hs;
-      g('p-score').textContent = ps + ' pts';
-      g('o-score').textContent = bs + ' pts';
+      const psEl = g('p-score');
+      const osEl = g('o-score');
+      if (psEl) psEl.textContent = ps + ' pts';
+      if (osEl) osEl.textContent = bs + ' pts';
       break;
 
     case 'over':
@@ -221,7 +250,7 @@ function onMsg(d) {
       break;
 
     case 'ropp':
-      B.respawn();
+      if (B) B.respawn();
       break;
   }
 }
