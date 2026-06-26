@@ -1,52 +1,68 @@
 'use strict';
 
-// Add this to your global variables in game.js if not already there, 
-// or it will just live globally here:
 window.floatingTexts = [];
 
 window.addFloatingText = function(x, y, text, color) {
-  window.floatingTexts.push({ x, y, text, color, life: 1.5, maxLife: 1.5 });
+  window.floatingTexts.push({ x, y, text, color, life: 1.4, maxLife: 1.4 });
 };
 
 function drawBackground() {
   ctx.save();
   
+  // Screen Shake calculation
   if (window.shk > 0) {
     ctx.translate((Math.random() - 0.5) * window.shk, (Math.random() - 0.5) * window.shk);
-    window.shk *= 0.8;
-    if (window.shk < 0.5) window.shk = 0;
+    window.shk *= 0.82;
+    if (window.shk < 0.4) window.shk = 0;
   }
 
-  // Sky
+  // Neon Cyber Sky Background Gradient
   const sky = ctx.createLinearGradient(0, 0, 0, H);
-  sky.addColorStop(0, '#7dd3fc');
-  sky.addColorStop(1, '#e0f2fe');
+  sky.addColorStop(0, '#020617');
+  sky.addColorStop(0.7, '#0f172a');
+  sky.addColorStop(1, '#1e1b4b');
   ctx.fillStyle = sky;
   ctx.fillRect(0, 0, W, H);
 
   const GY = H - 100;
 
-  // Draw Dirt Underground
-  ctx.fillStyle = '#78350f';
+  // OVERHAUL: ONLY GRASS SYSTEM (No dirt blocks anywhere)
+  // Deep underlying foundational green layer
+  const grassBase = ctx.createLinearGradient(0, GY, 0, H);
+  grassBase.addColorStop(0, '#166534');
+  grassBase.addColorStop(0.3, '#14532d');
+  grassBase.addColorStop(1, '#062f17');
+  ctx.fillStyle = grassBase;
   ctx.fillRect(0, GY, W, H - GY);
 
-  // Draw Top Grass Layer
-  ctx.fillStyle = '#4ade80';
-  ctx.fillRect(0, GY, W, 15);
+  // Surface highlight line
+  ctx.fillStyle = '#22c55e';
+  ctx.fillRect(0, GY, W, 4);
 
-  // Procedural Grass Blades
-  ctx.strokeStyle = '#22c55e';
-  ctx.lineWidth = 2;
+  // Dense, anti-flicker procedural layered lawn blades
   ctx.lineCap = 'round';
   
-  // Seeded predictable grass so it doesn't flicker every frame
-  for (let i = 0; i < W; i += 12) {
-    let height = 8 + (Math.sin(i * 0.1) * 4); 
-    let tilt = Math.cos(i * 0.05) * 5;
-    
+  // Layer 1: Dark background blades
+  ctx.strokeStyle = '#15803d';
+  ctx.lineWidth = 3;
+  for (let i = -5; i < W + 10; i += 8) {
+    let h = 14 + (Math.sin(i * 0.04) * 6);
+    let tilt = Math.cos(i * 0.02) * 4;
     ctx.beginPath();
     ctx.moveTo(i, GY + 2);
-    ctx.lineTo(i + tilt, GY - height);
+    ctx.lineTo(i + tilt, GY - h);
+    ctx.stroke();
+  }
+
+  // Layer 2: Bright neon foreground blades
+  ctx.strokeStyle = '#22c55e';
+  ctx.lineWidth = 2.5;
+  for (let i = -2; i < W + 10; i += 12) {
+    let h = 10 + (Math.sin(i * 0.08) * 4);
+    let tilt = Math.sin(i * 0.03) * 5;
+    ctx.beginPath();
+    ctx.moveTo(i, GY + 1);
+    ctx.lineTo(i + tilt, GY - h);
     ctx.stroke();
   }
 
@@ -54,42 +70,47 @@ function drawBackground() {
 }
 
 function drawActiveGameplayElements() {
-  // Draw Pickups
   const now = Date.now();
+  
+  // Draw Crate Pickups with custom floating matrix
   for (let qi = 0; qi < window.pku.length; qi++) {
     const pk = window.pku[qi];
-    const by = pk.y + Math.sin(now * 0.005 + qi) * 5;
+    const hoverY = pk.y + Math.sin(now * 0.006 + qi) * 7;
 
     ctx.save();
-    // Crate Box
-    ctx.fillStyle = '#fbbf24';
-    ctx.shadowColor = '#d97706';
-    ctx.shadowBlur = 10;
-    ctx.fillRect(pk.x - 15, by - 15, 30, 30);
-    ctx.shadowBlur = 0;
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = '#f59e0b';
     
-    // Label
-    ctx.fillStyle = '#000';
-    ctx.font = 'bold 10px Inter';
-    ctx.textAlign = 'center';
-    ctx.fillText('CRATE', pk.x, by + 4);
+    // Outer Crate Core Glow
+    ctx.fillStyle = '#d97706';
+    ctx.fillRect(pk.x - 16, hoverY - 16, 32, 32);
+    
+    // Interlines Cross Frame Accent
+    ctx.strokeStyle = '#fef08a';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(pk.x - 12, hoverY - 12, 24, 24);
+    ctx.beginPath();
+    ctx.moveTo(pk.x - 12, hoverY - 12); ctx.lineTo(pk.x + 12, hoverY + 12);
+    ctx.moveTo(pk.x + 12, hoverY - 12); ctx.lineTo(pk.x - 12, hoverY + 12);
+    ctx.stroke();
+    
     ctx.restore();
   }
 
-  // Render Floating Drop Texts
+  // Canvas Native Floating HUD Text Handler
   for (let i = window.floatingTexts.length - 1; i >= 0; i--) {
     let t = window.floatingTexts[i];
-    t.y -= 40 * window.dt; // Float upwards
+    t.y -= 48 * window.dt; 
     t.life -= window.dt;
     
     ctx.save();
     ctx.globalAlpha = Math.max(0, t.life / t.maxLife);
     ctx.fillStyle = t.color;
-    ctx.font = 'bold 24px Bebas Neue, sans-serif';
+    ctx.font = 'bold 26px Impact, sans-serif';
     ctx.textAlign = 'center';
-    // Outline for visibility
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 3;
+    
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 4;
     ctx.strokeText(t.text, t.x, t.y);
     ctx.fillText(t.text, t.x, t.y);
     ctx.restore();
@@ -99,14 +120,17 @@ function drawActiveGameplayElements() {
     }
   }
 
-  // Draw particles
+  // Global Engine Particles Render
   for (let pi = window.ptl.length - 1; pi >= 0; pi--) {
     const p = window.ptl[pi];
+    ctx.save();
     ctx.globalAlpha = Math.max(0, p.lf / p.mx);
     ctx.fillStyle = p.c;
+    ctx.shadowBlur = 8;
+    ctx.shadowColor = p.c;
     ctx.beginPath();
     ctx.arc(p.x, p.y, p.sz, 0, Math.PI * 2);
     ctx.fill();
-    ctx.globalAlpha = 1;
+    ctx.restore();
   }
 }
