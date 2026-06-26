@@ -1,5 +1,5 @@
 /**
- * FloppySticks — network.js v2.0
+ * FloppySticks — network.js v2.0 (FIXED)
  * PeerJS peer-to-peer multiplayer.
  * Depends on game.js globals: gs,P,B,ps,bs,MX,bul,pku,WPS,spawnP,startOnline,_save,g,mob
  */
@@ -9,6 +9,7 @@
 let isHost = false;
 let conn   = null;
 let peer   = null;
+let joinTimeout = null; // Added global tracker to clear timeouts properly
 
 const CC = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
@@ -46,6 +47,7 @@ function openOM() {
 
 function closeOM() {
   g('online-modal').classList.remove('open');
+  if (joinTimeout) clearTimeout(joinTimeout);
   if (conn) { try { conn.close();   } catch(e) {} conn = null; }
   if (peer) { try { peer.destroy(); } catch(e) {} peer = null; }
 }
@@ -79,18 +81,15 @@ function initHost() {
     ]}
   });
 
-  const TO = setTimeout(() => {
-    if (!conn) { setH('error', '❌ Timeout — try again'); try { peer.destroy(); } catch(e){} peer = null; }
-  }, 15000);
+  // FIX: Removed the 15-second timeout entirely. 
+  // The host should wait indefinitely for a friend to join the lobby.
 
   peer.on('error', e => {
-    clearTimeout(TO);
     if (e.type === 'unavailable-id') { peer.destroy(); peer = null; setTimeout(initHost, 600); return; }
     setH('error', '❌ Error — try again');
   });
 
   peer.on('connection', c => {
-    clearTimeout(TO);
     conn = c;
     setH('connecting', '<span class="spin"></span>Connecting…');
     setupConn(c, false);
@@ -116,7 +115,13 @@ function joinGame() {
     ]}
   });
 
-  const TO = setTimeout(() => setJ('error', '❌ Timeout — check code'), 15000);
+  if (joinTimeout) clearTimeout(joinTimeout);
+
+  // FIX: Joiner still has a timeout, but we will properly clear it upon success
+  joinTimeout = setTimeout(() => {
+    setJ('error', '❌ Timeout — check code');
+    if (peer) { try { peer.destroy(); } catch(e){} peer = null; }
+  }, 15000);
 
   peer.on('open', () => {
     const c = peer.connect('floppy-' + raw, { reliable: true, serialization: 'json' });
@@ -124,12 +129,18 @@ function joinGame() {
     setupConn(c, true);
   });
 
-  peer.on('error', e => { clearTimeout(TO); setJ('error', '❌ ' + (e.message || 'Failed')); });
+  peer.on('error', e => { 
+    if (joinTimeout) clearTimeout(joinTimeout); 
+    setJ('error', '❌ ' + (e.message || 'Failed')); 
+  });
 }
 
 // ── Connection ────────────────────────────────────────────────────────────────
 function setupConn(c, joiner) {
   c.on('open', () => {
+    // FIX: Clear the joiner's timeout now that they actually connected!
+    if (joinTimeout) clearTimeout(joinTimeout);
+
     if (joiner) setJ('connected', '✅ Connected! Starting…');
     send({ type: 'ready' });
   });
