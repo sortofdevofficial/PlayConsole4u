@@ -9,60 +9,51 @@ window.addFloatingText = function(x, y, text, color) {
 function drawBackground() {
   ctx.save();
   
-  // Screen Shake calculation
   if (window.shk > 0) {
     ctx.translate((Math.random() - 0.5) * window.shk, (Math.random() - 0.5) * window.shk);
     window.shk *= 0.82;
     if (window.shk < 0.4) window.shk = 0;
   }
 
-  // Neon Cyber Sky Background Gradient
+  // Normal Sky Gradient
   const sky = ctx.createLinearGradient(0, 0, 0, H);
-  sky.addColorStop(0, '#020617');
-  sky.addColorStop(0.7, '#0f172a');
-  sky.addColorStop(1, '#1e1b4b');
+  sky.addColorStop(0, '#60a5fa'); // light blue
+  sky.addColorStop(1, '#e0f2fe'); // pale blue near the horizon
   ctx.fillStyle = sky;
   ctx.fillRect(0, 0, W, H);
 
+  // Simple Fluffy Clouds
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+  const t = Date.now() * 0.015; // Slow drift
+  
+  const drawCloud = (cx, cy, scale) => {
+    // Make clouds wrap around the screen
+    let realX = ((cx + t * scale) % (W + 200)) - 100;
+    ctx.beginPath();
+    ctx.arc(realX, cy, 30 * scale, 0, Math.PI * 2);
+    ctx.arc(realX + 40 * scale, cy - 15 * scale, 40 * scale, 0, Math.PI * 2);
+    ctx.arc(realX + 80 * scale, cy, 35 * scale, 0, Math.PI * 2);
+    ctx.fill();
+  };
+
+  drawCloud(W * 0.1, H * 0.15, 1.2);
+  drawCloud(W * 0.6, H * 0.25, 0.8);
+  drawCloud(W * 0.9, H * 0.1, 1.5);
+
   const GY = H - 100;
 
-  // OVERHAUL: ONLY GRASS SYSTEM (No dirt blocks anywhere)
-  // Deep underlying foundational green layer
-  const grassBase = ctx.createLinearGradient(0, GY, 0, H);
-  grassBase.addColorStop(0, '#166534');
-  grassBase.addColorStop(0.3, '#14532d');
-  grassBase.addColorStop(1, '#062f17');
-  ctx.fillStyle = grassBase;
+  // Normal Grass Floor Only
+  ctx.fillStyle = '#4ade80';
   ctx.fillRect(0, GY, W, H - GY);
 
-  // Surface highlight line
-  ctx.fillStyle = '#22c55e';
-  ctx.fillRect(0, GY, W, 4);
-
-  // Dense, anti-flicker procedural layered lawn blades
+  // Simple grass blades at the top edge
+  ctx.strokeStyle = '#16a34a';
+  ctx.lineWidth = 2;
   ctx.lineCap = 'round';
-  
-  // Layer 1: Dark background blades
-  ctx.strokeStyle = '#15803d';
-  ctx.lineWidth = 3;
-  for (let i = -5; i < W + 10; i += 8) {
-    let h = 14 + (Math.sin(i * 0.04) * 6);
-    let tilt = Math.cos(i * 0.02) * 4;
+  for (let i = 0; i < W; i += 15) {
     ctx.beginPath();
-    ctx.moveTo(i, GY + 2);
-    ctx.lineTo(i + tilt, GY - h);
-    ctx.stroke();
-  }
-
-  // Layer 2: Bright neon foreground blades
-  ctx.strokeStyle = '#22c55e';
-  ctx.lineWidth = 2.5;
-  for (let i = -2; i < W + 10; i += 12) {
-    let h = 10 + (Math.sin(i * 0.08) * 4);
-    let tilt = Math.sin(i * 0.03) * 5;
-    ctx.beginPath();
-    ctx.moveTo(i, GY + 1);
-    ctx.lineTo(i + tilt, GY - h);
+    ctx.moveTo(i, GY + 5);
+    ctx.lineTo(i + 5, GY - 10);
     ctx.stroke();
   }
 
@@ -72,32 +63,30 @@ function drawBackground() {
 function drawActiveGameplayElements() {
   const now = Date.now();
   
-  // Draw Crate Pickups with custom floating matrix
+  // Draw Standard Crate Pickups
   for (let qi = 0; qi < window.pku.length; qi++) {
     const pk = window.pku[qi];
     const hoverY = pk.y + Math.sin(now * 0.006 + qi) * 7;
 
     ctx.save();
-    ctx.shadowBlur = 20;
-    ctx.shadowColor = '#f59e0b';
-    
-    // Outer Crate Core Glow
+    // Solid wooden crate look
     ctx.fillStyle = '#d97706';
     ctx.fillRect(pk.x - 16, hoverY - 16, 32, 32);
     
-    // Interlines Cross Frame Accent
-    ctx.strokeStyle = '#fef08a';
+    // Standard border
+    ctx.strokeStyle = '#000000';
     ctx.lineWidth = 2;
-    ctx.strokeRect(pk.x - 12, hoverY - 12, 24, 24);
-    ctx.beginPath();
-    ctx.moveTo(pk.x - 12, hoverY - 12); ctx.lineTo(pk.x + 12, hoverY + 12);
-    ctx.moveTo(pk.x + 12, hoverY - 12); ctx.lineTo(pk.x - 12, hoverY + 12);
-    ctx.stroke();
+    ctx.strokeRect(pk.x - 16, hoverY - 16, 32, 32);
     
+    // Diagonal lines
+    ctx.beginPath();
+    ctx.moveTo(pk.x - 16, hoverY - 16); ctx.lineTo(pk.x + 16, hoverY + 16);
+    ctx.moveTo(pk.x + 16, hoverY - 16); ctx.lineTo(pk.x - 16, hoverY + 16);
+    ctx.stroke();
     ctx.restore();
   }
 
-  // Canvas Native Floating HUD Text Handler
+  // Floating Drop Texts
   for (let i = window.floatingTexts.length - 1; i >= 0; i--) {
     let t = window.floatingTexts[i];
     t.y -= 48 * window.dt; 
@@ -106,11 +95,12 @@ function drawActiveGameplayElements() {
     ctx.save();
     ctx.globalAlpha = Math.max(0, t.life / t.maxLife);
     ctx.fillStyle = t.color;
-    ctx.font = 'bold 26px Impact, sans-serif';
+    ctx.font = 'bold 22px Arial, sans-serif';
     ctx.textAlign = 'center';
     
+    // Simple thin outline for text readability
     ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 4;
+    ctx.lineWidth = 3;
     ctx.strokeText(t.text, t.x, t.y);
     ctx.fillText(t.text, t.x, t.y);
     ctx.restore();
@@ -120,14 +110,12 @@ function drawActiveGameplayElements() {
     }
   }
 
-  // Global Engine Particles Render
+  // Normal Particles
   for (let pi = window.ptl.length - 1; pi >= 0; pi--) {
     const p = window.ptl[pi];
     ctx.save();
     ctx.globalAlpha = Math.max(0, p.lf / p.mx);
     ctx.fillStyle = p.c;
-    ctx.shadowBlur = 8;
-    ctx.shadowColor = p.c;
     ctx.beginPath();
     ctx.arc(p.x, p.y, p.sz, 0, Math.PI * 2);
     ctx.fill();

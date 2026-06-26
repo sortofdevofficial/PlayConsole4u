@@ -5,7 +5,6 @@ const ctx = cv.getContext('2d', { alpha: false });
 var W = window.innerWidth, H = window.innerHeight;
 
 window.GV = 38.0; 
-window.MX = 5; 
 window.WPS = ['Buster Sword', 'Smasher Club'];
 
 window.gs = 'MENU';
@@ -52,19 +51,18 @@ function startBot() {
   if (document.getElementById('menu')) document.getElementById('menu').style.display = 'none';
   if (document.getElementById('hud')) document.getElementById('hud').style.display = 'flex';
   
-  // Custom neon palettes matching the blue aura of image_f224a4.png
-  window.P = new S(W * 0.25, '#00f0ff', false); 
-  window.B = new S(W * 0.75, '#ff0055', true);
+  // Real standard stickmen - pure black for Player, dark grey for Bot to tell apart
+  window.P = new S(W * 0.25, '#000000', false); 
+  window.B = new S(W * 0.75, '#333333', true);
   
-  window.addFloatingText(W / 2, H / 2.5, "READY... FIGHT!", "#00f0ff");
+  window.addFloatingText(W / 2, H / 2.5, "FIGHT!", "#fbbf24");
 }
 
-let spawnTimer = 4.0; // Instantly start timing up first drop faster
+let spawnTimer = 4.0;
 function processPickups(delta) {
   if (window.gs !== 'BOT_MODE') return;
   spawnTimer += delta;
   
-  // Faster random spawning for immediate crate capture loops
   if (spawnTimer >= 6.0 && window.pku.length < 1) {
     spawnTimer = 0;
     const type = window.WPS[Math.floor(Math.random() * window.WPS.length)];
@@ -94,17 +92,15 @@ function loop(timestamp) {
   lastFrameTime = timestamp;
   window.dt = delta;
 
-  // 1. Environmental Layer (draw.js)
   if (typeof drawBackground === 'function') drawBackground();
 
-  // 2. State & Physics Engine Core
-  if (window.gs === 'BOT_MODE' || window.gs === 'MATCH_OVER') {
+  // Endless mode - removed MATCH_OVER logic
+  if (window.gs === 'BOT_MODE') {
     processPickups(delta);
 
     if (window.P) window.P.update(delta);
     if (window.B) window.B.update(delta);
 
-    // Dynamic Physics Particles Iteration Loop
     for (let pi = window.ptl.length - 1; pi >= 0; pi--) {
       const p = window.ptl[pi];
       p.x += p.vx * 60 * delta;
@@ -114,7 +110,6 @@ function loop(timestamp) {
       if (p.lf <= 0) window.ptl.splice(pi, 1);
     }
 
-    // Drops Physics & Claim Collision Check
     const gy = H - 100;
     for (let qi = window.pku.length - 1; qi >= 0; qi--) {
       const pk = window.pku[qi];
@@ -129,9 +124,8 @@ function loop(timestamp) {
         if (!claimed && ent && !ent.rd && Math.abs(ent.x - pk.x) < 36 && Math.abs((ent.y - 30) - pk.y) < 50) {
           ent.wp = pk.type;
           
-          // Flash Glowing Weapon Drop Notification UI Text System
-          window.addFloatingText(ent.x, ent.y - 85, `+ ${pk.type.toUpperCase()}`, '#fcd34d');
-          fx(pk.x, pk.y, '#fcd34d', 10);
+          window.addFloatingText(ent.x, ent.y - 85, `+ ${pk.type.toUpperCase()}`, '#fbbf24');
+          fx(pk.x, pk.y, '#fbbf24', 8);
           
           window.pku.splice(qi, 1);
           claimed = true;
@@ -139,13 +133,11 @@ function loop(timestamp) {
       });
     }
 
-    // 3. Complete Graphic Canvas Overlay Rendering
     if (typeof drawActiveGameplayElements === 'function') drawActiveGameplayElements();
     if (window.P) window.P.draw();
     if (window.B) window.B.draw();
   }
 }
 
-// Bootstrap Initialization
 resize();
 requestAnimationFrame(loop);
