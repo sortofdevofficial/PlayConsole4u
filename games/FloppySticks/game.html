@@ -9,12 +9,10 @@
 </head>
 <body>
 
-<div id="ver">v2.0</div>
+<div id="ver">v3.0</div>
 
-<!-- Damage flash overlay -->
 <div id="dmg-overlay"></div>
 
-<!-- ── MENU ───────────────────────────────────────────────────────────────── -->
 <div id="menu">
   <div id="menu-bg"></div>
   <div id="menu-glow"></div>
@@ -23,7 +21,6 @@
     <h1 class="game-title">FloppySticks</h1>
     <div class="game-sub">Nature Brawl</div>
 
-    <!-- W/L card -->
     <div id="wl-card">
       <div class="wl-stat">
         <div class="wl-val" id="wl-wins">0</div>
@@ -41,7 +38,6 @@
       </div>
     </div>
 
-    <!-- Auth -->
     <div id="auth-strip">
       <div id="auth-out">
         <button class="mbtn blue" id="btn-signin">🔑 Sign in to save W/L</button>
@@ -53,26 +49,26 @@
       </div>
     </div>
 
-    <button class="mbtn green" id="start-btn">🥊 vs AI</button>
-    <button class="mbtn blue"  id="online-btn">🌐 Online Match</button>
+    <button class="mbtn green" id="start-btn" onclick="startBot()">🥊 vs AI</button>
+    <button class="mbtn blue"  id="online-btn" onclick="openOnlineModal()">🌐 Online Match</button>
     <button class="mbtn grey"  onclick="history.back()">← Back</button>
 
   </div>
 </div>
 
-<!-- ── ONLINE MODAL ────────────────────────────────────────────────────────── -->
 <div id="online-modal">
   <div class="om-box">
-    <div class="om-title">🌐 Online Match</div>
-    <div class="om-sub">Share the 4-letter code with a friend. No account needed.</div>
+    <div class="om-title">🌐 Online Arena</div>
+    <div class="om-sub">Host a custom room, join via code, or queue up for matchmaking.</div>
     <div class="om-tabs">
       <button class="om-tab active" id="tab-host" onclick="switchTab('host')">🏠 Host</button>
       <button class="om-tab"        id="tab-join" onclick="switchTab('join')">🔗 Join</button>
+      <button class="om-tab"        id="tab-mm"   onclick="switchTab('mm')">⚡ Matchmaking</button>
     </div>
 
     <div class="om-panel active" id="panel-host">
       <div class="om-code-box" id="host-code-box">
-        <div style="font-size:13px;color:rgba(255,255,255,.3)">Generating…</div>
+        <div style="font-size:13px;color:rgba(0,0,0,.3)">Generating…</div>
       </div>
       <div class="om-status waiting" id="host-status">
         <span class="spin"></span>Waiting for opponent…
@@ -88,10 +84,15 @@
       <div class="om-status" id="join-status" style="display:none"></div>
       <button class="om-btn grey" onclick="closeOnlineModal()">Cancel</button>
     </div>
+
+    <div class="om-panel" id="panel-mm">
+      <div class="om-status waiting" id="mm-status">Ready to find local challengers...</div>
+      <button class="om-btn orange" id="mm-action-btn" onclick="toggleMM()">Find Match</button>
+      <button class="om-btn grey" onclick="closeOnlineModal()">Cancel</button>
+    </div>
   </div>
 </div>
 
-<!-- ── HUD ─────────────────────────────────────────────────────────────────── -->
 <div id="hud">
   <div class="hp">
     <div class="hp-title">
@@ -119,7 +120,6 @@
   </div>
 </div>
 
-<!-- ── MOBILE CONTROLS ─────────────────────────────────────────────────────── -->
 <div id="mob-ctrl">
   <div class="btn-grp">
     <div class="touch" id="btn-left">←</div>
@@ -133,23 +133,21 @@
 
 <canvas id="gameCanvas"></canvas>
 
-<!-- ── Firebase ────────────────────────────────────────────────────────────── -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="../../firebase.js"></script>
 
-<!-- ── PeerJS ──────────────────────────────────────────────────────────────── -->
 <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 
-<!-- ── Game modules ────────────────────────────────────────────────────────── -->
 <script src="js/entities/stickman.js"></script>
 <script src="js/net/network.js"></script>
 <script src="js/engine/draw.js"></script>
 <script src="js/engine/game.js"></script>
 
-<!-- ── Auth UI ─────────────────────────────────────────────────────────────── -->
 <script>
+  window.currentUsername = "Player_" + Math.floor(1000 + Math.random() * 9000);
+
   function showWL(w = 0, l = 0) {
     document.getElementById('wl-wins').textContent   = w;
     document.getElementById('wl-losses').textContent = l;
@@ -161,12 +159,14 @@
     document.getElementById('auth-out').style.display  = user ? 'none'  : 'block';
     document.getElementById('signed-in').style.display = user ? 'flex'  : 'none';
     if (user) {
-      document.getElementById('u-name').textContent     = user.displayName || 'Player';
+      window.currentUsername = user.displayName || "Player";
+      document.getElementById('u-name').textContent     = window.currentUsername;
       document.getElementById('u-avatar').src           = user.photoURL    || '';
       document.getElementById('u-avatar').style.display = user.photoURL    ? 'block' : 'none';
       const s = await window.FB.getMatchStats(user.uid).catch(() => ({ w: 0, l: 0 }));
       showWL(s.w || 0, s.l || 0);
     } else {
+      window.currentUsername = "Guest_" + Math.floor(1000 + Math.random() * 9000);
       document.getElementById('wl-card').style.display = 'none';
     }
   });

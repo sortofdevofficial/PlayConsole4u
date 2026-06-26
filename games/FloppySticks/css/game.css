@@ -1,4 +1,4 @@
-/* FloppySticks — game.css v2.1 — cozy nature theme */
+/* FloppySticks — game.css v3.0 — cozy nature theme */
 @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;700;900&display=swap');
 
 *{margin:0;padding:0;box-sizing:border-box}
@@ -111,7 +111,7 @@ canvas{display:block;width:100vw;height:100vh;position:fixed;top:0;left:0;z-inde
 .om-box{
   background:rgba(250,248,240,.97);
   border:1.5px solid rgba(120,160,60,.2);
-  border-radius:22px;padding:30px;width:min(400px,92vw);
+  border-radius:22px;padding:30px;width:min(440px,94vw);
   display:flex;flex-direction:column;gap:15px;
   box-shadow:0 24px 60px rgba(0,0,0,.18),0 0 0 1px rgba(255,255,255,.5);
   animation:popIn .22s cubic-bezier(.34,1.56,.64,1) both;
@@ -119,12 +119,12 @@ canvas{display:block;width:100vw;height:100vh;position:fixed;top:0;left:0;z-inde
 @keyframes popIn{from{opacity:0;transform:scale(.9) translateY(12px)}}
 .om-title{font-size:20px;font-weight:900;color:#2d5a1b;text-align:center;letter-spacing:.5px}
 .om-sub{font-size:12px;color:#8a9a7a;text-align:center;line-height:1.6}
-.om-tabs{display:flex;gap:8px}
+.om-tabs{display:flex;gap:6px}
 .om-tab{
-  flex:1;padding:11px;
+  flex:1;padding:11px 4px;
   border:1.5px solid rgba(100,140,60,.2);background:rgba(255,255,255,.6);
-  border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;transition:.15s;
-  color:#8a9a7a;font-family:'Inter',sans-serif;
+  border-radius:12px;font-size:12px;font-weight:700;cursor:pointer;transition:.15s;
+  color:#8a9a7a;font-family:'Inter',sans-serif;white-space:nowrap;
 }
 .om-tab.active{border-color:#4caf50;background:rgba(76,175,80,.1);color:#2d7a2d}
 .om-panel{display:none;flex-direction:column;gap:10px}
@@ -154,9 +154,11 @@ canvas{display:block;width:100vw;height:100vh;position:fixed;top:0;left:0;z-inde
 }
 .om-btn.blue{background:linear-gradient(135deg,#42a5f5,#1976d2);color:#fff;box-shadow:0 4px 14px rgba(66,165,245,.3)}
 .om-btn.blue:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(66,165,245,.4)}
+.om-btn.orange{background:linear-gradient(135deg,#ff9800,#f57c00);color:#fff;box-shadow:0 4px 14px rgba(255,152,0,.3)}
+.om-btn.orange:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(255,152,0,.4)}
 .om-btn.grey{background:rgba(0,0,0,.05);color:#8a9a7a;border:1.5px solid rgba(0,0,0,.08)}
 .om-btn.grey:hover{background:rgba(0,0,0,.09);color:#5a6a4a}
-.om-status{font-size:13px;font-weight:700;text-align:center;padding:10px;border-radius:10px;min-height:22px}
+.om-status{font-size:13px;font-weight:700;text-align:center;padding:12px;border-radius:10px;min-height:22px;line-height:1.4}
 .om-status.waiting{color:#d97706;background:rgba(217,119,6,.08);border:1px solid rgba(217,119,6,.2)}
 .om-status.connecting{color:#1976d2;background:rgba(25,118,210,.08);border:1px solid rgba(25,118,210,.2)}
 .om-status.connected{color:#2d7a2d;background:rgba(45,122,45,.08);border:1px solid rgba(45,122,45,.2)}
@@ -174,7 +176,7 @@ canvas{display:block;width:100vw;height:100vh;position:fixed;top:0;left:0;z-inde
 .hp{
   background:rgba(255,252,240,.88);backdrop-filter:blur(10px);
   padding:clamp(6px,1.5vw,10px) clamp(8px,2vw,13px);
-  border-radius:14px;width:clamp(140px,22vw,220px);
+  border-radius:14px;width:clamp(160px,24vw,250px);
   border:1.5px solid rgba(100,160,50,.18);
   box-shadow:0 4px 20px rgba(0,0,0,.08);
 }
@@ -186,13 +188,14 @@ canvas{display:block;width:100vw;height:100vh;position:fixed;top:0;left:0;z-inde
 .hp-badge{
   background:#3a5a20;color:#fff;padding:2px 7px;
   border-radius:8px;font-size:clamp(8px,1vw,10px);font-weight:800;letter-spacing:.5px;
+  white-space:nowrap;
 }
 .hp-bar-bg{width:100%;height:7px;background:rgba(0,0,0,.08);border-radius:4px;overflow:hidden}
 .hp-bar{height:100%;width:100%;border-radius:4px;transition:width .15s ease}
 #p-hp{background:linear-gradient(90deg,#4caf50,#8bc34a)}
 #b-hp{background:linear-gradient(90deg,#e53935,#ef9a9a)}
 .wp-tag{margin-top:5px;color:#8a9a7a;font-size:clamp(7px,1vw,10px);font-weight:600;
-  letter-spacing:.5px;text-transform:uppercase}
+  letter-spacing:.5px;text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .wp-tag span{color:#3a5a20;font-weight:800}
 
 #drop-timer{

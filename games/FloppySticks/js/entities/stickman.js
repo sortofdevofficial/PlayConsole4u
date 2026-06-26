@@ -1,8 +1,6 @@
 /**
  * FloppySticks — stickman.js v3.0 (COMPLETE & FIXED)
- * Stickman animations, input physics calculations, behavior rules, rendering pathways.
- * Globals from game.js: W, H, GV, MXP, ptl, bul, pku, gs, P, B, keys, shk, ps, bs, MX, WPS, fx(), _save(), g()
- * Globals from network.js: send(), isHost, conn
+ * Calibrated movement vectors to eliminate speed variations on higher refresh rate screens.
  */
 
 class S {
@@ -169,23 +167,19 @@ class S {
     }
   }
 
-  // AI Brain
   _ai(dt) {
     if (!this.bot || this.rd || gs !== 'BOT_MODE' || !P) return;
     const dist = P.x - this.x;
     this.fl = dist < 0;
 
-    // Tactical positioning
     if (Math.abs(dist) > (this.wp ? 50 : 120)) {
       this.vx = dist > 0 ? 170 : -170;
     } else {
       this.vx *= Math.pow(0.2, dt * 60);
     }
 
-    // Auto jumper tracking
     if (P.y < this.y - 60 && Math.random() < 0.03) this.jump();
 
-    // Combat initiation tracking
     if (this.wp && Math.abs(dist) < (this.wp === 'Assault Rifle' ? 320 : 70) && Math.random() < 0.07) {
       this.attack();
     }
@@ -219,7 +213,6 @@ class S {
       return;
     }
 
-    // Active action step tracking logic loops
     if (this.ac > 0) this.ac -= 60 * dt;
     if (this.ff > 0) this.ff -= 60 * dt;
     
@@ -236,19 +229,14 @@ class S {
       else { this.vx *= Math.pow(0.18, dt * 60); }
     }
 
-    // Universal Environmental Vector Updates
     this.vy += GV * dt;
     this.x  += this.vx * dt;
     this.y  += this.vy * 60 * dt;
 
-    // Restrict map limit constraints
     this.x = Math.max(22, Math.min(W - 22, this.x));
 
     if (this.y >= this.gy) {
-      if (!this.gr) { 
-        this.sq = 0.65; 
-        fx(this.x, this.gy, '#6a824e', 4); 
-      }
+      if (!this.gr) { this.sq = 0.65; fx(this.x, this.gy, '#6a824e', 4); }
       this.y = this.gy;
       this.vy = 0;
       this.gr = true;
@@ -257,7 +245,6 @@ class S {
       this.gr = false;
     }
 
-    // Body squash/stretch structural restoration steps
     this.sq += (1 - this.sq) * 10 * dt;
     this.fa += 0.15 * (this.vx / 15 - this.fa);
   }
@@ -284,7 +271,6 @@ class S {
       return;
     }
 
-    // Apply active movement transformations
     ctx.scale(this.fl ? -1 : 1, 1);
     ctx.scale(2 - this.sq, this.sq);
 
@@ -292,23 +278,19 @@ class S {
     ctx.lineCap = 'round';
     ctx.strokeStyle = this.ff > 0 ? '#ffffff' : this.c;
 
-    // Render configuration variables
     const hY = -54, bY = -32, fY = 0;
     const walk = Math.sin(Date.now() * 0.0095) * (Math.abs(this.vx) > 20 ? 1 : 0);
 
-    // 1. Spine/Torso
     ctx.beginPath();
     ctx.moveTo(0, bY);
     ctx.lineTo(0, -14);
     ctx.stroke();
 
-    // 2. Head
     ctx.fillStyle = this.ff > 0 ? '#ffffff' : this.c;
     ctx.beginPath();
     ctx.arc(0, hY, 8.5, 0, Math.PI * 2);
     ctx.fill();
 
-    // 3. Legs
     ctx.beginPath();
     ctx.moveTo(0, -14);
     ctx.lineTo(-8 + walk * 6, fY);
@@ -316,18 +298,12 @@ class S {
     ctx.lineTo(8 - walk * 6, fY);
     ctx.stroke();
 
-    // 4. Combat Weapons Layer Rendering
     ctx.save();
     ctx.translate(5, bY + 4);
-    if (this.wp && !this.bot) {
-      this.flp = false;
-    }
+    if (this.wp && !this.bot) this.flp = false;
     
-    if (this.atk) {
-      ctx.rotate(this.asw);
-    } else {
-      ctx.rotate(walk * 0.12);
-    }
+    if (this.atk) ctx.rotate(this.asw);
+    else ctx.rotate(walk * 0.12);
 
     if (this.wp === 'Buster Sword') {
       ctx.strokeStyle = '#78909c'; ctx.fillStyle = '#b0bec5'; ctx.lineWidth = 3;
@@ -348,7 +324,6 @@ class S {
     }
     ctx.restore();
 
-    // 5. Arms
     ctx.beginPath();
     if (this.wp) {
       ctx.moveTo(0, bY + 2);
