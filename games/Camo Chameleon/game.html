@@ -6,11 +6,11 @@
     <title>Camo Chameleon: Studio</title>
     <link rel="stylesheet" href="style.css">
 
-    <!-- Firebase compat (from root) -->
+    <!-- Firebase compat -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-    <script src="/firebase.js"></script>
+    <script src="/PlayConsole4u/firebase.js"></script>
 
     <!-- PeerJS -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
@@ -34,13 +34,12 @@
             <p class="subtitle">Studio Edition</p>
 
             <div id="auth-section">
-                <button id="btn-signin">🔑 Sign in with Google</button>
+                <button id="btn-signin">Sign in with Google</button>
                 <div id="user-info" style="display:none;">
                     <img id="user-avatar" src="" alt="" />
-                    <span id="user-name"></span>
-                    <div class="wl-display">
-                        <span class="stat-badge win">🏆 <span id="menu-wins">0</span>W</span>
-                        <span class="stat-badge loss">💀 <span id="menu-losses">0</span>L</span>
+                    <div>
+                        <div id="user-name"></div>
+                        <div class="wins-row">🏆 <span id="menu-wins">0</span> Wins</div>
                     </div>
                     <button id="btn-signout" class="small-btn">Sign Out</button>
                 </div>
@@ -48,10 +47,11 @@
 
             <div class="controls-list">
                 <p><b>WASD</b> — Move</p>
-                <p><b>SPACE</b> — Jump</p>
+                <p><b>SPACE</b> — Jump (x2 double jump)</p>
                 <p><b>SHIFT</b> — Sprint</p>
-                <p><b>Left-Click</b> — Paint</p>
-                <p><b>Right-Click Drag</b> — Orbit Camera</p>
+                <p><b>F</b> — Freeze</p>
+                <p><b>Left-Click Drag</b> — Orbit Camera</p>
+                <p><b>Left-Click Wall</b> — Paint</p>
                 <p><b>Scroll</b> — Zoom</p>
             </div>
 
@@ -60,26 +60,41 @@
     </div>
 
     <!-- HUD -->
-    <div id="hud" style="display: none;">
-        <!-- Paint Sidebar -->
+    <div id="hud" style="display:none;">
+        <!-- Stats top left -->
+        <div class="hud-panel" id="stats-panel">
+            <img id="hud-avatar" src="" alt="" />
+            <div>
+                <div id="hud-username">Guest</div>
+                <div class="wins-row">🏆 <span id="hud-wins">0</span> Wins</div>
+            </div>
+        </div>
+
+        <!-- Online players bottom left -->
+        <div class="hud-panel" id="online-panel">
+            <div class="panel-label">LOBBY</div>
+            <div id="online-list"><div class="online-entry">🟢 You</div></div>
+        </div>
+
+        <!-- Paint sidebar right -->
         <div class="hud-panel" id="sidebar-tools">
             <div class="sidebar-section">
-                <span class="section-title">Active Color</span>
+                <span class="section-title">Color</span>
                 <div class="color-picker-wrapper">
                     <input type="color" id="html-color-picker" value="#38bdf8">
                     <span id="color-hex-label">#38BDF8</span>
                 </div>
             </div>
             <div class="sidebar-section">
-                <span class="section-title">Tools</span>
+                <span class="section-title">Tool</span>
                 <button class="tool-btn active" data-tool="brush">🎨 Brush</button>
-                <button class="tool-btn" data-tool="bucket">🪣 Fill Bucket</button>
+                <button class="tool-btn" data-tool="bucket">🪣 Bucket</button>
                 <button class="tool-btn" data-tool="eraser">🧼 Eraser</button>
                 <div class="tool-divider"></div>
-                <button class="tool-btn" data-tool="picker">💧 Eyedropper</button>
+                <button class="tool-btn" data-tool="picker">💧 Picker</button>
             </div>
             <div class="sidebar-section">
-                <span class="section-title">Brush Size</span>
+                <span class="section-title">Size</span>
                 <div class="size-group">
                     <button class="size-btn" data-radius="12">S</button>
                     <button class="size-btn active" data-radius="32">M</button>
@@ -88,24 +103,21 @@
             </div>
         </div>
 
-        <!-- Stats Panel (top left) -->
-        <div class="hud-panel" id="stats-panel">
-            <div id="hud-user-row">
-                <img id="hud-avatar" src="" alt="" />
-                <div>
-                    <div id="hud-username">Guest</div>
-                    <div class="wl-display">
-                        <span class="stat-badge win">🏆 <span id="hud-wins">0</span>W</span>
-                        <span class="stat-badge loss">💀 <span id="hud-losses">0</span>L</span>
-                    </div>
+        <!-- Freeze indicator -->
+        <div id="freeze-indicator" style="display:none;">❄️ FROZEN</div>
+
+        <!-- Mobile controls -->
+        <div id="mobile-controls">
+            <div id="joystick-zone">
+                <div id="joystick-base">
+                    <div id="joystick-knob"></div>
                 </div>
             </div>
-        </div>
-
-        <!-- Online Players -->
-        <div class="hud-panel" id="online-panel">
-            <span class="section-title">LOBBY</span>
-            <div id="online-list">You</div>
+            <div id="action-btns">
+                <button class="mob-btn" id="mob-jump">↑<br><small>Jump</small></button>
+                <button class="mob-btn" id="mob-sprint">⚡<br><small>Sprint</small></button>
+                <button class="mob-btn" id="mob-freeze">❄️<br><small>Freeze</small></button>
+            </div>
         </div>
     </div>
 
