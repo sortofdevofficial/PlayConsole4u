@@ -3,40 +3,55 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import Environment from './Environment.js';
 import Player from './Player.js';
 
-// ── State ────────────────────────────────────────────────────────────────────
-let scene, camera, renderer, controls, clock;
+// ─── Core ────────────────────────────────────────────────────────────────────
+let scene, camera, renderer, menuControls, clock;
 let environment, player;
 let raycaster, mouse;
 
-const keys = { w: false, a: false, s: false, d: false, ' ': false, Shift: false };
+const keys = { w:false, a:false, s:false, d:false, ' ':false, Shift:false };
 let gameStarted = false;
-let activeTool  = 'brush';
-let brushColor  = '#38bdf8';
-let brushRadius = 32;
+let activeTool = 'brush', brushColor = '#c0392b', brushRadius = 20;
 
-// Camera — left-click drag to orbit
-let cameraYaw   = 0;
-let cameraPitch = 0.35;
-let cameraZoom  = 1.0;
-let isOrbiting  = false;
-let lastMouse   = { x: 0, y: 0 };
-let didDrag     = false;  // distinguish drag vs click for paint
+// Camera (manual third-person)
+let camYaw = 0, camPitch = 0.38, camZoom = 1;
+let orbiting = false, dragMoved = false, lastMx = 0, lastMy = 0;
 
-// Multiplayer
-const LOBBY_ID = 'camo-chameleon-lobby-v1';
-let peer = null, myPeerId = null;
-let connections = {}, remotePlayers = {};
-let myDisplayName = 'Guest';
-const COLORS = ['#c8cdd4','#e8a0a0','#a0c8a0','#a0b8e8','#e8d0a0','#c8a0d0','#d0c0a0'];
-let myColor = COLORS[Math.floor(Math.random() * COLORS.length)];
+// Mobile
+const mob = { x:0, z:0, sprint:false };
+let joyActive=false, joyId=null, joyOrigin={x:0,y:0};
+
+// ─── Auth & Firebase ─────────────────────────────────────────────────────────
 let fbUser = null;
+let myName = 'Player';
+let myWins = 0;
 
-// Mobile joystick state
-const mobileInput = { x: 0, z: 0, sprint: false };
-let joystickActive = false, joystickId = null;
-let joystickOrigin = { x: 0, y: 0 };
+// ─── Multiplayer / Lobby ──────────────────────────────────────────────────────
+let peer=null, myPeerId=null;
+let conns = {};          // peerId → DataConnection
+let remotePlayers = {};  // peerId → Player
+let lobbyMembers = {};   // peerId → { name, role, wins }
+const PLAYER_COLORS = ['#c8cdd4','#e8a0a0','#a0c8a0','#a0b8e8','#e8d0a0','#c8a0d0','#d0c0a0'];
+let myColor = PLAYER_COLORS[Math.floor(Math.random()*PLAYER_COLORS.length)];
+let myRole = null; // 'hunter' | 'seeker' | null
 
-// ── Init ──────────────────────────────────────────────────────────────────────
+// ─── Round System ─────────────────────────────────────────────────────────────
+// Roles: 1 hunter (it), rest are seekers trying to paint + hide
+// Seekers try to blend into walls by painting themselves
+// Hunter tags seekers by walking into them (proximity)
+// Round ends when hunter tags all seekers OR timer runs out
+// Seekers win if time runs out; Hunter wins if all tagged
+const ROUND_DURATION = 60; // seconds
+const TAG_DISTANCE   = 0.6; // world units
+const MIN_PLAYERS    = 2;
+
+let roundState = 'lobby'; // 'lobby' | 'countdown' | 'playing' | 'ended'
+let roundTimer  = 0;
+let roundNumber = 0;
+let taggedSeekers = new Set(); // peerIds of tagged seekers
+let amIHost = false; // host drives round logic + broadcasts round events
+let roundInterval = null;
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
 init();
 animate();
 
@@ -44,21 +59,21 @@ function init() {
     scene = new THREE.Scene();
     clock = new THREE.Clock();
 
-    renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('canvas3d'), antialias: true });
+    renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('canvas3d'), antialias:true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 
-    camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 500);
-    camera.position.set(0, 7, 12);
+    camera = new THREE.PerspectiveCamera(65, window.innerWidth/window.innerHeight, 0.01, 200);
+    camera.position.set(0, 4, 8);
 
-    // OrbitControls disabled during game; used only for menu spin
-    controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true; controls.dampingFactor = 0.08;
-    controls.autoRotate = true; controls.autoRotateSpeed = 1.5;
-    controls.enablePan = false;
-    controls.maxPolarAngle = Math.PI / 2 - 0.05;
-    controls.minDistance = 3; controls.maxDistance = 20;
+    // Menu auto-rotate only
+    menuControls = new OrbitControls(camera, renderer.domElement);
+    menuControls.enableDamping = true; menuControls.dampingFactor = 0.08;
+    menuControls.autoRotate = true; menuControls.autoRotateSpeed = 1.2;
+    menuControls.enablePan = false; menuControls.enableZoom = false;
+    menuControls.maxPolarAngle = Math.PI/2 - 0.05;
 
     environment = new Environment(scene);
     player = new Player(scene, myColor);
@@ -66,48 +81,44 @@ function init() {
     raycaster = new THREE.Raycaster();
     mouse = new THREE.Vector2();
 
-    // ── Input ────────────────────────────────────────────────────────────────
+    // ── Keyboard
     window.addEventListener('keydown', e => {
         if (!gameStarted) return;
-        if (e.key === ' ') { e.preventDefault(); player.jump(); }
-        if (e.key === 'f' || e.key === 'F') { player.toggleFreeze(); updateFreezeUI(); }
-        if (e.key in keys) keys[e.key] = true;
+        if (e.code==='Space')  { e.preventDefault(); player.jump(); }
+        if (e.code==='KeyF')   { player.toggleFreeze(); updateFreezeUI(); }
+        if (e.key in keys)     keys[e.key] = true;
+        if (e.code==='ShiftLeft'||e.code==='ShiftRight') keys.Shift=true;
     });
-    window.addEventListener('keyup', e => { if (e.key in keys) keys[e.key] = false; });
+    window.addEventListener('keyup', e => {
+        if (e.key in keys) keys[e.key] = false;
+        if (e.code==='ShiftLeft'||e.code==='ShiftRight') keys.Shift=false;
+    });
 
-    // Left-click: start orbit drag OR paint on release (no drag)
+    // ── Pointer (left-click drag = orbit; no-drag click = paint)
     window.addEventListener('pointerdown', e => {
-        if (!gameStarted) return;
-        if (e.button !== 0) return; // only left click
-        if (e.target.closest('.hud-panel') || e.target.closest('#mobile-controls')) return;
-        isOrbiting = true;
-        didDrag = false;
-        lastMouse = { x: e.clientX, y: e.clientY };
+        if (!gameStarted||e.button!==0) return;
+        if (e.target.closest('.hud-panel')||e.target.closest('#mobile-controls')||e.target.closest('#round-overlay')) return;
+        orbiting=true; dragMoved=false; lastMx=e.clientX; lastMy=e.clientY;
     });
     window.addEventListener('pointermove', e => {
-        if (!isOrbiting || !gameStarted) return;
-        const dx = e.clientX - lastMouse.x;
-        const dy = e.clientY - lastMouse.y;
-        if (Math.abs(dx) + Math.abs(dy) > 3) didDrag = true;
-        cameraYaw   -= dx * 0.005;
-        cameraPitch  = Math.max(0.08, Math.min(1.3, cameraPitch + dy * 0.004));
-        lastMouse = { x: e.clientX, y: e.clientY };
+        if (!orbiting||!gameStarted) return;
+        const dx=e.clientX-lastMx, dy=e.clientY-lastMy;
+        if (Math.abs(dx)+Math.abs(dy)>4) dragMoved=true;
+        camYaw   -= dx*0.005;
+        camPitch  = Math.max(0.08, Math.min(1.3, camPitch+dy*0.004));
+        lastMx=e.clientX; lastMy=e.clientY;
     });
     window.addEventListener('pointerup', e => {
-        if (!gameStarted || e.button !== 0) return;
-        if (!didDrag && !e.target.closest('.hud-panel') && !e.target.closest('#mobile-controls')) {
-            handlePaint(e);
-        }
-        isOrbiting = false;
+        if (!gameStarted||e.button!==0) return;
+        if (!dragMoved && !e.target.closest('.hud-panel') && !e.target.closest('#mobile-controls')) handlePaint(e);
+        orbiting=false;
     });
-    window.addEventListener('contextmenu', e => e.preventDefault());
-    window.addEventListener('wheel', e => {
-        cameraZoom = Math.max(0.4, Math.min(2.8, cameraZoom + e.deltaY * 0.001));
-    });
+    window.addEventListener('contextmenu', e=>e.preventDefault());
+    window.addEventListener('wheel', e=>{ camZoom=Math.max(0.3,Math.min(3,camZoom+e.deltaY*0.001)); });
     window.addEventListener('resize', () => {
-        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.aspect=window.innerWidth/window.innerHeight;
         camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setSize(window.innerWidth,window.innerHeight);
     });
 
     setupUI();
@@ -115,247 +126,509 @@ function init() {
     setupMobile();
 }
 
-// ── Firebase ──────────────────────────────────────────────────────────────────
+// ─── Firebase Auth ─────────────────────────────────────────────────────────────
 function setupFirebase() {
-    if (typeof FB === 'undefined') return;
+    if (typeof FB==='undefined') return;
     FB.onAuthChange(async user => {
         fbUser = user;
         if (user) {
-            myDisplayName = user.displayName || 'Player';
-            document.getElementById('user-name').textContent = myDisplayName;
-            document.getElementById('user-avatar').src = user.photoURL || '';
+            myName = user.displayName||'Player';
+            document.getElementById('user-name').textContent = myName;
+            document.getElementById('user-avatar').src = user.photoURL||'';
             document.getElementById('user-info').style.display = 'flex';
-            document.getElementById('btn-signin').style.display = 'none';
+            document.getElementById('auth-gate').style.display = 'none';
             const stats = await FB.getMatchStats(user.uid);
-            setWins(stats.w);
+            myWins = stats.w||0;
+            document.getElementById('menu-wins').textContent = myWins;
+            document.getElementById('btn-play').disabled = false;
+            document.getElementById('btn-play').textContent = 'JOIN LOBBY';
+            updateLobbyStatus();
         } else {
             document.getElementById('user-info').style.display = 'none';
-            document.getElementById('btn-signin').style.display = 'block';
+            document.getElementById('auth-gate').style.display = 'block';
+            document.getElementById('btn-play').disabled = true;
+            document.getElementById('btn-play').textContent = 'Sign in to play';
         }
     });
-    document.getElementById('btn-signin').addEventListener('click', () => FB.signInGoogle());
-    document.getElementById('btn-signout').addEventListener('click', () => FB.signOut());
+    document.getElementById('btn-signin').addEventListener('click', ()=>FB.signInGoogle());
+    document.getElementById('btn-signout').addEventListener('click', ()=>FB.signOut());
 }
 
-function setWins(w) {
-    document.getElementById('menu-wins').textContent = w;
-    document.getElementById('hud-wins').textContent  = w;
-}
-
-function updateFreezeUI() {
-    document.getElementById('freeze-indicator').style.display = player.frozen ? 'flex' : 'none';
-}
-
-// ── UI ────────────────────────────────────────────────────────────────────────
+// ─── UI Setup ─────────────────────────────────────────────────────────────────
 function setupUI() {
-    document.getElementById('btn-play').addEventListener('click', startGame);
+    document.getElementById('btn-play').addEventListener('click', () => {
+        if (!fbUser) return;
+        enterGame();
+    });
 
-    const picker = document.getElementById('html-color-picker');
-    const hexLbl = document.getElementById('color-hex-label');
-    picker.addEventListener('input', e => { brushColor = e.target.value; hexLbl.textContent = brushColor.toUpperCase(); });
+    const picker=document.getElementById('html-color-picker');
+    const hexLbl=document.getElementById('color-hex-label');
+    picker.addEventListener('input', e=>{ brushColor=e.target.value; hexLbl.textContent=brushColor.toUpperCase(); });
 
-    document.querySelectorAll('.tool-btn').forEach(btn => btn.addEventListener('click', e => {
-        document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tool-btn').forEach(b=>b.addEventListener('click',e=>{
+        document.querySelectorAll('.tool-btn').forEach(x=>x.classList.remove('active'));
         e.currentTarget.classList.add('active');
-        activeTool = e.currentTarget.dataset.tool;
+        activeTool=e.currentTarget.dataset.tool;
     }));
-    document.querySelectorAll('.size-btn').forEach(btn => btn.addEventListener('click', e => {
-        document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.size-btn').forEach(b=>b.addEventListener('click',e=>{
+        document.querySelectorAll('.size-btn').forEach(x=>x.classList.remove('active'));
         e.currentTarget.classList.add('active');
-        brushRadius = parseInt(e.currentTarget.dataset.radius);
+        brushRadius=parseInt(e.currentTarget.dataset.radius);
     }));
 }
 
-function startGame() {
-    document.getElementById('main-menu').style.display = 'none';
-    document.getElementById('hud').style.display = 'block';
-    gameStarted = true;
-    controls.enabled = false;
-    controls.autoRotate = false;
+function enterGame() {
+    document.getElementById('main-menu').style.display='none';
+    document.getElementById('hud').style.display='block';
+    gameStarted=true;
+    menuControls.enabled=false;
     clock.getDelta();
 
-    // HUD user
-    if (fbUser) {
-        document.getElementById('hud-username').textContent = myDisplayName;
-        document.getElementById('hud-avatar').src = fbUser.photoURL || '';
-    }
-    player.setName(myDisplayName);
+    document.getElementById('hud-username').textContent=myName;
+    document.getElementById('hud-avatar').src=fbUser?.photoURL||'';
+    document.getElementById('hud-wins').textContent=myWins;
 
-    // Show mobile controls on touch devices
-    if ('ontouchstart' in window) {
-        document.getElementById('mobile-controls').style.display = 'flex';
-    }
+    player.setName(myName);
+    player.group.position.set((Math.random()-0.5)*4, 0, (Math.random()-0.5)*4);
+
+    if ('ontouchstart' in window) document.getElementById('mobile-controls').style.display='flex';
 
     initMultiplayer();
 }
 
-// ── Mobile Controls ───────────────────────────────────────────────────────────
-function setupMobile() {
-    const zone  = document.getElementById('joystick-zone');
-    const knob  = document.getElementById('joystick-knob');
-    const base  = document.getElementById('joystick-base');
-
-    zone.addEventListener('touchstart', e => {
-        e.preventDefault();
-        const t = e.changedTouches[0];
-        joystickActive = true;
-        joystickId = t.identifier;
-        joystickOrigin = { x: t.clientX, y: t.clientY };
-        knob.style.transform = 'translate(-50%,-50%)';
-    }, { passive: false });
-
-    window.addEventListener('touchmove', e => {
-        if (!joystickActive) return;
-        for (const t of e.changedTouches) {
-            if (t.identifier !== joystickId) continue;
-            const dx = t.clientX - joystickOrigin.x;
-            const dy = t.clientY - joystickOrigin.y;
-            const dist = Math.min(Math.sqrt(dx*dx+dy*dy), 40);
-            const angle = Math.atan2(dy, dx);
-            const nx = Math.cos(angle) * dist;
-            const ny = Math.sin(angle) * dist;
-            knob.style.transform = `translate(calc(-50% + ${nx}px), calc(-50% + ${ny}px))`;
-            mobileInput.x =  (dx / 40) * Math.min(1, dist / 40);
-            mobileInput.z =  (dy / 40) * Math.min(1, dist / 40);
-        }
-    }, { passive: true });
-
-    const endJoy = () => {
-        joystickActive = false;
-        mobileInput.x = 0; mobileInput.z = 0;
-        knob.style.transform = 'translate(-50%,-50%)';
-    };
-    window.addEventListener('touchend',    endJoy);
-    window.addEventListener('touchcancel', endJoy);
-
-    // Action buttons
-    document.getElementById('mob-jump').addEventListener('touchstart',   e => { e.preventDefault(); player.jump(); }, { passive: false });
-    document.getElementById('mob-freeze').addEventListener('touchstart',  e => { e.preventDefault(); player.toggleFreeze(); updateFreezeUI(); }, { passive: false });
-    const sprintBtn = document.getElementById('mob-sprint');
-    sprintBtn.addEventListener('touchstart',  e => { e.preventDefault(); mobileInput.sprint = true;  }, { passive: false });
-    sprintBtn.addEventListener('touchend',    () => mobileInput.sprint = false);
-    sprintBtn.addEventListener('touchcancel', () => mobileInput.sprint = false);
+function updateFreezeUI() {
+    document.getElementById('freeze-indicator').style.display = player.frozen ? 'block' : 'none';
 }
 
-// ── Paint ──────────────────────────────────────────────────────────────────────
-function handlePaint(event) {
-    if (!gameStarted) return;
-    mouse.x =  (event.clientX / window.innerWidth)  * 2 - 1;
-    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-    raycaster.setFromCamera(mouse, camera);
-    const hits = raycaster.intersectObjects([...environment.targets, ...player.paintableMeshes]);
-    if (!hits.length) return;
-    const hit = hits[0];
-    if (player.paintableMeshes.includes(hit.object) && hit.uv) {
-        if (['brush','bucket','eraser'].includes(activeTool))
-            player.executePaintMatrix(hit.object, hit.uv, brushColor, brushRadius, activeTool);
-    } else if (!player.paintableMeshes.includes(hit.object)) {
-        if (activeTool === 'picker') {
-            brushColor = '#' + hit.object.material.color.getHexString();
-            document.getElementById('html-color-picker').value = brushColor;
-            document.getElementById('color-hex-label').textContent = brushColor.toUpperCase();
+// ─── Players Sidebar ──────────────────────────────────────────────────────────
+function rebuildPlayersList() {
+    const list = document.getElementById('players-list');
+    list.innerHTML='';
+
+    // Me
+    const me = document.createElement('div');
+    me.className='player-entry me';
+    const roleIcon = myRole==='hunter'?'🔴':myRole==='seeker'?'🔵':'⚪';
+    me.innerHTML=`<span class="p-dot" style="background:${myColor}"></span><span class="p-name">${myName} (You)</span><span class="p-role">${roleIcon}</span><span class="p-wins">🏆${myWins}</span>`;
+    list.appendChild(me);
+
+    // Others
+    Object.entries(lobbyMembers).forEach(([pid,m])=>{
+        const el=document.createElement('div');
+        el.className='player-entry';
+        el.id='ple-'+pid;
+        const ri=m.role==='hunter'?'🔴':m.role==='seeker'?'🔵':'⚪';
+        const clr=remotePlayers[pid]?remotePlayers[pid].baseSkinColor:'#888';
+        el.innerHTML=`<span class="p-dot" style="background:${clr}"></span><span class="p-name">${m.name||'Player'}</span><span class="p-role">${ri}</span><span class="p-wins">🏆${m.wins||0}</span>`;
+        list.appendChild(el);
+    });
+}
+
+function updateLobbyStatus() {
+    const total=1+Object.keys(lobbyMembers).length;
+    const need=Math.max(0,MIN_PLAYERS-total);
+    const el=document.getElementById('lobby-status');
+    if (el) el.textContent = need>0 ? `Need ${need} more player${need>1?'s':''} to start` : `${total} players in lobby`;
+}
+
+// ─── Round System ──────────────────────────────────────────────────────────────
+// HOST drives all round logic. Host = alphabetically first peerId in lobby.
+function electHost() {
+    const allIds=[myPeerId,...Object.keys(conns)].sort();
+    amIHost = allIds[0]===myPeerId;
+}
+
+function tryStartRound() {
+    if (!amIHost) return;
+    const total=1+Object.keys(conns).length;
+    if (total<MIN_PLAYERS||roundState!=='lobby') return;
+    broadcastAll({ type:'round_start', round: ++roundNumber });
+    beginRound(roundNumber);
+}
+
+function beginRound(num) {
+    roundState='countdown';
+    roundNumber=num;
+    taggedSeekers.clear();
+    showOverlay(`Round ${num}`, 'Get ready…', 2500);
+
+    setTimeout(()=>{
+        // Assign roles: 1 hunter (random), rest seekers
+        const allIds=[myPeerId,...Object.keys(conns)];
+        const hunterIdx=Math.floor(Math.random()*allIds.length);
+        const hunterPid=allIds[hunterIdx];
+        const roles={};
+        allIds.forEach(pid=>{ roles[pid]=pid===hunterPid?'hunter':'seeker'; });
+
+        if (amIHost) broadcastAll({ type:'roles', roles, round:roundNumber });
+        applyRoles(roles);
+
+        roundState='playing';
+        roundTimer=ROUND_DURATION;
+        updateRoundUI();
+    }, 2500);
+}
+
+function applyRoles(roles) {
+    myRole = roles[myPeerId];
+    player.setRole(myRole);
+    updateRoleBadge();
+
+    Object.entries(roles).forEach(([pid,role])=>{
+        if (remotePlayers[pid]) remotePlayers[pid].setRole(role);
+        if (lobbyMembers[pid])  lobbyMembers[pid].role=role;
+    });
+    rebuildPlayersList();
+}
+
+function updateRoleBadge() {
+    const panel=document.getElementById('role-panel');
+    const badge=document.getElementById('role-badge');
+    if (!myRole) { panel.style.display='none'; return; }
+    panel.style.display='block';
+    if (myRole==='hunter') {
+        badge.textContent='🔴 YOU ARE THE HUNTER';
+        badge.className='role-hunter';
+    } else {
+        badge.textContent='🔵 YOU ARE A SEEKER — HIDE!';
+        badge.className='role-seeker';
+    }
+}
+
+function updateRoundUI() {
+    const lbl=document.getElementById('round-label');
+    const tmr=document.getElementById('round-timer');
+    if (roundState==='playing') {
+        lbl.textContent=`Round ${roundNumber}`;
+        tmr.textContent=`${Math.ceil(roundTimer)}s`;
+    } else if (roundState==='lobby') {
+        lbl.textContent='Lobby'; tmr.textContent='';
+    } else if (roundState==='ended') {
+        lbl.textContent='Round Over'; tmr.textContent='';
+    }
+}
+
+function tickRound(delta) {
+    if (roundState!=='playing') return;
+    roundTimer-=delta;
+    updateRoundUI();
+
+    if (amIHost) {
+        // Check tags (hunter proximity to seekers)
+        if (myRole==='hunter') {
+            Object.entries(remotePlayers).forEach(([pid,rp])=>{
+                if (taggedSeekers.has(pid)) return;
+                if (lobbyMembers[pid]?.role!=='seeker') return;
+                const dist=player.group.position.distanceTo(rp.group.position);
+                if (dist<TAG_DISTANCE) {
+                    taggedSeekers.add(pid);
+                    broadcastAll({ type:'tagged', pid, round:roundNumber });
+                    handleTagged(pid);
+                }
+            });
+        } else {
+            // Check if a remote hunter tagged me
+            Object.entries(remotePlayers).forEach(([pid,rp])=>{
+                if (lobbyMembers[pid]?.role!=='hunter') return;
+                const dist=player.group.position.distanceTo(rp.group.position);
+                if (dist<TAG_DISTANCE && !taggedSeekers.has(myPeerId)) {
+                    taggedSeekers.add(myPeerId);
+                    broadcastAll({ type:'tagged', pid:myPeerId, round:roundNumber });
+                    handleTagged(myPeerId);
+                }
+            });
+        }
+
+        const seekerIds=[myPeerId,...Object.keys(conns)].filter(pid=>{
+            const role=pid===myPeerId?myRole:lobbyMembers[pid]?.role;
+            return role==='seeker';
+        });
+        const allTagged=seekerIds.every(pid=>taggedSeekers.has(pid));
+
+        if (allTagged||roundTimer<=0) {
+            const hunterWon=allTagged;
+            broadcastAll({ type:'round_end', hunterWon, round:roundNumber });
+            endRound(hunterWon);
         }
     }
 }
 
-// ── Third-person Camera ────────────────────────────────────────────────────────
+function handleTagged(pid) {
+    taggedSeekers.add(pid);
+    if (pid===myPeerId) {
+        showOverlay('Tagged!','You were caught 😱', 2000);
+        // Freeze seeker in place
+        if (myRole==='seeker') { player.frozen=true; updateFreezeUI(); }
+    }
+    // Update player list visual
+    const el=document.getElementById('ple-'+pid);
+    if (el) el.classList.add('tagged');
+    rebuildPlayersList();
+}
+
+async function endRound(hunterWon) {
+    roundState='ended';
+    updateRoundUI();
+
+    const iHunter=myRole==='hunter';
+    const iWon=(iHunter&&hunterWon)||(!iHunter&&!hunterWon);
+
+    let msg=hunterWon?'Hunter wins! All seekers tagged!':'Seekers escape! Time ran out!';
+    let sub=iWon?'🎉 You win!':'😔 You lose';
+    showOverlay(msg,sub,4000);
+
+    if (iWon && fbUser) {
+        myWins++;
+        document.getElementById('hud-wins').textContent=myWins;
+        document.getElementById('menu-wins').textContent=myWins;
+        await FB.recordMatch(fbUser.uid,true);
+    }
+
+    // Reset roles
+    player.setRole(null); myRole=null;
+    Object.values(remotePlayers).forEach(rp=>rp.setRole(null));
+    Object.values(lobbyMembers).forEach(m=>m.role=null);
+    player.frozen=false; updateFreezeUI();
+
+    if (amIHost) {
+        setTimeout(()=>{
+            roundState='lobby';
+            updateRoundUI();
+            rebuildPlayersList();
+            broadcastAll({ type:'lobby_reset' });
+            setTimeout(tryStartRound,3000);
+        }, 4500);
+    }
+}
+
+function showOverlay(title,sub,duration) {
+    const ov=document.getElementById('round-overlay');
+    document.getElementById('overlay-title').textContent=title;
+    document.getElementById('overlay-sub').textContent=sub;
+    ov.style.display='flex';
+    setTimeout(()=>{ ov.style.display='none'; },duration);
+}
+
+// ─── Multiplayer ──────────────────────────────────────────────────────────────
+function initMultiplayer() {
+    peer=new Peer(undefined,{
+        host:'0.peerjs.com',port:443,secure:true,
+        config:{iceServers:[{urls:'stun:stun.google.com:19302'}]}
+    });
+    peer.on('open', id=>{ myPeerId=id; firestoreAnnounce(); });
+    peer.on('connection', conn=>onIncomingConn(conn));
+    peer.on('error', err=>console.warn('[P2P]',err.type,err));
+}
+
+async function firestoreAnnounce() {
+    if (typeof firebase==='undefined') return;
+    const db=firebase.firestore();
+    const lobbyDoc=db.collection('cc_lobby').doc('main');
+
+    // Write presence
+    await lobbyDoc.set({
+        [myPeerId]: { name:myName, wins:myWins, ts:Date.now() }
+    },{ merge:true });
+
+    // On close, clean up
+    window.addEventListener('beforeunload', ()=>{
+        db.collection('cc_lobby').doc('main').update({
+            [myPeerId]: firebase.firestore.FieldValue.delete()
+        }).catch(()=>{});
+    });
+
+    // Watch lobby
+    lobbyDoc.onSnapshot(snap=>{
+        const data=snap.data()||{};
+        // Remove stale entries (>30s old) and connect to new peers
+        Object.entries(data).forEach(([pid,info])=>{
+            if (pid===myPeerId) return;
+            if (Date.now()-info.ts>30000) return; // stale
+            if (!conns[pid]) {
+                const c=peer.connect(pid,{reliable:false,serialization:'json',metadata:{name:myName,wins:myWins}});
+                c.on('open',()=>onConnectionReady(c,pid,info.name,info.wins));
+            }
+        });
+
+        // Remove gone peers from lobbyMembers
+        Object.keys(lobbyMembers).forEach(pid=>{
+            if (!data[pid]) removePeer(pid);
+        });
+
+        updateLobbyStatus();
+        electHost();
+
+        // Heartbeat to stay alive in lobby
+        lobbyDoc.update({ [myPeerId+'.ts']: Date.now() }).catch(()=>{});
+    });
+
+    // Keep-alive heartbeat every 10s
+    setInterval(()=>{
+        lobbyDoc.update({ [myPeerId+'.ts']: Date.now() }).catch(()=>{});
+    },10000);
+}
+
+function onIncomingConn(conn) {
+    conn.on('open',()=>{
+        const pid=conn.peer;
+        const meta=conn.metadata||{};
+        onConnectionReady(conn,pid,meta.name,meta.wins);
+    });
+}
+
+function onConnectionReady(conn,pid,name,wins) {
+    conns[pid]=conn;
+    lobbyMembers[pid]={ name, wins:wins||0, role:null };
+
+    // Assign color
+    const idx=Object.keys(remotePlayers).length%PLAYER_COLORS.length;
+    const rp=new Player(scene,PLAYER_COLORS[idx],true);
+    rp.setName(name||'Player');
+    remotePlayers[pid]=rp;
+
+    rebuildPlayersList();
+    updateLobbyStatus();
+    electHost();
+
+    conn.on('data',data=>handlePeerData(pid,data));
+    conn.on('close',()=>removePeer(pid));
+    conn.on('error',()=>removePeer(pid));
+
+    // If we just got enough players and we're host, start
+    setTimeout(tryStartRound,1000);
+}
+
+function removePeer(pid) {
+    if (remotePlayers[pid]) { remotePlayers[pid].destroy(); delete remotePlayers[pid]; }
+    delete conns[pid];
+    delete lobbyMembers[pid];
+    const el=document.getElementById('ple-'+pid); if(el) el.remove();
+    electHost();
+    updateLobbyStatus();
+    rebuildPlayersList();
+}
+
+function handlePeerData(pid,data) {
+    if (!data||!data.type) return;
+    switch(data.type) {
+        case 'state':
+            if (remotePlayers[pid]) remotePlayers[pid].applyRemoteState(data);
+            break;
+        case 'round_start':
+            roundNumber=data.round;
+            beginRound(roundNumber);
+            break;
+        case 'roles':
+            applyRoles(data.roles);
+            roundState='playing'; roundTimer=ROUND_DURATION; updateRoundUI();
+            break;
+        case 'tagged':
+            handleTagged(data.pid);
+            break;
+        case 'round_end':
+            if (roundState==='playing') endRound(data.hunterWon);
+            break;
+        case 'lobby_reset':
+            roundState='lobby'; updateRoundUI();
+            Object.values(remotePlayers).forEach(rp=>rp.setRole(null));
+            player.setRole(null); myRole=null;
+            rebuildPlayersList();
+            break;
+    }
+}
+
+function broadcastAll(data) {
+    Object.values(conns).forEach(c=>{ try{c.send(data);}catch(e){} });
+}
+
+// ─── Paint ────────────────────────────────────────────────────────────────────
+function handlePaint(e) {
+    mouse.x=(e.clientX/window.innerWidth)*2-1;
+    mouse.y=-(e.clientY/window.innerHeight)*2+1;
+    raycaster.setFromCamera(mouse,camera);
+    const hits=raycaster.intersectObjects([...environment.targets,...player.paintableMeshes]);
+    if (!hits.length) return;
+    const hit=hits[0];
+    if (player.paintableMeshes.includes(hit.object)&&hit.uv) {
+        if (['brush','bucket','eraser'].includes(activeTool))
+            player.executePaintMatrix(hit.object,hit.uv,brushColor,brushRadius,activeTool);
+    } else if (activeTool==='picker') {
+        brushColor='#'+hit.object.material.color.getHexString();
+        document.getElementById('html-color-picker').value=brushColor;
+        document.getElementById('color-hex-label').textContent=brushColor.toUpperCase();
+    }
+}
+
+// ─── Camera ───────────────────────────────────────────────────────────────────
 function updateCamera() {
-    const target = player.group.position.clone();
-    target.y += 1.4;
-    const dist = 10 * cameraZoom;
-    const x = target.x + Math.sin(cameraYaw) * Math.cos(cameraPitch) * dist;
-    const y = target.y + Math.sin(cameraPitch) * dist;
-    const z = target.z + Math.cos(cameraYaw) * Math.cos(cameraPitch) * dist;
-    camera.position.lerp(new THREE.Vector3(x, y, z), 0.13);
+    const target=player.group.position.clone(); target.y+=0.3;
+    const dist=2*camZoom;
+    camera.position.lerp(new THREE.Vector3(
+        target.x+Math.sin(camYaw)*Math.cos(camPitch)*dist,
+        target.y+Math.sin(camPitch)*dist,
+        target.z+Math.cos(camYaw)*Math.cos(camPitch)*dist
+    ),0.13);
     camera.lookAt(target);
 }
 
-// ── Multiplayer ───────────────────────────────────────────────────────────────
-function initMultiplayer() {
-    peer = new Peer(undefined, {
-        host: '0.peerjs.com', port: 443, secure: true,
-        config: { iceServers: [{ urls: 'stun:stun.google.com:19302' }] }
-    });
-    peer.on('open', id => { myPeerId = id; hostAnnounce(); });
-    peer.on('connection', conn => setupConn(conn));
-    peer.on('error', err => console.warn('[P2P]', err));
-}
-
-async function hostAnnounce() {
-    if (typeof firebase === 'undefined') return;
-    try {
-        await firebase.firestore().collection('lobby').doc('main')
-            .set({ peers: firebase.firestore.FieldValue.arrayUnion(myPeerId) }, { merge: true });
-        firebase.firestore().collection('lobby').doc('main').onSnapshot(snap => {
-            const peers = snap.data()?.peers || [];
-            peers.forEach(pid => {
-                if (pid !== myPeerId && !connections[pid]) {
-                    const c = peer.connect(pid, { reliable: false, serialization: 'json' });
-                    c.on('open', () => setupConn(c));
-                }
-            });
-        });
-    } catch(e) { console.warn('[P2P] announce failed:', e.message); }
-}
-
-function setupConn(conn) {
-    const pid = conn.peer;
-    connections[pid] = conn;
-    conn.on('data', data => {
-        if (data.type === 'state') {
-            if (!remotePlayers[pid]) {
-                const color = COLORS[Object.keys(remotePlayers).length % COLORS.length];
-                const rp = new Player(scene, color, true);
-                rp.setName(data.name || 'Player');
-                remotePlayers[pid] = rp;
-                addOnlineEntry(pid, data.name);
-            }
-            remotePlayers[pid].applyRemoteState(data);
+// ─── Mobile ───────────────────────────────────────────────────────────────────
+function setupMobile() {
+    const zone=document.getElementById('joystick-zone');
+    const knob=document.getElementById('joystick-knob');
+    zone.addEventListener('touchstart',e=>{
+        e.preventDefault();
+        const t=e.changedTouches[0];
+        joyActive=true; joyId=t.identifier; joyOrigin={x:t.clientX,y:t.clientY};
+    },{passive:false});
+    window.addEventListener('touchmove',e=>{
+        if (!joyActive) return;
+        for (const t of e.changedTouches) {
+            if (t.identifier!==joyId) continue;
+            const dx=t.clientX-joyOrigin.x, dy=t.clientY-joyOrigin.y;
+            const dist=Math.sqrt(dx*dx+dy*dy), max=40;
+            const cx=Math.cos(Math.atan2(dy,dx))*Math.min(dist,max);
+            const cy=Math.sin(Math.atan2(dy,dx))*Math.min(dist,max);
+            knob.style.transform=`translate(calc(-50% + ${cx}px),calc(-50% + ${cy}px))`;
+            mob.x=dx/max; mob.z=dy/max;
         }
-    });
-    conn.on('close', () => {
-        if (remotePlayers[pid]) { remotePlayers[pid].destroy(); delete remotePlayers[pid]; }
-        delete connections[pid];
-        const el = document.getElementById('op-'+pid); if (el) el.remove();
-    });
+    },{passive:true});
+    const endJ=()=>{ joyActive=false; mob.x=0; mob.z=0; knob.style.transform='translate(-50%,-50%)'; };
+    window.addEventListener('touchend',endJ);
+    window.addEventListener('touchcancel',endJ);
+    document.getElementById('mob-jump').addEventListener('touchstart',e=>{e.preventDefault();player.jump();},{passive:false});
+    document.getElementById('mob-freeze').addEventListener('touchstart',e=>{e.preventDefault();player.toggleFreeze();updateFreezeUI();},{passive:false});
+    const sb=document.getElementById('mob-sprint');
+    sb.addEventListener('touchstart',e=>{e.preventDefault();mob.sprint=true;},{passive:false});
+    sb.addEventListener('touchend',()=>mob.sprint=false);
 }
 
-function addOnlineEntry(pid, name) {
-    if (document.getElementById('op-'+pid)) return;
-    const el = document.createElement('div');
-    el.id = 'op-'+pid; el.className = 'online-entry';
-    el.textContent = '🟢 ' + (name || 'Player');
-    document.getElementById('online-list').appendChild(el);
-}
-
-// ── Animate ───────────────────────────────────────────────────────────────────
-let netTimer = 0;
+// ─── Animate ──────────────────────────────────────────────────────────────────
+let netT=0;
 
 function animate() {
     requestAnimationFrame(animate);
-    const delta = Math.min(clock.getDelta(), 0.1);
+    const delta=Math.min(clock.getDelta(),0.1);
 
-    if (gameStarted) {
-        // Merge mobile joystick into keys
-        const mergedKeys = {
-            w: keys.w || mobileInput.z < -0.2,
-            s: keys.s || mobileInput.z >  0.2,
-            a: keys.a || mobileInput.x < -0.2,
-            d: keys.d || mobileInput.x >  0.2,
-        };
-        const sprinting = keys.Shift || mobileInput.sprint;
-        player.update(mergedKeys, sprinting, delta, environment.colliders);
-        updateCamera();
+    if (!gameStarted) { menuControls.update(); renderer.render(scene,camera); return; }
 
-        netTimer += delta;
-        if (netTimer > 0.05) {
-            netTimer = 0;
-            const state = { ...player.getNetState(), type: 'state', name: myDisplayName };
-            Object.values(connections).forEach(c => { try { c.send(state); } catch(e){} });
-        }
-    } else {
-        controls.update();
+    const mk={
+        w: keys.w||mob.z<-0.25,
+        s: keys.s||mob.z>0.25,
+        a: keys.a||mob.x<-0.25,
+        d: keys.d||mob.x>0.25,
+    };
+    const sprinting=keys.Shift||mob.sprint;
+
+    player.update(mk,sprinting,delta,environment.colliders);
+    updateCamera();
+    tickRound(delta);
+
+    // Broadcast position ~20Hz
+    netT+=delta;
+    if (netT>0.05) {
+        netT=0;
+        broadcastAll({ type:'state', ...player.getNetState(), name:myName });
     }
 
-    renderer.render(scene, camera);
+    renderer.render(scene,camera);
 }

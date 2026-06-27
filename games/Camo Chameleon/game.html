@@ -3,124 +3,131 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Camo Chameleon: Studio</title>
+    <title>Camo Chameleon</title>
     <link rel="stylesheet" href="style.css">
-
-    <!-- Firebase compat -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
     <script src="/PlayConsole4u/firebase.js"></script>
-
-    <!-- PeerJS -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-
-    <script type="importmap">
-        {
-            "imports": {
-                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
-            }
-        }
-    </script>
+    <script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}</script>
 </head>
 <body>
-    <canvas id="canvas3d"></canvas>
+<canvas id="canvas3d"></canvas>
 
-    <!-- Main Menu -->
-    <div id="main-menu">
-        <div class="menu-box">
-            <h1 class="game-title">CAMO CHAMELEON</h1>
-            <p class="subtitle">Studio Edition</p>
+<!-- MAIN MENU -->
+<div id="main-menu">
+    <div class="menu-box">
+        <h1 class="game-title">CAMO CHAMELEON</h1>
+        <p class="subtitle">Studio Edition</p>
 
-            <div id="auth-section">
-                <button id="btn-signin">Sign in with Google</button>
-                <div id="user-info" style="display:none;">
-                    <img id="user-avatar" src="" alt="" />
-                    <div>
-                        <div id="user-name"></div>
-                        <div class="wins-row">🏆 <span id="menu-wins">0</span> Wins</div>
-                    </div>
-                    <button id="btn-signout" class="small-btn">Sign Out</button>
-                </div>
-            </div>
-
-            <div class="controls-list">
-                <p><b>WASD</b> — Move</p>
-                <p><b>SPACE</b> — Jump (x2 double jump)</p>
-                <p><b>SHIFT</b> — Sprint</p>
-                <p><b>F</b> — Freeze</p>
-                <p><b>Left-Click Drag</b> — Orbit Camera</p>
-                <p><b>Left-Click Wall</b> — Paint</p>
-                <p><b>Scroll</b> — Zoom</p>
-            </div>
-
-            <button id="btn-play">JOIN LOBBY & PLAY</button>
+        <!-- Auth gate -->
+        <div id="auth-gate">
+            <p class="gate-msg">Sign in to play</p>
+            <button id="btn-signin">Sign in with Google</button>
         </div>
-    </div>
 
-    <!-- HUD -->
-    <div id="hud" style="display:none;">
-        <!-- Stats top left -->
-        <div class="hud-panel" id="stats-panel">
-            <img id="hud-avatar" src="" alt="" />
+        <!-- Signed-in state -->
+        <div id="user-info" style="display:none">
+            <img id="user-avatar" src="" alt="">
             <div>
-                <div id="hud-username">Guest</div>
-                <div class="wins-row">🏆 <span id="hud-wins">0</span> Wins</div>
+                <div id="user-name"></div>
+                <div class="wins-row">🏆 <span id="menu-wins">0</span> Wins</div>
             </div>
+            <button id="btn-signout" class="small-btn">Sign Out</button>
         </div>
 
-        <!-- Online players bottom left -->
-        <div class="hud-panel" id="online-panel">
-            <div class="panel-label">LOBBY</div>
-            <div id="online-list"><div class="online-entry">🟢 You</div></div>
+        <div class="controls-list">
+            <p><b>WASD</b> — Move</p>
+            <p><b>Space ×2</b> — Double Jump</p>
+            <p><b>Shift</b> — Sprint</p>
+            <p><b>F</b> — Freeze</p>
+            <p><b>Left drag</b> — Orbit camera</p>
+            <p><b>Click wall</b> — Paint</p>
+            <p><b>Scroll</b> — Zoom</p>
         </div>
 
-        <!-- Paint sidebar right -->
-        <div class="hud-panel" id="sidebar-tools">
-            <div class="sidebar-section">
-                <span class="section-title">Color</span>
-                <div class="color-picker-wrapper">
-                    <input type="color" id="html-color-picker" value="#38bdf8">
-                    <span id="color-hex-label">#38BDF8</span>
-                </div>
-            </div>
-            <div class="sidebar-section">
-                <span class="section-title">Tool</span>
-                <button class="tool-btn active" data-tool="brush">🎨 Brush</button>
-                <button class="tool-btn" data-tool="bucket">🪣 Bucket</button>
-                <button class="tool-btn" data-tool="eraser">🧼 Eraser</button>
-                <div class="tool-divider"></div>
-                <button class="tool-btn" data-tool="picker">💧 Picker</button>
-            </div>
-            <div class="sidebar-section">
-                <span class="section-title">Size</span>
-                <div class="size-group">
-                    <button class="size-btn" data-radius="12">S</button>
-                    <button class="size-btn active" data-radius="32">M</button>
-                    <button class="size-btn" data-radius="64">L</button>
-                </div>
+        <button id="btn-play" disabled>Waiting for sign-in…</button>
+        <p id="lobby-status" class="lobby-status"></p>
+    </div>
+</div>
+
+<!-- HUD -->
+<div id="hud" style="display:none">
+
+    <!-- Top-left: user stats -->
+    <div class="hud-panel" id="stats-panel">
+        <img id="hud-avatar" src="" alt="">
+        <div>
+            <div id="hud-username">—</div>
+            <div class="wins-row">🏆 <span id="hud-wins">0</span> Wins</div>
+        </div>
+    </div>
+
+    <!-- Top-center: round info -->
+    <div class="hud-panel" id="round-panel">
+        <div id="round-label">Waiting…</div>
+        <div id="round-timer"></div>
+    </div>
+
+    <!-- Top-right: my role badge -->
+    <div class="hud-panel" id="role-panel" style="display:none">
+        <div id="role-badge"></div>
+    </div>
+
+    <!-- Right: paint tools -->
+    <div class="hud-panel" id="sidebar-tools">
+        <div class="sidebar-section">
+            <span class="section-title">Color</span>
+            <div class="color-picker-wrapper">
+                <input type="color" id="html-color-picker" value="#c0392b">
+                <span id="color-hex-label">#C0392B</span>
             </div>
         </div>
-
-        <!-- Freeze indicator -->
-        <div id="freeze-indicator" style="display:none;">❄️ FROZEN</div>
-
-        <!-- Mobile controls -->
-        <div id="mobile-controls">
-            <div id="joystick-zone">
-                <div id="joystick-base">
-                    <div id="joystick-knob"></div>
-                </div>
-            </div>
-            <div id="action-btns">
-                <button class="mob-btn" id="mob-jump">↑<br><small>Jump</small></button>
-                <button class="mob-btn" id="mob-sprint">⚡<br><small>Sprint</small></button>
-                <button class="mob-btn" id="mob-freeze">❄️<br><small>Freeze</small></button>
+        <div class="sidebar-section">
+            <span class="section-title">Tool</span>
+            <button class="tool-btn active" data-tool="brush">🎨 Brush</button>
+            <button class="tool-btn" data-tool="bucket">🪣 Bucket</button>
+            <button class="tool-btn" data-tool="eraser">🧼 Eraser</button>
+            <div class="tool-divider"></div>
+            <button class="tool-btn" data-tool="picker">💧 Picker</button>
+        </div>
+        <div class="sidebar-section">
+            <span class="section-title">Size</span>
+            <div class="size-group">
+                <button class="size-btn" data-radius="8">S</button>
+                <button class="size-btn active" data-radius="20">M</button>
+                <button class="size-btn" data-radius="40">L</button>
             </div>
         </div>
     </div>
 
-    <script type="module" src="main.js"></script>
+    <!-- Left sidebar: player list -->
+    <div class="hud-panel" id="players-panel">
+        <div class="panel-label">PLAYERS</div>
+        <div id="players-list"></div>
+    </div>
+
+    <!-- Freeze indicator -->
+    <div id="freeze-indicator">❄️ FROZEN — press F to unfreeze</div>
+
+    <!-- Round overlay (start/end) -->
+    <div id="round-overlay" style="display:none">
+        <div id="overlay-title"></div>
+        <div id="overlay-sub"></div>
+    </div>
+
+    <!-- Mobile controls -->
+    <div id="mobile-controls">
+        <div id="joystick-zone"><div id="joystick-base"><div id="joystick-knob"></div></div></div>
+        <div id="action-btns">
+            <button class="mob-btn" id="mob-jump">↑<br><small>Jump</small></button>
+            <button class="mob-btn" id="mob-sprint">⚡<br><small>Sprint</small></button>
+            <button class="mob-btn" id="mob-freeze">❄️<br><small>Freeze</small></button>
+        </div>
+    </div>
+</div>
+
+<script type="module" src="main.js"></script>
 </body>
 </html>
