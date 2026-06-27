@@ -3,13 +3,13 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import Environment from './Environment.js';
 import Player from './Player.js';
 
-let scene, camera, renderer, controls;
+let scene, camera, renderer, controls, clock;
 let environment, player;
 let raycaster, mouse;
+let lastPlayerPos = new THREE.Vector3(); // Used for smart camera tracking
 
 const keys = { w: false, a: false, s: false, d: false, ' ': false, Shift: false };
 
-// Game State & Tool Configuration
 let gameStarted = false;
 let activeTool = 'brush'; 
 let brushColor = '#38bdf8';
@@ -21,6 +21,8 @@ animate();
 function init() {
     scene = new THREE.Scene();
     scene.background = new THREE.Color('#060911');
+    
+    clock = new THREE.Clock(); 
 
     renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('canvas3d'), antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -36,17 +38,22 @@ function init() {
     controls.minDistance = 3.5;
     controls.maxDistance = 20;
     
-    // Auto-rotate camera slowly during the main menu!
+    // RESTORED: Right-click to pan is back!
+    controls.enablePan = true; 
+    
     controls.autoRotate = true;
     controls.autoRotateSpeed = 1.5;
 
     environment = new Environment(scene);
     player = new Player(scene);
+    
+    // Set initial camera anchor
+    lastPlayerPos.copy(player.group.position);
+    lastPlayerPos.y += 1.2;
 
     raycaster = new THREE.Raycaster();
     mouse = new THREE.Vector2();
 
-    // Input Listeners
     window.addEventListener('keydown', (e) => { 
         if(!gameStarted) return;
         if(e.key === ' ') e.preventDefault();
@@ -66,15 +73,18 @@ function init() {
 }
 
 function setupUI() {
-    // Start Game Button
     document.getElementById('btn-play').addEventListener('click', () => {
         document.getElementById('main-menu').style.display = 'none';
         document.getElementById('hud').style.display = 'block';
         gameStarted = true;
-        controls.autoRotate = false; // Stop menu rotation
+        controls.autoRotate = false; 
+        clock.getDelta(); 
+        
+        // Snap anchor when game starts
+        lastPlayerPos.copy(player.group.position);
+        lastPlayerPos.y += 1.2;
     });
 
-    // Color UI
     const picker = document.getElementById('html-color-picker');
     const hexLabel = document.getElementById('color-hex-label');
 
@@ -83,7 +93,6 @@ function setupUI() {
         hexLabel.textContent = brushColor.toUpperCase();
     });
 
-    // Tool Buttons
     document.querySelectorAll('.tool-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
@@ -92,7 +101,6 @@ function setupUI() {
         });
     });
 
-    // Size Buttons
     document.querySelectorAll('.size-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
@@ -104,24 +112,26 @@ function setupUI() {
 
 function handleInteraction(event) {
     if (!gameStarted) return;
+    
+    // Right click is for panning, don't try to paint!
+    if (event.button === 2) return; 
+    
     if (event.target.closest('.hud-panel') || event.target.tagName === 'INPUT' || event.target.tagName === 'BUTTON') return;
 
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
     mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
     raycaster.setFromCamera(mouse, camera);
-    const intersections = raycaster.intersectObjects([...environment.targets, player.torso]);
+    const intersections = raycaster.intersectObjects([...environment.targets, ...player.paintableMeshes]);
 
     if (intersections.length > 0) {
         const hit = intersections[0];
         
-        if (hit.object === player.torso && hit.uv) {
-            // Apply Drawing Tools ONLY if Brush, Bucket, or Eraser is selected
+        if (player.paintableMeshes.includes(hit.object) && hit.uv) {
             if (['brush', 'bucket', 'eraser'].includes(activeTool)) {
-                player.executePaintMatrix(hit.uv, brushColor, brushRadius, activeTool);
+                player.executePaintMatrix(hit.object, hit.uv, brushColor, brushRadius, activeTool);
             }
-        } else if (hit.object !== player.torso) {
-            // Snatch Color from Environment ONLY if Eyedropper tool is selected
+        } else if (!player.paintableMeshes.includes(hit.object)) {
             if (activeTool === 'picker') {
                 brushColor = "#" + hit.object.material.color.getHexString();
                 document.getElementById('html-color-picker').value = brushColor;
@@ -133,17 +143,23 @@ function handleInteraction(event) {
 
 function animate() {
     requestAnimationFrame(animate);
+    
+    const delta = Math.min(clock.getDelta(), 0.1);
 
     if (gameStarted) {
-        const speed = keys.Shift ? 0.22 : 0.12;
-        player.update(keys, speed);
+        player.update(keys, keys.Shift, delta);
         
-        // Track player
-        controls.target.copy(player.group.position);
-        controls.target.y = 1.2; 
-    } else {
-        // While in menu, just orbit around the center scene
-        controls.target.set(0, 1.2, 0);
+        // SMART CAMERA: Calculates how much the player moved this frame
+        // and moves the camera by the exact same amount, preserving your pans!
+        const currentPlayerTarget = player.group.position.clone();
+        currentPlayerTarget.y += 1.2;
+        
+        const movementDelta = currentPlayerTarget.clone().sub(lastPlayerPos);
+        
+        controls.target.add(movementDelta);
+        camera.position.add(movementDelta);
+        
+        lastPlayerPos.copy(currentPlayerTarget);
     }
 
     controls.update();

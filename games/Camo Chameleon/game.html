@@ -5,7 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Camo Chameleon: Studio</title>
     <link rel="stylesheet" href="style.css">
-    
+
+    <!-- Firebase compat (from root) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="/firebase.js"></script>
+
+    <!-- PeerJS -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+
     <script type="importmap">
         {
             "imports": {
@@ -18,24 +27,41 @@
 <body>
     <canvas id="canvas3d"></canvas>
 
+    <!-- Main Menu -->
     <div id="main-menu">
         <div class="menu-box">
             <h1 class="game-title">CAMO CHAMELEON</h1>
             <p class="subtitle">Studio Edition</p>
-            
-            <div class="controls-list">
-                <p><b>WASD</b> - Move Character</p>
-                <p><b>SPACE</b> - Jump</p>
-                <p><b>SHIFT</b> - Sprint</p>
-                <p><b>Left-Click & Drag</b> - Pan Camera</p>
-                <p><b>Scroll Wheel</b> - Zoom In/Out</p>
+
+            <div id="auth-section">
+                <button id="btn-signin">🔑 Sign in with Google</button>
+                <div id="user-info" style="display:none;">
+                    <img id="user-avatar" src="" alt="" />
+                    <span id="user-name"></span>
+                    <div class="wl-display">
+                        <span class="stat-badge win">🏆 <span id="menu-wins">0</span>W</span>
+                        <span class="stat-badge loss">💀 <span id="menu-losses">0</span>L</span>
+                    </div>
+                    <button id="btn-signout" class="small-btn">Sign Out</button>
+                </div>
             </div>
 
-            <button id="btn-play">START GAME</button>
+            <div class="controls-list">
+                <p><b>WASD</b> — Move</p>
+                <p><b>SPACE</b> — Jump</p>
+                <p><b>SHIFT</b> — Sprint</p>
+                <p><b>Left-Click</b> — Paint</p>
+                <p><b>Right-Click Drag</b> — Orbit Camera</p>
+                <p><b>Scroll</b> — Zoom</p>
+            </div>
+
+            <button id="btn-play">JOIN LOBBY & PLAY</button>
         </div>
     </div>
 
+    <!-- HUD -->
     <div id="hud" style="display: none;">
+        <!-- Paint Sidebar -->
         <div class="hud-panel" id="sidebar-tools">
             <div class="sidebar-section">
                 <span class="section-title">Active Color</span>
@@ -44,7 +70,6 @@
                     <span id="color-hex-label">#38BDF8</span>
                 </div>
             </div>
-
             <div class="sidebar-section">
                 <span class="section-title">Tools</span>
                 <button class="tool-btn active" data-tool="brush">🎨 Brush</button>
@@ -53,7 +78,6 @@
                 <div class="tool-divider"></div>
                 <button class="tool-btn" data-tool="picker">💧 Eyedropper</button>
             </div>
-
             <div class="sidebar-section">
                 <span class="section-title">Brush Size</span>
                 <div class="size-group">
@@ -62,6 +86,26 @@
                     <button class="size-btn" data-radius="64">L</button>
                 </div>
             </div>
+        </div>
+
+        <!-- Stats Panel (top left) -->
+        <div class="hud-panel" id="stats-panel">
+            <div id="hud-user-row">
+                <img id="hud-avatar" src="" alt="" />
+                <div>
+                    <div id="hud-username">Guest</div>
+                    <div class="wl-display">
+                        <span class="stat-badge win">🏆 <span id="hud-wins">0</span>W</span>
+                        <span class="stat-badge loss">💀 <span id="hud-losses">0</span>L</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Online Players -->
+        <div class="hud-panel" id="online-panel">
+            <span class="section-title">LOBBY</span>
+            <div id="online-list">You</div>
         </div>
     </div>
 
