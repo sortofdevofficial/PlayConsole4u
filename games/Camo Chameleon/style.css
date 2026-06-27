@@ -1,0 +1,89 @@
+body, html {
+    margin: 0; padding: 0; overflow: hidden;
+    width: 100%; height: 100%;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    user-select: none; background-color: #070a13;
+}
+
+#canvas3d { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+
+/* Main Menu Styling */
+#main-menu {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 100; background: rgba(7, 10, 19, 0.7);
+    backdrop-filter: blur(8px); display: flex;
+    justify-content: center; align-items: center;
+}
+
+.menu-box {
+    background: rgba(15, 23, 42, 0.95); padding: 40px 60px;
+    border-radius: 20px; border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+    text-align: center; color: white;
+}
+
+.game-title { margin: 0; font-size: 2.5rem; color: #38bdf8; letter-spacing: 2px; font-weight: 900; }
+.subtitle { margin: 5px 0 25px 0; color: #94a3b8; font-size: 1rem; text-transform: uppercase; letter-spacing: 4px; }
+
+.controls-list {
+    background: rgba(0,0,0,0.3); padding: 20px; border-radius: 12px;
+    text-align: left; margin-bottom: 30px; font-size: 0.95rem; color: #cbd5e1; line-height: 1.8;
+}
+.controls-list b { color: #38bdf8; display: inline-block; width: 160px; }
+
+#btn-play {
+    background: #38bdf8; color: #0f172a; font-weight: bold; font-size: 1.2rem;
+    padding: 15px 40px; border: none; border-radius: 12px; cursor: pointer;
+    transition: 0.2s; box-shadow: 0 0 20px rgba(56,189,248,0.4);
+}
+#btn-play:hover { background: #7dd3fc; transform: scale(1.05); }
+
+/* In-Game HUD Styling */
+#hud {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 10; pointer-events: none; box-sizing: border-box; padding: 20px;
+}
+
+.hud-panel {
+    pointer-events: auto; background: rgba(13, 20, 35, 0.88);
+    backdrop-filter: blur(12px); color: #f8fafc;
+    border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+#sidebar-tools {
+    position: absolute; top: 20px; right: 20px; width: 220px;
+    display: flex; flex-direction: column; gap: 20px; padding: 22px 18px;
+}
+
+.sidebar-section { display: flex; flex-direction: column; gap: 10px; }
+.section-title { font-size: 0.72rem; text-transform: uppercase; color: #64748b; font-weight: 700; letter-spacing: 1px; }
+
+.color-picker-wrapper {
+    display: flex; align-items: center; gap: 12px;
+    background: rgba(0,0,0,0.2); padding: 8px; border-radius: 10px;
+}
+
+input[type="color"] {
+    -webkit-appearance: none; border: none; width: 34px; height: 34px;
+    border-radius: 8px; cursor: pointer; background: none; padding: 0;
+}
+input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+input[type="color"]::-webkit-color-swatch { border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; }
+
+#color-hex-label { font-size: 0.85rem; font-family: monospace; color: #cbd5e1; font-weight: bold; }
+
+.tool-btn {
+    background: #1e293b; border: 1px solid rgba(255,255,255,0.05);
+    padding: 10px 14px; border-radius: 10px; color: #94a3b8;
+    font-size: 0.85rem; text-align: left; cursor: pointer; transition: 0.2s;
+}
+.tool-btn:hover { background: #334155; color: white; }
+.tool-btn.active { background: #38bdf8; color: #0f172a; font-weight: 700; }
+.tool-divider { height: 1px; background: rgba(255,255,255,0.1); margin: 5px 0; }
+
+.size-group { display: flex; gap: 5px; }
+.size-btn {
+    flex: 1; background: #1e293b; border: none; padding: 8px 0;
+    border-radius: 6px; color: #94a3b8; font-size: 0.8rem; cursor: pointer;
+}
+.size-btn.active { background: #64748b; color: white; font-weight: bold; }

@@ -2,42 +2,69 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Camo Chameleon 3D</title>
-    <style>
-        body, html { margin: 0; padding: 0; overflow: hidden; width: 100%; height: 100%; font-family: sans-serif; }
-        #canvas3d { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
-        #game-hud { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none; }
-        .hud-element { pointer-events: auto; position: absolute; }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Camo Chameleon: Studio</title>
+    <link rel="stylesheet" href="style.css">
+    
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
 </head>
 <body>
-
-    <!-- 1. The 3D Game World (Three.js / WebGL Render Target) -->
     <canvas id="canvas3d"></canvas>
 
-    <!-- 2. The Interactive 2D UI Overlay -->
-    <div id="game-hud">
-        <!-- Reticle for aiming the color-snatch tongue -->
-        <div id="crosshair" class="hud-element" style="top: 50%; left: 50%; transform: translate(-50%, -50%); width: 10px; height: 10px; border: 2px solid white; border-radius: 50%;"></div>
-        
-        <!-- Active Palette Slated (Snatched hex codes go here) -->
-        <div id="palette-bar" class="hud-element" style="bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; background: rgba(0,0,0,0.6); padding: 10px; border-radius: 8px;">
-            <div class="color-slot" style="width: 50px; height: 50px; border-radius: 4px; background: #ffffff; border: 2px solid #fff;"></div>
-            <div class="color-slot" style="width: 50px; height: 50px; border-radius: 4px; background: #7a7a7a;"></div>
-            <div class="color-slot" style="width: 50px; height: 50px; border-radius: 4px; background: #222222;"></div>
-        </div>
+    <div id="main-menu">
+        <div class="menu-box">
+            <h1 class="game-title">CAMO CHAMELEON</h1>
+            <p class="subtitle">Studio Edition</p>
+            
+            <div class="controls-list">
+                <p><b>WASD</b> - Move Character</p>
+                <p><b>SPACE</b> - Jump</p>
+                <p><b>SHIFT</b> - Sprint</p>
+                <p><b>Left-Click & Drag</b> - Pan Camera</p>
+                <p><b>Scroll Wheel</b> - Zoom In/Out</p>
+            </div>
 
-        <!-- Stress Meter / Match Timer -->
-        <div id="top-stats" class="hud-element" style="top: 20px; left: 20px; color: white; background: rgba(0,0,0,0.6); padding: 10px; border-radius: 5px;">
-            <div>TIME REMAINING: <span id="timer-val">120</span>s</div>
-            <div style="margin-top: 5px;">STRESS: <span id="stress-val">0</span>%</div>
+            <button id="btn-play">START GAME</button>
         </div>
     </div>
 
-    <!-- Your Javascript Engine Modules -->
-    <script type="importmap">
-        { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
-    </script>
-    <script type="module" src="game.js"></script>
+    <div id="hud" style="display: none;">
+        <div class="hud-panel" id="sidebar-tools">
+            <div class="sidebar-section">
+                <span class="section-title">Active Color</span>
+                <div class="color-picker-wrapper">
+                    <input type="color" id="html-color-picker" value="#38bdf8">
+                    <span id="color-hex-label">#38BDF8</span>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <span class="section-title">Tools</span>
+                <button class="tool-btn active" data-tool="brush">🎨 Brush</button>
+                <button class="tool-btn" data-tool="bucket">🪣 Fill Bucket</button>
+                <button class="tool-btn" data-tool="eraser">🧼 Eraser</button>
+                <div class="tool-divider"></div>
+                <button class="tool-btn" data-tool="picker">💧 Eyedropper</button>
+            </div>
+
+            <div class="sidebar-section">
+                <span class="section-title">Brush Size</span>
+                <div class="size-group">
+                    <button class="size-btn" data-radius="12">S</button>
+                    <button class="size-btn active" data-radius="32">M</button>
+                    <button class="size-btn" data-radius="64">L</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="main.js"></script>
 </body>
 </html>
