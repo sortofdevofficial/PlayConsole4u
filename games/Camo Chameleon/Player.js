@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
 export default class Player {
-    constructor(scene, color = '#b0b8c4', isRemote = false) {
+    constructor(scene, color = '#c8cdd4', isRemote = false) {
         this.scene = scene;
         this.isRemote = isRemote;
         this.group = new THREE.Group();
@@ -11,15 +11,15 @@ export default class Player {
         this.velocity = new THREE.Vector3();
         this.direction = new THREE.Vector3();
         this.isGrounded = true;
+        this.jumpsLeft = 2; // double jump
+        this.frozen = false;
         this.moveTime = 0;
         this.particles = [];
 
-        // Player capsule radius + height for collision
         this.radius = 0.35;
-        this.height = 2.8; // total height
+        this.height = 2.8;
 
         this.baseSkinColor = color;
-
         this.paintableMeshes = [];
         this.paintLayers = new Map();
 
@@ -33,45 +33,41 @@ export default class Player {
 
         this.armL = new THREE.Group();
         const shoulderL = new THREE.Mesh(jointGeo);
-        const boneL     = new THREE.Mesh(limbGeo); boneL.position.y = -0.3;
+        const boneL = new THREE.Mesh(limbGeo); boneL.position.y = -0.3;
         this.armL.add(shoulderL, boneL); this.armL.position.set(-0.45, 1.9, 0);
 
         this.armR = new THREE.Group();
         const shoulderR = new THREE.Mesh(jointGeo);
-        const boneR     = new THREE.Mesh(limbGeo); boneR.position.y = -0.3;
+        const boneR = new THREE.Mesh(limbGeo); boneR.position.y = -0.3;
         this.armR.add(shoulderR, boneR); this.armR.position.set(0.45, 1.9, 0);
 
         this.legL = new THREE.Group();
-        const hipL   = new THREE.Mesh(jointGeo);
+        const hipL = new THREE.Mesh(jointGeo);
         const thighL = new THREE.Mesh(limbGeo); thighL.position.y = -0.3;
         this.legL.add(hipL, thighL); this.legL.position.set(-0.2, 0.8, 0);
 
         this.legR = new THREE.Group();
-        const hipR   = new THREE.Mesh(jointGeo);
+        const hipR = new THREE.Mesh(jointGeo);
         const thighR = new THREE.Mesh(limbGeo); thighR.position.y = -0.3;
         this.legR.add(hipR, thighR); this.legR.position.set(0.2, 0.8, 0);
 
         const bodyParts = [this.head, this.torso, shoulderL, boneL, shoulderR, boneR, hipL, thighL, hipR, thighR];
-        bodyParts.forEach(part => this.makePaintable(part));
+        bodyParts.forEach(p => this.makePaintable(p));
 
         this.modelGroup.add(this.head, this.torso, this.armL, this.armR, this.legL, this.legR);
         this.scene.add(this.group);
-
-        // Name label above head
         this.nameLabel = null;
     }
 
     setName(name) {
-        if (this.nameLabel) {
-            this.modelGroup.remove(this.nameLabel);
-        }
+        if (this.nameLabel) this.modelGroup.remove(this.nameLabel);
         const canvas = document.createElement('canvas');
         canvas.width = 256; canvas.height = 64;
         const ctx = canvas.getContext('2d');
         ctx.fillStyle = 'rgba(0,0,0,0)';
         ctx.fillRect(0,0,256,64);
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 28px Segoe UI';
+        ctx.font = 'bold 26px Segoe UI';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(name.slice(0,16), 128, 32);
@@ -91,77 +87,65 @@ export default class Player {
         ctx.fillStyle = this.baseSkinColor;
         ctx.fillRect(0, 0, 512, 512);
         const texture = new THREE.CanvasTexture(canvas);
-        mesh.material = new THREE.MeshStandardMaterial({ map: texture, roughness: 0.7, metalness: 0.1 });
+        mesh.material = new THREE.MeshStandardMaterial({ map: texture, roughness: 0.75, metalness: 0.05 });
         mesh.castShadow = true;
         this.paintLayers.set(mesh.uuid, { canvas, ctx, texture });
         this.paintableMeshes.push(mesh);
     }
 
     jump() {
-        if (!this.isGrounded) return;
-        this.velocity.y = 18.0;
+        if (this.frozen) return;
+        if (this.jumpsLeft <= 0) return;
+        this.velocity.y = this.jumpsLeft === 2 ? 20 : 16; // second jump slightly lower
+        this.jumpsLeft--;
         this.isGrounded = false;
         this.createDustEffect();
     }
 
+    toggleFreeze() {
+        this.frozen = !this.frozen;
+    }
+
     createDustEffect() {
-        const dustMat = new THREE.MeshBasicMaterial({ color: '#cbd5e1', transparent: true, opacity: 0.8 });
-        for (let i = 0; i < 8; i++) {
-            const p = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 8), dustMat.clone());
-            p.position.copy(this.group.position);
-            p.position.y = this.group.position.y + 0.1;
-            p.userData = { vx: (Math.random()-0.5)*5, vy: Math.random()*3, vz: (Math.random()-0.5)*5, life: 1.0 };
+        const mat = new THREE.MeshBasicMaterial({ color: '#aab4be', transparent: true, opacity: 0.7 });
+        for (let i = 0; i < 7; i++) {
+            const p = new THREE.Mesh(new THREE.SphereGeometry(0.1, 6, 6), mat.clone());
+            p.position.copy(this.group.position); p.position.y += 0.1;
+            p.userData = { vx: (Math.random()-0.5)*4, vy: Math.random()*3, vz: (Math.random()-0.5)*4, life: 1 };
             this.scene.add(p);
             this.particles.push(p);
         }
     }
 
-    // Resolve AABB collision vs environment colliders
-    // Returns corrected position + whether grounded
     resolveCollisions(pos, colliders) {
-        const r = this.radius;
-        const h = this.height;
+        const r = this.radius, h = this.height;
         let grounded = false;
-
         for (const box of colliders) {
-            // Expand box by capsule radius
-            const ex = { minX: box.minX - r, maxX: box.maxX + r, minY: box.minY, maxY: box.maxY + h, minZ: box.minZ - r, maxZ: box.maxZ + r };
+            const ex = { minX: box.minX-r, maxX: box.maxX+r, minY: box.minY, maxY: box.maxY+h, minZ: box.minZ-r, maxZ: box.maxZ+r };
             if (pos.x < ex.minX || pos.x > ex.maxX) continue;
             if (pos.y < ex.minY || pos.y > ex.maxY) continue;
             if (pos.z < ex.minZ || pos.z > ex.maxZ) continue;
-
-            // Overlapping — find smallest penetration axis
-            const dx1 = ex.maxX - pos.x, dx2 = pos.x - ex.minX;
-            const dy1 = ex.maxY - pos.y, dy2 = pos.y - ex.minY;
-            const dz1 = ex.maxZ - pos.z, dz2 = pos.z - ex.minZ;
-
-            const mx = Math.min(dx1, dx2);
-            const my = Math.min(dy1, dy2);
-            const mz = Math.min(dz1, dz2);
-
+            const dx1 = ex.maxX-pos.x, dx2 = pos.x-ex.minX;
+            const dy1 = ex.maxY-pos.y, dy2 = pos.y-ex.minY;
+            const dz1 = ex.maxZ-pos.z, dz2 = pos.z-ex.minZ;
+            const mx = Math.min(dx1,dx2), my = Math.min(dy1,dy2), mz = Math.min(dz1,dz2);
             if (my <= mx && my <= mz) {
-                if (dy2 < dy1) {
-                    // Landed on top
-                    pos.y = box.maxY + 0.001;
-                    if (this.velocity.y < 0) { this.velocity.y = 0; grounded = true; }
-                } else {
-                    pos.y = box.minY - h - 0.001;
-                    if (this.velocity.y > 0) this.velocity.y = 0;
-                }
+                if (dy2 < dy1) { pos.y = box.maxY+0.001; if (this.velocity.y < 0) { this.velocity.y = 0; grounded = true; } }
+                else { pos.y = box.minY-h-0.001; if (this.velocity.y > 0) this.velocity.y = 0; }
             } else if (mx <= mz) {
-                if (dx2 < dx1) { pos.x = box.minX - r - 0.001; } else { pos.x = box.maxX + r + 0.001; }
+                if (dx2 < dx1) pos.x = box.minX-r-0.001; else pos.x = box.maxX+r+0.001;
                 this.velocity.x = 0;
             } else {
-                if (dz2 < dz1) { pos.z = box.minZ - r - 0.001; } else { pos.z = box.maxZ + r + 0.001; }
+                if (dz2 < dz1) pos.z = box.minZ-r-0.001; else pos.z = box.maxZ+r+0.001;
                 this.velocity.z = 0;
             }
         }
-
         return grounded;
     }
 
     update(keys, isSprinting, delta, colliders = []) {
-        if (this.isRemote) return; // remote players updated via applyRemoteState
+        if (this.isRemote) return;
+        if (this.frozen) return;
 
         this.direction.set(0, 0, 0);
         if (keys.w) this.direction.z -= 1;
@@ -170,7 +154,7 @@ export default class Player {
         if (keys.d) this.direction.x += 1;
         this.direction.normalize();
 
-        const speed = isSprinting ? 70 : 40;
+        const speed = isSprinting ? 110 : 65;
         const friction = 14;
 
         if (this.direction.length() > 0) {
@@ -179,51 +163,46 @@ export default class Player {
         }
         this.velocity.x -= this.velocity.x * friction * delta;
         this.velocity.z -= this.velocity.z * friction * delta;
-        this.velocity.y -= 55 * delta; // gravity
+        this.velocity.y -= 58 * delta;
 
         const pos = this.group.position.clone();
         pos.x += this.velocity.x * delta;
         pos.y += this.velocity.y * delta;
         pos.z += this.velocity.z * delta;
 
-        // Floor
         if (pos.y <= 0) {
             pos.y = 0;
             if (this.velocity.y < 0) {
                 if (!this.isGrounded) this.createDustEffect();
                 this.velocity.y = 0;
                 this.isGrounded = true;
+                this.jumpsLeft = 2;
             }
         }
 
-        // Box collisions
         const landedOnBox = this.resolveCollisions(pos, colliders);
-        if (landedOnBox) this.isGrounded = true;
+        if (landedOnBox) { this.isGrounded = true; this.jumpsLeft = 2; }
         if (pos.y > 0.01 && !landedOnBox) this.isGrounded = false;
 
-        // Arena bounds
-        const bound = 38;
+        const bound = 22;
         pos.x = Math.max(-bound, Math.min(bound, pos.x));
         pos.z = Math.max(-bound, Math.min(bound, pos.z));
-
         this.group.position.copy(pos);
 
-        // Animations
-        const currentSpeed = Math.sqrt(this.velocity.x**2 + this.velocity.z**2);
-        if (currentSpeed > 0.5) {
+        const spd = Math.sqrt(this.velocity.x**2 + this.velocity.z**2);
+        if (spd > 0.5) {
             const targetAngle = Math.atan2(this.velocity.x, this.velocity.z);
             let diff = targetAngle - this.modelGroup.rotation.y;
             diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-            this.modelGroup.rotation.y += diff * 18 * delta;
-
+            this.modelGroup.rotation.y += diff * 20 * delta;
             if (this.isGrounded) {
-                this.moveTime += currentSpeed * delta * 0.6;
+                this.moveTime += spd * delta * 0.6;
                 const wave = Math.sin(this.moveTime * 14);
-                this.legL.rotation.x  =  wave * 0.75;
-                this.legR.rotation.x  = -wave * 0.75;
-                this.armL.rotation.x  = -wave * 0.65;
-                this.armR.rotation.x  =  wave * 0.65;
-                this.head.rotation.y  = Math.sin(this.moveTime * 5) * 0.12;
+                this.legL.rotation.x =  wave * 0.75;
+                this.legR.rotation.x = -wave * 0.75;
+                this.armL.rotation.x = -wave * 0.65;
+                this.armR.rotation.x =  wave * 0.65;
+                this.head.rotation.y = Math.sin(this.moveTime * 5) * 0.1;
             }
         } else {
             const t = 18 * delta;
@@ -245,34 +224,17 @@ export default class Player {
         }
     }
 
-    // Apply state from remote peer
     applyRemoteState(state) {
         this.group.position.set(state.x, state.y, state.z);
         this.modelGroup.rotation.y = state.ry;
-        this.legL.rotation.x  =  state.la || 0;
-        this.legR.rotation.x  = -state.la || 0;
-        this.armL.rotation.x  = -state.la || 0;
-        this.armR.rotation.x  =  state.la || 0;
+        this.legL.rotation.x =  state.la || 0;
+        this.legR.rotation.x = -state.la || 0;
+        this.armL.rotation.x = -state.la || 0;
+        this.armR.rotation.x =  state.la || 0;
     }
 
-    // Get state to send to peers
     getNetState() {
-        return {
-            x:  this.group.position.x,
-            y:  this.group.position.y,
-            z:  this.group.position.z,
-            ry: this.modelGroup.rotation.y,
-            la: this.legL.rotation.x,
-        };
-    }
-
-    // Snapshot of paint data for a mesh (base64)
-    getPaintSnapshot() {
-        const out = {};
-        this.paintLayers.forEach((layer, uuid) => {
-            out[uuid] = layer.canvas.toDataURL();
-        });
-        return out;
+        return { x: this.group.position.x, y: this.group.position.y, z: this.group.position.z, ry: this.modelGroup.rotation.y, la: this.legL.rotation.x };
     }
 
     executePaintMatrix(hitObject, uv, selectedColor, radius, currentTool) {
@@ -280,7 +242,6 @@ export default class Player {
         if (!layer) return;
         const xCoord = uv.x * layer.canvas.width;
         const yCoord = (1 - uv.y) * layer.canvas.height;
-
         if (currentTool === 'bucket') {
             layer.ctx.fillStyle = selectedColor;
             layer.ctx.fillRect(0, 0, layer.canvas.width, layer.canvas.height);
@@ -293,7 +254,5 @@ export default class Player {
         layer.texture.needsUpdate = true;
     }
 
-    destroy() {
-        this.scene.remove(this.group);
-    }
+    destroy() { this.scene.remove(this.group); }
 }
