@@ -2,8 +2,9 @@
 // users/{uid}                     → { n, e, ph }
 // users/{uid}/G/CP/L/{VER}        → CubePlatformer times
 // users/{uid}/G/FS                → { w, l, k, h, s }  
-// users/{uid}/G/CC                → { w, l, k, h, s, likes }  (Camo Chameleon specific)
-// users/{uid}/G/CC/Likes/{vUid}   → { t, by } (Who liked them and when)
+// users/{uid}/G/CC                → { w, l, k, h, s, likes }  (Camo Chameleon stats)
+// users/{uid}/G/CC/Likes/{likerUid} → { by, t }  (who liked and when)
+// users/{uid}/presence/cc           → { peerId, name, wins, uid, active, t }  (live presence)
 // users/{uid}/subscription        → { active, FTL, plan, start, next, activatedBy }
 
 firebase.initializeApp({
@@ -229,26 +230,25 @@ async function getStats(uid){
 async function likePlayer(targetUid) {
   const me = currentUser();
   if (!me || me.uid === targetUid) return false;
-  
   try {
+    // Path: users/{targetUid}/G/CC/Likes/{myUid}
     const likeDoc = ccRef(targetUid).collection('Likes').doc(me.uid);
     const snap = await likeDoc.get();
-    if (snap.exists) return false; 
-    
-    // Update local cache data structure immediately so UI reflects the honor like
+    if (snap.exists) return false; // already liked
+
+    // Optimistic cache
     const targetKey = 'cc_'+targetUid;
-    const currentTargetStats = cG(targetKey);
-    if(currentTargetStats) {
-      currentTargetStats.likes++;
-      cS(targetKey, currentTargetStats, 30000);
-    }
-    
-    await likeDoc.set({ by: me.uid, t: Date.now() });
-    await ccRef(targetUid).set({ likes: firebase.firestore.FieldValue.increment(1) }, { merge: true });
+    const cs = cG(targetKey);
+    if(cs) { cs.likes=(cs.likes||0)+1; cS(targetKey,cs,30000); }
+
+    // Write like doc: users/{targetUid}/G/CC/Likes/{myUid} = { by, t }
+    await likeDoc.set({ by:me.uid, t:Date.now() });
+    // Increment likes counter on the CC stats doc
+    await ccRef(targetUid).set({ likes:firebase.firestore.FieldValue.increment(1) },{merge:true});
     return true;
-  } catch (e) {
+  } catch(e) {
     cD('cc_'+targetUid);
-    console.error("[FB] Error liking player:", e.message);
+    console.error('[FB] likePlayer:',e.message);
     return false;
   }
 }
