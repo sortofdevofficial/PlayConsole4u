@@ -31,7 +31,7 @@ let myColor = PLAYER_COLORS[Math.floor(Math.random()*PLAYER_COLORS.length)];
 let myRole = null; 
 
 const ROUND_DURATION = 60; 
-const TAG_DISTANCE   = 0.75; 
+const TAG_DISTANCE   = 0.95; // Expanded tag range slightly to match the larger Hunter size
 const MIN_PLAYERS    = 2;  
 
 let roundState = 'lobby'; 
@@ -39,6 +39,7 @@ let roundTimer  = 0;
 let roundNumber = 0;
 let taggedSeekers = new Set(); 
 let amIHost = false; 
+let lobbyUnsubscribe = null;
 
 init();
 animate();
@@ -79,7 +80,6 @@ function init() {
         if (e.code==='ShiftLeft'||e.code==='ShiftRight') keys.Shift=false;
     });
     
-    // Cross-Device input pointer logic fixes
     const startProp = e => {
         if (!gameStarted||(e.pointerType==='mouse' && e.button!==0)) return;
         if (e.target.closest('.hud-panel')||e.target.closest('#mobile-controls')||e.target.closest('#round-overlay')||e.target.closest('#honor-screen')||e.target.closest('#mob-paint-toggle')) return;
@@ -235,7 +235,7 @@ function tryStartRound() {
 
 function beginRound(num) {
     roundState='countdown'; roundNumber=num; taggedSeekers.clear(); roundKills = 0;
-    showOverlay(`Round ${num}`, 'Prepare to run fast!', 2000);
+    showOverlay(`Round ${num}`, 'Prepare to outrun the hunter!', 2000);
     setTimeout(()=>{
         const allIds=[myPeerId,...Object.keys(conns)];
         const hunterPid=allIds[Math.floor(Math.random()*allIds.length)];
@@ -261,9 +261,9 @@ function updateRoleBadge() {
     const badge=document.getElementById('role-badge');
     if (!myRole) { panel.style.display='none'; return; }
     panel.style.display='block';
-    if (myRole==='hunter') { badge.textContent='🔴 HUNTER TARGET THEM'; badge.className='role-hunter'; } 
-    else if (myRole==='spectator') { badge.textContent='👻 SPECTATING VOID'; badge.className='role-seeker'; }
-    else { badge.textContent='🔵 SEEKER — DASH OUT!'; badge.className='role-seeker'; }
+    if (myRole==='hunter') { badge.textContent='🔴 HUNTER'; badge.className='role-hunter'; } 
+    else if (myRole==='spectator') { badge.textContent='👻 SPECTATOR'; badge.className='role-seeker'; }
+    else { badge.textContent='🔵 SEEKER'; badge.className='role-seeker'; }
 }
 
 function updateRoundUI() {
@@ -305,7 +305,7 @@ function tickRound(delta) {
 function handleTagged(pid) {
     taggedSeekers.add(pid);
     if (pid===myPeerId && myRole==='seeker') {
-        showOverlay('TAGGED!','Entering ghost profile...', 1500);
+        showOverlay('TAGGED!','Entering spectator profile...', 1500);
         player.frozen=true; updateFreezeUI(); 
     }
     rebuildPlayersList();
@@ -314,11 +314,14 @@ function handleTagged(pid) {
 async function endRound(hunterWon) {
     roundState='ended'; updateRoundUI();
     const iWon=(myRole==='hunter'&&hunterWon)||(myRole==='seeker'&&!hunterWon);
-    showOverlay(hunterWon?'HUNTER CAUGHT EVERYONE':'SEEKERS ESCAPED OUT', iWon?'🎉 DEFEAT ELUDED':'😔 OUTMATCHED', 2500);
+    showOverlay(hunterWon?'HUNTER CAUGHT EVERYONE':'SEEKERS ESCAPED', iWon?'🎉 DEFEAT ELUDED':'😔 OUTMATCHED', 2500);
 
     if (fbUser && myRole !== 'spectator' && iWon) {
         myWins++; document.getElementById('hud-wins').textContent=myWins;
-        if (FB.recordRound) await FB.recordRound(fbUser.uid, { won: true, kills: roundKills, role: myRole });
+        if (FB.recordRound) {
+            // Saves performance benchmarks properly to users/{uid}/G/CC
+            await FB.recordRound(fbUser.uid, { won: true, kills: roundKills, role: myRole });
+        }
     }
     setTimeout(() => { showHonorScreen(); }, 2500);
 
@@ -355,13 +358,16 @@ function showHonorScreen() {
     list.querySelectorAll('.honor-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             e.currentTarget.classList.add('liked');
-            if (FB.likePlayer) await FB.likePlayer(e.currentTarget.dataset.uid);
+            if (FB.likePlayer) {
+                // Adds like updates to subcollection users/{uid}/G/CC/Likes/
+                await FB.likePlayer(e.currentTarget.dataset.uid);
+            }
         });
     });
     scr.style.display = 'flex'; setTimeout(() => { scr.style.display = 'none'; }, 5500);
 }
 
-// ─── Direct P2P Mesh Handshakes (NO cc_lobby writes loops!) ───
+// ─── Live Dynamic Snapshot Connection Engine (Fixes lingering device bugs) ───
 function initMultiplayer() {
     peer=new Peer(undefined,{host:'0.peerjs.com',port:443,secure:true});
     peer.on('open', id=>{ myPeerId=id; connectToGlobalLobby(); });
@@ -369,22 +375,39 @@ function initMultiplayer() {
 }
 
 function connectToGlobalLobby() {
-    // Write once on connection setup to announce peer location
     if (typeof firebase==='undefined') return;
     const presRef = firebase.firestore().collection('cc_lobby').doc(myPeerId);
+    
+    // Announce existence to the signaling directory
     presRef.set({ name:myName, wins:myWins, uid:fbUser.uid, active:true });
     
-    // Auto clear trace entries on close
-    window.addEventListener('beforeunload', () => presRef.delete().catch(()=>{}));
+    // Intercept immediate tab kills & sync drops
+    const purgePresence = () => {
+        presRef.delete().catch(()=>{});
+    };
+    window.addEventListener('beforeunload', purgePresence);
+    window.addEventListener('unload', purgePresence);
 
-    // Listen only to find newly arrived active peer signatures
-    firebase.firestore().collection('cc_lobby').where('active','==',true).get().then(snap => {
+    // ⚡ REAL-TIME MONITORING: Instantly deletes players if closed/gone
+    lobbyUnsubscribe = firebase.firestore().collection('cc_lobby').where('active','==',true).onSnapshot(snap => {
+        const discoveredIds = new Set();
         snap.forEach(doc => {
             const pid = doc.id;
-            if (pid === myPeerId || conns[pid]) return;
-            const info = doc.data();
-            const c = peer.connect(pid,{reliable:false, metadata:{name:myName,wins:myWins,uid:fbUser.uid}});
-            c.on('open',()=>onConnectionReady(c,pid,info.name,info.wins,info.uid));
+            if (pid === myPeerId) return;
+            discoveredIds.add(pid);
+            
+            if (!conns[pid]) {
+                const info = doc.data();
+                const c = peer.connect(pid,{reliable:false, metadata:{name:myName,wins:myWins,uid:fbUser.uid}});
+                c.on('open',()=>onConnectionReady(c,pid,info.name,info.wins,info.uid));
+            }
+        });
+
+        // Drop players immediately from our world window if they left the snapshot list
+        Object.keys(conns).forEach(pid => {
+            if (!discoveredIds.has(pid)) {
+                removePeer(pid);
+            }
         });
     });
 }
@@ -405,14 +428,17 @@ function onConnectionReady(conn,pid,name,wins,uid) {
         broadcastAll({ type:'sync_state', roles:syncRoles, round:roundNumber, rTime:roundTimer }); applyRoles(syncRoles);
     }
     rebuildPlayersList(); updateLobbyStatus(); electHost();
+    
     conn.on('data',data=>handlePeerData(pid,data));
-    conn.on('close',()=>removePeer(pid)); conn.on('error',()=>removePeer(pid));
+    conn.on('close',()=>removePeer(pid)); 
+    conn.on('error',()=>removePeer(pid));
     setTimeout(tryStartRound,1000);
 }
 
 function removePeer(pid) {
     if (remotePlayers[pid]) { remotePlayers[pid].destroy(); delete remotePlayers[pid]; }
-    delete conns[pid]; delete lobbyMembers[pid];
+    if (conns[pid]) { try { conns[pid].close(); } catch(e){} delete conns[pid]; }
+    delete lobbyMembers[pid];
     electHost(); updateLobbyStatus(); rebuildPlayersList();
 }
 
@@ -493,7 +519,6 @@ function animate() {
     player.update(mk,keys.Shift||mob.sprint,delta,environment.colliders);
     updateCamera(); tickRound(delta);
 
-    // 🕳️ VOID DEATH CHECK (Fell off the platform island!)
     if (player.group.position.y < -4.5) {
         if (roundState === 'playing') {
             if (myRole === 'seeker' && !taggedSeekers.has(myPeerId)) {
