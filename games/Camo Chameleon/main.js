@@ -123,85 +123,32 @@ function init() {
     setupMobile();
 }
 
-// ─── Firebase Auth (UPDATED WITH EXPLICIT ERROR CAPTURING) ───────────────────
+// ─── Firebase Auth ─────────────────────────────────────────────────────────────
 function setupFirebase() {
-    const authMsg = document.getElementById('auth-msg');
-
-    if (typeof FB==='undefined') {
-        if (authMsg) authMsg.textContent = "Error: firebase.js failed to load. Check file path!";
-        return;
-    }
-
+    if (typeof FB==='undefined') return;
     FB.onAuthChange(async user => {
         fbUser = user;
         if (user) {
-            if (authMsg) authMsg.textContent = ""; 
             myName = user.displayName||'Player';
             document.getElementById('user-name').textContent = myName;
             document.getElementById('user-avatar').src = user.photoURL||'';
-            
-            // Sync layout states safely
-            const userCard = document.getElementById('user-info');
-            if (userCard) userCard.style.display = 'flex';
-            
-            const authScreen = document.getElementById('auth-screen') || document.getElementById('auth-gate');
-            if (authScreen) authScreen.style.display = 'none';
-
-            const mainMenu = document.getElementById('main-menu');
-            if (mainMenu) mainMenu.style.display = 'flex';
-
+            document.getElementById('user-info').style.display = 'flex';
+            document.getElementById('auth-gate').style.display = 'none';
             const stats = await FB.getStats ? await FB.getStats(user.uid) : await FB.getMatchStats(user.uid);
             myWins = stats.w||0; myKills = stats.k||0;
-            
-            const menuWins = document.getElementById('menu-wins');
-            if (menuWins) menuWins.textContent = myWins;
-            
-            const btnPlay = document.getElementById('btn-play');
-            if (btnPlay) {
-                btnPlay.disabled = false;
-                btnPlay.textContent = 'JOIN LOBBY';
-            }
+            document.getElementById('menu-wins').textContent = myWins;
+            document.getElementById('btn-play').disabled = false;
+            document.getElementById('btn-play').textContent = 'JOIN LOBBY';
             updateLobbyStatus();
         } else {
-            const userCard = document.getElementById('user-info');
-            if (userCard) userCard.style.display = 'none';
-
-            const mainMenu = document.getElementById('main-menu');
-            if (mainMenu) mainMenu.style.display = 'none';
-
-            const authScreen = document.getElementById('auth-screen') || document.getElementById('auth-gate');
-            if (authScreen) authScreen.style.display = 'flex';
-
-            const btnPlay = document.getElementById('btn-play');
-            if (btnPlay) {
-                btnPlay.disabled = true;
-                btnPlay.textContent = 'Sign in to play';
-            }
+            document.getElementById('user-info').style.display = 'none';
+            document.getElementById('auth-gate').style.display = 'block';
+            document.getElementById('btn-play').disabled = true;
+            document.getElementById('btn-play').textContent = 'Sign in to play';
         }
     });
-
-    // Wrapped login click with promise try/catch block
-    document.getElementById('btn-signin').addEventListener('click', async () => {
-        try {
-            if (authMsg) {
-                authMsg.textContent = "Opening Google Sign-in...";
-                authMsg.style.color = "#94a3b8";
-            }
-            await FB.signInGoogle();
-        } catch (error) {
-            console.error("Sign-in Failed:", error);
-            if (authMsg) {
-                authMsg.style.color = "#fc8181";
-                if (error.code === 'auth/popup-closed-by-user') {
-                    authMsg.textContent = "Sign-in window closed before completion.";
-                } else {
-                    authMsg.textContent = error.message || "Connection blocked by authentication server.";
-                }
-            }
-        }
-    });
-    
-    document.getElementById('btn-signout').addEventListener('click', () => FB.signOut());
+    document.getElementById('btn-signin').addEventListener('click', ()=>FB.signInGoogle());
+    document.getElementById('btn-signout').addEventListener('click', ()=>FB.signOut());
 }
 
 // ─── UI Setup ─────────────────────────────────────────────────────────────────
@@ -211,25 +158,9 @@ function setupUI() {
         enterGame();
     });
 
-    // Adaptive support for updated semantic style.css class structures
-    const picker = document.getElementById('color-picker') || document.getElementById('html-color-picker');
-    const hexLbl = document.getElementById('color-hex') || document.getElementById('color-hex-label');
-    
-    if (picker && hexLbl) {
-        picker.addEventListener('input', e => { 
-            brushColor = e.target.value; 
-            hexLbl.textContent = brushColor.toUpperCase(); 
-        });
-    }
-
-    // Dynamic Swatches integration support
-    document.querySelectorAll('.swatch').forEach(swatch => {
-        swatch.addEventListener('click', (e) => {
-            brushColor = e.target.dataset.c;
-            if (picker) picker.value = brushColor;
-            if (hexLbl) hexLbl.textContent = brushColor.toUpperCase();
-        });
-    });
+    const picker=document.getElementById('html-color-picker');
+    const hexLbl=document.getElementById('color-hex-label');
+    picker.addEventListener('input', e=>{ brushColor=e.target.value; hexLbl.textContent=brushColor.toUpperCase(); });
 
     document.querySelectorAll('.tool-btn').forEach(b=>b.addEventListener('click',e=>{
         document.querySelectorAll('.tool-btn').forEach(x=>x.classList.remove('active'));
@@ -239,7 +170,7 @@ function setupUI() {
     document.querySelectorAll('.size-btn').forEach(b=>b.addEventListener('click',e=>{
         document.querySelectorAll('.size-btn').forEach(x=>x.classList.remove('active'));
         e.currentTarget.classList.add('active');
-        brushRadius=parseInt(e.currentTarget.dataset.radius || e.currentTarget.dataset.r);
+        brushRadius=parseInt(e.currentTarget.dataset.radius);
     }));
 }
 
@@ -252,12 +183,7 @@ function enterGame() {
 
     document.getElementById('hud-username').textContent=myName;
     document.getElementById('hud-avatar').src=fbUser?.photoURL||'';
-    
-    const hudWins = document.getElementById('hud-wins');
-    if (hudWins) hudWins.textContent = myWins;
-    
-    const hudLikes = document.getElementById('hud-likes');
-    if (hudLikes) hudLikes.textContent = myLikes;
+    document.getElementById('hud-wins').textContent=myWins;
 
     player.setName(myName);
     player.group.position.set((Math.random()-0.5)*4, 0, (Math.random()-0.5)*4);
@@ -267,14 +193,9 @@ function enterGame() {
     initMultiplayer();
 }
 
-function updateFreezeUI() {
-    document.getElementById('freeze-indicator').style.display = player.frozen ? 'block' : 'none';
-}
-
 // ─── Players Sidebar ──────────────────────────────────────────────────────────
 function rebuildPlayersList() {
     const list = document.getElementById('players-list');
-    if (!list) return;
     list.innerHTML='';
 
     // Me
@@ -289,7 +210,6 @@ function rebuildPlayersList() {
         const el=document.createElement('div');
         el.className='player-entry';
         el.id='ple-'+pid;
-        if (taggedSeekers.has(pid)) el.classList.add('tagged');
         const ri=m.role==='hunter'?'🔴':m.role==='seeker'?'🔵':'⚪';
         const clr=remotePlayers[pid]?remotePlayers[pid].baseSkinColor:'#888';
         el.innerHTML=`<span class="p-dot" style="background:${clr}"></span><span class="p-name">${m.name||'Player'}</span><span class="p-role">${ri}</span><span class="p-wins">🏆${m.wins||0}</span>`;
@@ -356,23 +276,20 @@ function applyRoles(roles) {
 function updateRoleBadge() {
     const panel=document.getElementById('role-panel');
     const badge=document.getElementById('role-badge');
-    if (!myRole) { if (panel) panel.style.display='none'; return; }
-    if (panel) panel.style.display='block';
-    if (badge) {
-        if (myRole==='hunter') {
-            badge.textContent='🔴 YOU ARE THE HUNTER';
-            badge.className='role-hunter';
-        } else {
-            badge.textContent='🔵 YOU ARE A SEEKER — HIDE!';
-            badge.className='role-seeker';
-        }
+    if (!myRole) { panel.style.display='none'; return; }
+    panel.style.display='block';
+    if (myRole==='hunter') {
+        badge.textContent='🔴 YOU ARE THE HUNTER';
+        badge.className='role-hunter';
+    } else {
+        badge.textContent='🔵 YOU ARE A SEEKER — HIDE!';
+        badge.className='role-seeker';
     }
 }
 
 function updateRoundUI() {
     const lbl=document.getElementById('round-label');
     const tmr=document.getElementById('round-timer');
-    if (!lbl || !tmr) return;
     if (roundState==='playing') {
         lbl.textContent=`Round ${roundNumber}`;
         tmr.textContent=`${Math.ceil(roundTimer)}s`;
@@ -438,6 +355,10 @@ function handleTagged(pid) {
     rebuildPlayersList();
 }
 
+function updateFreezeUI() {
+    document.getElementById('freeze-indicator').style.display = player.frozen ? 'block' : 'none';
+}
+
 async function endRound(hunterWon) {
     roundState='ended';
     updateRoundUI();
@@ -452,8 +373,8 @@ async function endRound(hunterWon) {
     if (fbUser) {
         if (iWon) {
             myWins++;
-            const hWins = document.getElementById('hud-wins'); if (hWins) hWins.textContent=myWins;
-            const mWins = document.getElementById('menu-wins'); if (mWins) mWins.textContent=myWins;
+            document.getElementById('hud-wins').textContent=myWins;
+            document.getElementById('menu-wins').textContent=myWins;
         }
         myKills += roundKills;
         if (FB.recordRound) {
@@ -481,7 +402,6 @@ async function endRound(hunterWon) {
 
 function showOverlay(title,sub,duration) {
     const ov=document.getElementById('round-overlay');
-    if (!ov) return;
     document.getElementById('overlay-title').textContent=title;
     document.getElementById('overlay-sub').textContent=sub;
     ov.style.display='flex';
@@ -518,7 +438,7 @@ async function firestoreAnnounce() {
         const data=snap.data()||{};
         Object.entries(data).forEach(([pid,info])=>{
             if (pid===myPeerId) return;
-            if (Date.now()-info.ts>30000) return; 
+            if (Date.now()-info.ts>30000) return;
             if (!conns[pid]) {
                 const c=peer.connect(pid,{reliable:false,serialization:'json',metadata:{name:myName,wins:myWins}});
                 c.on('open',()=>onConnectionReady(c,pid,info.name,info.wins));
@@ -624,10 +544,8 @@ function handlePaint(e) {
             player.executePaintMatrix(hit.object,hit.uv,brushColor,brushRadius,activeTool);
     } else if (activeTool==='picker') {
         brushColor='#'+hit.object.material.color.getHexString();
-        const picker = document.getElementById('color-picker') || document.getElementById('html-color-picker');
-        const hexLbl = document.getElementById('color-hex') || document.getElementById('color-hex-label');
-        if (picker) picker.value=brushColor;
-        if (hexLbl) hexLbl.textContent=brushColor.toUpperCase();
+        document.getElementById('html-color-picker').value=brushColor;
+        document.getElementById('color-hex-label').textContent=brushColor.toUpperCase();
     }
 }
 
@@ -647,7 +565,7 @@ function updateCamera() {
 function setupMobile() {
     const zone=document.getElementById('joystick-zone');
     const knob=document.getElementById('joystick-knob');
-    if (!zone || !knob) return;
+    if(!zone || !knob) return;
     
     zone.addEventListener('touchstart',e=>{
         e.preventDefault();
@@ -669,18 +587,11 @@ function setupMobile() {
     const endJ=()=>{ joyActive=false; mob.x=0; mob.z=0; knob.style.transform='translate(-50%,-50%)'; };
     window.addEventListener('touchend',endJ);
     window.addEventListener('touchcancel',endJ);
-    
-    const mbJump = document.getElementById('mob-jump');
-    if (mbJump) mbJump.addEventListener('touchstart',e=>{e.preventDefault();player.jump();},{passive:false});
-    
-    const mbFreeze = document.getElementById('mob-freeze');
-    if (mbFreeze) mbFreeze.addEventListener('touchstart',e=>{e.preventDefault();player.toggleFreeze();updateFreezeUI();},{passive:false});
-    
+    document.getElementById('mob-jump').addEventListener('touchstart',e=>{e.preventDefault();player.jump();},{passive:false});
+    document.getElementById('mob-freeze').addEventListener('touchstart',e=>{e.preventDefault();player.toggleFreeze();updateFreezeUI();},{passive:false});
     const sb=document.getElementById('mob-sprint');
-    if (sb) {
-        sb.addEventListener('touchstart',e=>{e.preventDefault();mob.sprint=true;},{passive:false});
-        sb.addEventListener('touchend',()=>mob.sprint=false);
-    }
+    sb.addEventListener('touchstart',e=>{e.preventDefault();mob.sprint=true;},{passive:false});
+    sb.addEventListener('touchend',()=>mob.sprint=false);
 }
 
 // ─── Animate ──────────────────────────────────────────────────────────────────
@@ -704,7 +615,6 @@ function animate() {
     updateCamera();
     tickRound(delta);
 
-    // Broadcast position ~20Hz
     netT+=delta;
     if (netT>0.05) {
         netT=0;
