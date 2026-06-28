@@ -12,7 +12,7 @@ const keys = { w:false, a:false, s:false, d:false, ' ':false, Shift:false };
 let gameStarted = false;
 let activeTool = 'brush', brushColor = '#c0392b', brushRadius = 20;
 
-// Camera (manual third-person)
+// Camera
 let camYaw = 0, camPitch = 0.38, camZoom = 1;
 let orbiting = false, dragMoved = false, lastMx = 0, lastMy = 0;
 
@@ -25,35 +25,29 @@ let fbUser = null;
 let myName = 'Player';
 let myWins = 0;
 let myKills = 0;
-let roundKills = 0; // tags made this round as hunter
+let myLikes = 0;
+let roundKills = 0;
 
 // ─── Multiplayer / Lobby ──────────────────────────────────────────────────────
 let peer=null, myPeerId=null;
-let conns = {};          // peerId → DataConnection
-let remotePlayers = {};  // peerId → Player
-let lobbyMembers = {};   // peerId → { name, role, wins }
+let conns = {};          
+let remotePlayers = {};  
+let lobbyMembers = {};   // peerId → { name, role, wins, uid }
 const PLAYER_COLORS = ['#c8cdd4','#e8a0a0','#a0c8a0','#a0b8e8','#e8d0a0','#c8a0d0','#d0c0a0'];
 let myColor = PLAYER_COLORS[Math.floor(Math.random()*PLAYER_COLORS.length)];
-let myRole = null; // 'hunter' | 'seeker' | null
+let myRole = null; 
 
 // ─── Round System ─────────────────────────────────────────────────────────────
-// Roles: 1 hunter (it), rest are seekers trying to paint + hide
-// Seekers try to blend into walls by painting themselves
-// Hunter tags seekers by walking into them (proximity)
-// Round ends when hunter tags all seekers OR timer runs out
-// Seekers win if time runs out; Hunter wins if all tagged
-const ROUND_DURATION = 60; // seconds
-const TAG_DISTANCE   = 0.6; // world units
+const ROUND_DURATION = 60; 
+const TAG_DISTANCE   = 0.6; 
 const MIN_PLAYERS    = 2;
 
-let roundState = 'lobby'; // 'lobby' | 'countdown' | 'playing' | 'ended'
+let roundState = 'lobby'; 
 let roundTimer  = 0;
 let roundNumber = 0;
-let taggedSeekers = new Set(); // peerIds of tagged seekers
-let amIHost = false; // host drives round logic + broadcasts round events
-let roundInterval = null;
+let taggedSeekers = new Set(); 
+let amIHost = false; 
 
-// ─── Init ─────────────────────────────────────────────────────────────────────
 init();
 animate();
 
@@ -70,7 +64,6 @@ function init() {
     camera = new THREE.PerspectiveCamera(65, window.innerWidth/window.innerHeight, 0.01, 200);
     camera.position.set(0, 4, 8);
 
-    // Menu auto-rotate only
     menuControls = new OrbitControls(camera, renderer.domElement);
     menuControls.enableDamping = true; menuControls.dampingFactor = 0.08;
     menuControls.autoRotate = true; menuControls.autoRotateSpeed = 1.2;
@@ -83,7 +76,6 @@ function init() {
     raycaster = new THREE.Raycaster();
     mouse = new THREE.Vector2();
 
-    // ── Keyboard
     window.addEventListener('keydown', e => {
         if (!gameStarted) return;
         if (e.code==='Space')  { e.preventDefault(); player.jump(); }
@@ -96,7 +88,6 @@ function init() {
         if (e.code==='ShiftLeft'||e.code==='ShiftRight') keys.Shift=false;
     });
 
-    // ── Pointer (left-click drag = orbit; no-drag click = paint)
     window.addEventListener('pointerdown', e => {
         if (!gameStarted||e.button!==0) return;
         if (e.target.closest('.hud-panel')||e.target.closest('#mobile-controls')||e.target.closest('#round-overlay')) return;
@@ -128,7 +119,6 @@ function init() {
     setupMobile();
 }
 
-// ─── Firebase Auth ─────────────────────────────────────────────────────────────
 function setupFirebase() {
     if (typeof FB==='undefined') return;
     FB.onAuthChange(async user => {
@@ -139,9 +129,13 @@ function setupFirebase() {
             document.getElementById('user-avatar').src = user.photoURL||'';
             document.getElementById('user-info').style.display = 'flex';
             document.getElementById('auth-gate').style.display = 'none';
+            
             const stats = await FB.getStats ? await FB.getStats(user.uid) : await FB.getMatchStats(user.uid);
-            myWins = stats.w||0; myKills = stats.k||0;
+            myWins = stats.w||0; myKills = stats.k||0; myLikes = stats.likes||0;
+            
             document.getElementById('menu-wins').textContent = myWins;
+            document.getElementById('menu-likes').textContent = myLikes;
+            
             document.getElementById('btn-play').disabled = false;
             document.getElementById('btn-play').textContent = 'JOIN LOBBY';
             updateLobbyStatus();
@@ -156,7 +150,6 @@ function setupFirebase() {
     document.getElementById('btn-signout').addEventListener('click', ()=>FB.signOut());
 }
 
-// ─── UI Setup ─────────────────────────────────────────────────────────────────
 function setupUI() {
     document.getElementById('btn-play').addEventListener('click', () => {
         if (!fbUser) return;
@@ -177,6 +170,20 @@ function setupUI() {
         e.currentTarget.classList.add('active');
         brushRadius=parseInt(e.currentTarget.dataset.radius);
     }));
+
+    // Like Button Event Delegation
+    document.getElementById('players-list').addEventListener('click', e => {
+        const btn = e.target.closest('.p-like-btn');
+        if (btn && window.FB) {
+            const targetUid = btn.dataset.uid;
+            if (targetUid) {
+                // Instantly feedback in UI
+                btn.classList.add('liked');
+                btn.disabled = true;
+                FB.likePlayer(targetUid);
+            }
+        }
+    });
 }
 
 function enterGame() {
@@ -189,6 +196,7 @@ function enterGame() {
     document.getElementById('hud-username').textContent=myName;
     document.getElementById('hud-avatar').src=fbUser?.photoURL||'';
     document.getElementById('hud-wins').textContent=myWins;
+    document.getElementById('hud-likes').textContent=myLikes;
 
     player.setName(myName);
     player.group.position.set((Math.random()-0.5)*4, 0, (Math.random()-0.5)*4);
@@ -202,7 +210,6 @@ function updateFreezeUI() {
     document.getElementById('freeze-indicator').style.display = player.frozen ? 'block' : 'none';
 }
 
-// ─── Players Sidebar ──────────────────────────────────────────────────────────
 function rebuildPlayersList() {
     const list = document.getElementById('players-list');
     list.innerHTML='';
@@ -211,7 +218,7 @@ function rebuildPlayersList() {
     const me = document.createElement('div');
     me.className='player-entry me';
     const roleIcon = myRole==='hunter'?'🔴':myRole==='seeker'?'🔵':'⚪';
-    me.innerHTML=`<span class="p-dot" style="background:${myColor}"></span><span class="p-name">${myName} (You)</span><span class="p-role">${roleIcon}</span><span class="p-wins">🏆${myWins}</span>`;
+    me.innerHTML=`<span class="p-dot" style="background:${myColor}"></span><span class="p-name">${myName}</span><span class="p-role">${roleIcon}</span><span class="p-wins">🏆${myWins}</span>`;
     list.appendChild(me);
 
     // Others
@@ -221,7 +228,11 @@ function rebuildPlayersList() {
         el.id='ple-'+pid;
         const ri=m.role==='hunter'?'🔴':m.role==='seeker'?'🔵':'⚪';
         const clr=remotePlayers[pid]?remotePlayers[pid].baseSkinColor:'#888';
-        el.innerHTML=`<span class="p-dot" style="background:${clr}"></span><span class="p-name">${m.name||'Player'}</span><span class="p-role">${ri}</span><span class="p-wins">🏆${m.wins||0}</span>`;
+        
+        // Only show like button if we have their Firebase UID
+        const likeHtml = m.uid ? `<button class="p-like-btn" data-uid="${m.uid}">❤️</button>` : '';
+        
+        el.innerHTML=`<span class="p-dot" style="background:${clr}"></span><span class="p-name">${m.name||'Player'}</span><span class="p-role">${ri}</span><span class="p-wins">🏆${m.wins||0}</span>${likeHtml}`;
         list.appendChild(el);
     });
 }
@@ -233,8 +244,6 @@ function updateLobbyStatus() {
     if (el) el.textContent = need>0 ? `Need ${need} more player${need>1?'s':''} to start` : `${total} players in lobby`;
 }
 
-// ─── Round System ──────────────────────────────────────────────────────────────
-// HOST drives all round logic. Host = alphabetically first peerId in lobby.
 function electHost() {
     const allIds=[myPeerId,...Object.keys(conns)].sort();
     amIHost = allIds[0]===myPeerId;
@@ -256,7 +265,6 @@ function beginRound(num) {
     showOverlay(`Round ${num}`, 'Get ready…', 2500);
 
     setTimeout(()=>{
-        // Assign roles: 1 hunter (random), rest seekers
         const allIds=[myPeerId,...Object.keys(conns)];
         const hunterIdx=Math.floor(Math.random()*allIds.length);
         const hunterPid=allIds[hunterIdx];
@@ -317,7 +325,6 @@ function tickRound(delta) {
     updateRoundUI();
 
     if (amIHost) {
-        // Check tags (hunter proximity to seekers)
         if (myRole==='hunter') {
             Object.entries(remotePlayers).forEach(([pid,rp])=>{
                 if (taggedSeekers.has(pid)) return;
@@ -331,7 +338,6 @@ function tickRound(delta) {
                 }
             });
         } else {
-            // Check if a remote hunter tagged me
             Object.entries(remotePlayers).forEach(([pid,rp])=>{
                 if (lobbyMembers[pid]?.role!=='hunter') return;
                 const dist=player.group.position.distanceTo(rp.group.position);
@@ -361,10 +367,8 @@ function handleTagged(pid) {
     taggedSeekers.add(pid);
     if (pid===myPeerId) {
         showOverlay('Tagged!','You were caught 😱', 2000);
-        // Freeze seeker in place
         if (myRole==='seeker') { player.frozen=true; updateFreezeUI(); }
     }
-    // Update player list visual
     const el=document.getElementById('ple-'+pid);
     if (el) el.classList.add('tagged');
     rebuildPlayersList();
@@ -396,7 +400,6 @@ async function endRound(hunterWon) {
         }
     }
 
-    // Reset roles
     player.setRole(null); myRole=null;
     Object.values(remotePlayers).forEach(rp=>rp.setRole(null));
     Object.values(lobbyMembers).forEach(m=>m.role=null);
@@ -437,32 +440,31 @@ async function firestoreAnnounce() {
     const db=firebase.firestore();
     const lobbyDoc=db.collection('cc_lobby').doc('main');
 
-    // Write presence
+    // Share our Firebase UID so others can like us!
     await lobbyDoc.set({
-        [myPeerId]: { name:myName, wins:myWins, ts:Date.now() }
+        [myPeerId]: { name:myName, wins:myWins, uid: fbUser?.uid, ts:Date.now() }
     },{ merge:true });
 
-    // On close, clean up
     window.addEventListener('beforeunload', ()=>{
         db.collection('cc_lobby').doc('main').update({
             [myPeerId]: firebase.firestore.FieldValue.delete()
         }).catch(()=>{});
     });
 
-    // Watch lobby
     lobbyDoc.onSnapshot(snap=>{
         const data=snap.data()||{};
-        // Remove stale entries (>30s old) and connect to new peers
         Object.entries(data).forEach(([pid,info])=>{
             if (pid===myPeerId) return;
-            if (Date.now()-info.ts>30000) return; // stale
+            if (Date.now()-info.ts>30000) return; 
             if (!conns[pid]) {
-                const c=peer.connect(pid,{reliable:false,serialization:'json',metadata:{name:myName,wins:myWins}});
-                c.on('open',()=>onConnectionReady(c,pid,info.name,info.wins));
+                const c=peer.connect(pid,{
+                    reliable:false,serialization:'json',
+                    metadata:{name:myName,wins:myWins,uid:fbUser?.uid}
+                });
+                c.on('open',()=>onConnectionReady(c,pid,info.name,info.wins,info.uid));
             }
         });
 
-        // Remove gone peers from lobbyMembers
         Object.keys(lobbyMembers).forEach(pid=>{
             if (!data[pid]) removePeer(pid);
         });
@@ -470,11 +472,9 @@ async function firestoreAnnounce() {
         updateLobbyStatus();
         electHost();
 
-        // Heartbeat to stay alive in lobby
         lobbyDoc.update({ [myPeerId+'.ts']: Date.now() }).catch(()=>{});
     });
 
-    // Keep-alive heartbeat every 10s
     setInterval(()=>{
         lobbyDoc.update({ [myPeerId+'.ts']: Date.now() }).catch(()=>{});
     },10000);
@@ -484,15 +484,14 @@ function onIncomingConn(conn) {
     conn.on('open',()=>{
         const pid=conn.peer;
         const meta=conn.metadata||{};
-        onConnectionReady(conn,pid,meta.name,meta.wins);
+        onConnectionReady(conn,pid,meta.name,meta.wins,meta.uid);
     });
 }
 
-function onConnectionReady(conn,pid,name,wins) {
+function onConnectionReady(conn,pid,name,wins,uid) {
     conns[pid]=conn;
-    lobbyMembers[pid]={ name, wins:wins||0, role:null };
+    lobbyMembers[pid]={ name, wins:wins||0, role:null, uid:uid };
 
-    // Assign color
     const idx=Object.keys(remotePlayers).length%PLAYER_COLORS.length;
     const rp=new Player(scene,PLAYER_COLORS[idx],true);
     rp.setName(name||'Player');
@@ -506,7 +505,6 @@ function onConnectionReady(conn,pid,name,wins) {
     conn.on('close',()=>removePeer(pid));
     conn.on('error',()=>removePeer(pid));
 
-    // If we just got enough players and we're host, start
     setTimeout(tryStartRound,1000);
 }
 
@@ -587,6 +585,7 @@ function updateCamera() {
 function setupMobile() {
     const zone=document.getElementById('joystick-zone');
     const knob=document.getElementById('joystick-knob');
+    if(!zone) return; // simple guard
     zone.addEventListener('touchstart',e=>{
         e.preventDefault();
         const t=e.changedTouches[0];
@@ -616,7 +615,6 @@ function setupMobile() {
 
 // ─── Animate ──────────────────────────────────────────────────────────────────
 let netT=0;
-
 function animate() {
     requestAnimationFrame(animate);
     const delta=Math.min(clock.getDelta(),0.1);
@@ -635,7 +633,6 @@ function animate() {
     updateCamera();
     tickRound(delta);
 
-    // Broadcast position ~20Hz
     netT+=delta;
     if (netT>0.05) {
         netT=0;

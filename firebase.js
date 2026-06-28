@@ -1,11 +1,10 @@
-// firebase.js v3.0
+// firebase.js v3.1
 // users/{uid}                     → { n, e, ph }
 // users/{uid}/G/CP/L/{VER}        → CubePlatformer times
-// users/{uid}/G/FS                → { w, l, k, h, s }  (FloppySticks / Camo Chameleon)
-// users/{uid}/G/CC                → { w, l, k, h, s }  (Camo Chameleon specific)
+// users/{uid}/G/FS                → { w, l, k, h, s }  
+// users/{uid}/G/CC                → { w, l, k, h, s, likes }  (Camo Chameleon specific)
+// users/{uid}/G/CC/Likes/{vUid}   → { t, by } (Who liked them and when)
 // users/{uid}/subscription        → { active, FTL, plan, start, next, activatedBy }
-//   active: bool, FTL: bool (First Time Lite), plan: 'lite'
-//   activatedBy: 'admin' (manually set by typing Lite:true in console)
 
 firebase.initializeApp({
   apiKey:'AIzaSyCZPK5A0UQSFB2D_zNj3wjZ5-Tbyb1VYn8',
@@ -71,8 +70,6 @@ async function saveProfile(uid,name) {
 }
 
 // ── Subscription ──────────────────────────────────────────────────────────────
-// Activated manually by admin typing: FB.activateLite(uid)
-// Or via dev console shortcut: Lite:true  (handled in index.html)
 async function getSubscription(uid) {
   const h=cG('sub_'+uid); if(h) return h;
   try {
@@ -89,14 +86,10 @@ async function activateLite(uid) {
   const isFirstTime = !existing.FTL;
   const now = Date.now();
   const data = {
-    active: true,
-    plan: 'lite',
-    FTL: true,                         // First Time Lite — set once, never cleared
+    active: true, plan: 'lite', FTL: true,
     firstActivated: existing.firstActivated || now,
-    start: now,
-    next: now + 30*24*60*60*1000,      // ~30 days
-    activatedBy: 'admin',
-    price: isFirstTime ? 39 : 49,      // ₹39 first time, ₹49 after
+    start: now, next: now + 30*24*60*60*1000,
+    activatedBy: 'admin', price: isFirstTime ? 39 : 49,
   };
   await subRef(uid).set(data, {merge:true});
   cD('sub_'+uid);
@@ -163,27 +156,48 @@ async function getMatchStats(uid) {
   catch(e){console.warn('[FB] getMatchStats:',e.message);return{w:0,l:0};}
 }
 
-// ── Camo Chameleon Stats (G/CC) ───────────────────────────────────────────────
-// w=wins, l=losses, k=kills(tags), h=rounds as hider/seeker, s=rounds as hunter
+// ── Camo Chameleon Stats & Likes (G/CC) ───────────────────────────────────────
 async function recordRound(uid,{won,kills=0,role}){
   cD('cc_'+uid);
   const INC=firebase.firestore.FieldValue.increment;
   const upd={
     w:INC(won?1:0), l:INC(!won?1:0),
-    k:INC(kills),
-    h:INC(role==='seeker'?1:0),
-    s:INC(role==='hunter'?1:0),
+    k:INC(kills), h:INC(role==='seeker'?1:0), s:INC(role==='hunter'?1:0),
   };
   try{
     await ccRef(uid).set(upd,{merge:true});
-    console.log('[FB] CC recordRound',{won,kills,role});
   }catch(e){console.error('[FB] recordRound:',e.message);throw e;}
 }
 
 async function getStats(uid){
   cD('cc_'+uid);
-  try{const s=await ccRef(uid).get();const v=s.exists?s.data():{};return{w:v.w||0,l:v.l||0,k:v.k||0,h:v.h||0,s:v.s||0};}
-  catch(e){console.warn('[FB] getStats:',e.message);return{w:0,l:0,k:0,h:0,s:0};}
+  try{const s=await ccRef(uid).get();const v=s.exists?s.data():{};return{w:v.w||0,l:v.l||0,k:v.k||0,h:v.h||0,s:v.s||0,likes:v.likes||0};}
+  catch(e){console.warn('[FB] getStats:',e.message);return{w:0,l:0,k:0,h:0,s:0,likes:0};}
+}
+
+async function likePlayer(targetUid) {
+  const me = currentUser();
+  if (!me || me.uid === targetUid) return false; // Can't like yourself or if not logged in
+  
+  try {
+    const likeDoc = ccRef(targetUid).collection('Likes').doc(me.uid);
+    const snap = await likeDoc.get();
+    
+    if (snap.exists) {
+      console.log("[FB] You already liked this player.");
+      return false; 
+    }
+    
+    // Save to the subcollection inside CC
+    await likeDoc.set({ by: me.uid, t: Date.now() });
+    
+    // Increment the total counter on the CC document
+    await ccRef(targetUid).set({ likes: firebase.firestore.FieldValue.increment(1) }, { merge: true });
+    return true;
+  } catch (e) {
+    console.error("[FB] Error liking player:", e.message);
+    return false;
+  }
 }
 
 // ── Leaderboard ───────────────────────────────────────────────────────────────
@@ -207,7 +221,7 @@ window.FB = {
   getSubscription, activateLite, deactivateLite, isLiteActive,
   saveLevelTime, getMyTimes, unlockLevel,
   recordMatch, getMatchStats,
-  recordRound, getStats,
+  recordRound, getStats, likePlayer,
   getLeaderboard, VER
 };
 console.log('[FB] ready v'+VER);

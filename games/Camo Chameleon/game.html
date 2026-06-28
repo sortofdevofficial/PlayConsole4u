@@ -15,7 +15,6 @@
 <body>
 <canvas id="c3d"></canvas>
 
-<!-- AUTH GATE (shown first, blocks everything) -->
 <div id="auth-screen">
   <div class="auth-box">
     <div class="auth-logo">🦎</div>
@@ -29,7 +28,6 @@
   </div>
 </div>
 
-<!-- MAIN MENU (shown after Lite verified) -->
 <div id="main-menu" style="display:none">
   <div class="menu-box">
     <h1 class="game-title">CAMO CHAMELEON</h1>
@@ -38,7 +36,7 @@
       <img id="user-avatar" src="" alt="">
       <div>
         <div id="user-name"></div>
-        <div class="wins-row">🏆 <span id="menu-wins">0</span> Wins</div>
+        <div class="wins-row">🏆 <span id="menu-wins">0</span> Wins <span style="margin:0 5px">•</span> ❤️ <span id="menu-likes">0</span> Likes</div>
       </div>
       <button id="btn-signout" class="small-btn">Sign Out</button>
     </div>
@@ -56,29 +54,24 @@
   </div>
 </div>
 
-<!-- HUD -->
 <div id="hud" style="display:none">
-  <!-- Top-left stats -->
   <div class="hud-panel" id="stats-panel">
     <img id="hud-avatar" src="" alt="">
     <div>
       <div id="hud-username">—</div>
-      <div class="wins-row">🏆 <span id="hud-wins">0</span></div>
+      <div class="wins-row">🏆 <span id="hud-wins">0</span> <span style="margin:0 4px">•</span> ❤️ <span id="hud-likes">0</span></div>
     </div>
   </div>
 
-  <!-- Top-center round -->
   <div class="hud-panel" id="round-panel">
     <div id="round-label">Lobby</div>
     <div id="round-timer"></div>
   </div>
 
-  <!-- Role badge -->
   <div class="hud-panel" id="role-panel" style="display:none">
     <div id="role-badge"></div>
   </div>
 
-  <!-- Paint tools right -->
   <div class="hud-panel" id="sidebar-tools">
     <div class="sidebar-section">
       <span class="section-title">Color</span>
@@ -86,7 +79,6 @@
         <input type="color" id="color-picker" value="#c0392b">
         <span id="color-hex">#C0392B</span>
       </div>
-      <!-- Quick color swatches -->
       <div class="swatches">
         <div class="swatch" style="background:#c0392b" data-c="#c0392b"></div>
         <div class="swatch" style="background:#e67e22" data-c="#e67e22"></div>
@@ -116,22 +108,18 @@
     </div>
   </div>
 
-  <!-- Players list left -->
   <div class="hud-panel" id="players-panel">
     <div class="panel-label">PLAYERS</div>
     <div id="players-list"></div>
   </div>
 
-  <!-- Freeze -->
   <div id="freeze-indicator">❄️ FROZEN — F to unfreeze</div>
 
-  <!-- Round overlay -->
   <div id="round-overlay" style="display:none">
     <div id="ov-title"></div>
     <div id="ov-sub"></div>
   </div>
 
-  <!-- Mobile -->
   <div id="mobile-controls">
     <div id="joy-zone"><div id="joy-base"><div id="joy-knob"></div></div></div>
     <div id="act-btns">
@@ -141,7 +129,6 @@
     </div>
   </div>
 
-  <!-- Mobile paint button -->
   <button id="mob-paint-toggle">🎨</button>
 </div>
 
