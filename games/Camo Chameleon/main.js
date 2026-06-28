@@ -24,6 +24,8 @@ let joyActive=false, joyId=null, joyOrigin={x:0,y:0};
 let fbUser = null;
 let myName = 'Player';
 let myWins = 0;
+let myKills = 0;
+let roundKills = 0; // tags made this round as hunter
 
 // ─── Multiplayer / Lobby ──────────────────────────────────────────────────────
 let peer=null, myPeerId=null;
@@ -137,8 +139,8 @@ function setupFirebase() {
             document.getElementById('user-avatar').src = user.photoURL||'';
             document.getElementById('user-info').style.display = 'flex';
             document.getElementById('auth-gate').style.display = 'none';
-            const stats = await FB.getMatchStats(user.uid);
-            myWins = stats.w||0;
+            const stats = await FB.getStats ? await FB.getStats(user.uid) : await FB.getMatchStats(user.uid);
+            myWins = stats.w||0; myKills = stats.k||0;
             document.getElementById('menu-wins').textContent = myWins;
             document.getElementById('btn-play').disabled = false;
             document.getElementById('btn-play').textContent = 'JOIN LOBBY';
@@ -250,6 +252,7 @@ function beginRound(num) {
     roundState='countdown';
     roundNumber=num;
     taggedSeekers.clear();
+    roundKills = 0;
     showOverlay(`Round ${num}`, 'Get ready…', 2500);
 
     setTimeout(()=>{
@@ -322,6 +325,7 @@ function tickRound(delta) {
                 const dist=player.group.position.distanceTo(rp.group.position);
                 if (dist<TAG_DISTANCE) {
                     taggedSeekers.add(pid);
+                    roundKills++;
                     broadcastAll({ type:'tagged', pid, round:roundNumber });
                     handleTagged(pid);
                 }
@@ -377,11 +381,19 @@ async function endRound(hunterWon) {
     let sub=iWon?'🎉 You win!':'😔 You lose';
     showOverlay(msg,sub,4000);
 
-    if (iWon && fbUser) {
-        myWins++;
-        document.getElementById('hud-wins').textContent=myWins;
-        document.getElementById('menu-wins').textContent=myWins;
-        await FB.recordMatch(fbUser.uid,true);
+    if (fbUser) {
+        if (iWon) {
+            myWins++;
+            document.getElementById('hud-wins').textContent=myWins;
+            document.getElementById('menu-wins').textContent=myWins;
+        }
+        myKills += roundKills;
+        const recordFn = FB.recordRound || FB.recordMatch;
+        if (FB.recordRound) {
+            await FB.recordRound(fbUser.uid, { won: iWon, kills: roundKills, role: myRole });
+        } else {
+            await FB.recordMatch(fbUser.uid, iWon);
+        }
     }
 
     // Reset roles

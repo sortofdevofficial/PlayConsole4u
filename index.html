@@ -11,6 +11,7 @@
   --bg:#f4f2ee;--bg2:#ece9e3;--surface:#fff;--border:#e2ddd6;
   --accent:#5b3af7;--accent2:#8b6fff;--accent3:#ff4f7b;--text:#1a1625;--text2:#6b6579;--text3:#a09ab0;--green:#16a34a;
   --shadow:0 2px 16px rgba(91,58,247,.07);--shadow2:0 8px 32px rgba(91,58,247,.12);
+  --lite:#f59e0b;--lite2:#fbbf24;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
@@ -24,13 +25,14 @@ header{display:flex;align-items:center;justify-content:space-between;flex-wrap:w
 #sign-in-btn{display:flex;align-items:center;gap:8px;background:var(--surface);color:var(--text);border:1.5px solid var(--border);padding:8px 16px;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:.18s;box-shadow:var(--shadow)}
 #sign-in-btn:hover{border-color:var(--accent2);box-shadow:var(--shadow2);transform:translateY(-1px)}
 #sign-in-btn img{width:15px;height:15px}
-
-/* WhatsApp-Style Profile User Chip */
 #user-chip{display:none;align-items:center;gap:10px;background:var(--surface);border:1.5px solid var(--border);border-radius:999px;padding:4px 14px 4px 4px;cursor:pointer;transition:.18s;box-shadow:var(--shadow)}
 #user-chip:hover{border-color:var(--accent);box-shadow:var(--shadow2);transform:translateY(-1px)}
 .u-badge{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;flex-shrink:0;overflow:hidden;background:#ccc;box-shadow:0 2px 6px rgba(0,0,0,.1)}
 .u-badge img{width:100%;height:100%;object-fit:cover;display:block}
 #user-chip .uname{font-size:13px;font-weight:700;color:var(--text);max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* Lite badge on chip */
+.lite-chip-badge{font-size:9px;font-weight:800;letter-spacing:.8px;background:linear-gradient(135deg,var(--lite),var(--lite2));color:#fff;padding:2px 7px;border-radius:999px;margin-left:2px;box-shadow:0 2px 6px rgba(245,158,11,.35)}
 
 .icon-btn{width:34px;height:34px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface);color:var(--text2);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.18s;font-size:15px;box-shadow:var(--shadow)}
 .icon-btn:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-1px);box-shadow:var(--shadow2)}
@@ -50,6 +52,63 @@ header{display:flex;align-items:center;justify-content:space-between;flex-wrap:w
 .stat-val{font-family:'Syne',sans-serif;font-size:22px;font-weight:800}
 .stat-lbl{font-size:11px;font-weight:600;color:var(--text3);letter-spacing:.4px}
 
+/* ── SUBSCRIPTION BANNER ───────────────────────────────────────────────────── */
+#sub-banner{
+  display:none;
+  margin-bottom:28px;
+  background:linear-gradient(135deg,#1a0a00 0%,#3d1c00 50%,#1a0a00 100%);
+  border-radius:20px;padding:0;overflow:hidden;
+  border:2px solid var(--lite);
+  box-shadow:0 8px 40px rgba(245,158,11,.28),0 0 0 1px rgba(245,158,11,.1);
+  animation:fadeUp .45s .12s ease both;
+  position:relative;
+}
+#sub-banner::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,rgba(245,158,11,.08),rgba(251,191,36,.04));
+  pointer-events:none;
+}
+.sub-banner-inner{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:20px;flex-wrap:wrap;padding:22px 28px;
+  position:relative;z-index:1;
+}
+.sub-banner-left{}
+.sub-banner-eyebrow{
+  display:inline-flex;align-items:center;gap:8px;
+  font-size:10px;font-weight:800;letter-spacing:3px;text-transform:uppercase;
+  color:var(--lite);margin-bottom:8px;
+}
+.sub-banner-eyebrow span{
+  display:inline-block;width:6px;height:6px;border-radius:50%;
+  background:var(--lite);box-shadow:0 0 8px var(--lite);
+  animation:litepulse 1.5s ease infinite;
+}
+@keyframes litepulse{0%,100%{opacity:1;box-shadow:0 0 8px var(--lite)}50%{opacity:.5;box-shadow:0 0 18px var(--lite)}}
+.sub-banner-title{
+  font-family:'Syne',sans-serif;font-size:20px;font-weight:800;
+  color:#fff;line-height:1.2;margin-bottom:5px;
+}
+.sub-banner-title span{color:var(--lite);}
+.sub-banner-desc{font-size:12.5px;color:rgba(255,255,255,.6);line-height:1.5;max-width:460px;}
+.sub-banner-right{display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0}
+.sub-price-row{text-align:right;}
+.sub-price-first{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:var(--lite);line-height:1;}
+.sub-price-note{font-size:10px;color:rgba(255,255,255,.45);margin-top:2px;}
+.sub-price-renewal{font-size:11px;color:rgba(255,255,255,.35);}
+.sub-discord-btn{
+  display:inline-flex;align-items:center;gap:8px;
+  background:linear-gradient(135deg,#5865f2,#7289da);
+  color:#fff;border:none;padding:11px 20px;border-radius:12px;
+  font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;
+  cursor:pointer;transition:.18s;white-space:nowrap;
+  box-shadow:0 4px 16px rgba(88,101,242,.35);
+  text-decoration:none;
+}
+.sub-discord-btn:hover{filter:brightness(1.1);transform:translateY(-2px);box-shadow:0 8px 24px rgba(88,101,242,.45);}
+.sub-discord-btn svg{width:18px;height:18px;flex-shrink:0}
+/* ─────────────────────────────────────────────────────────────────────────── */
+
 .slabel{font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--text3);margin-bottom:16px;display:flex;align-items:center;gap:10px}
 .slabel::after{content:'';flex:1;height:1px;background:var(--border)}
 
@@ -67,13 +126,27 @@ header{display:flex;align-items:center;justify-content:space-between;flex-wrap:w
 .cbody{padding:18px 20px;flex:1;display:flex;flex-direction:column;justify-content:center}
 .ctag{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--green);margin-bottom:5px;display:flex;align-items:center;gap:5px}
 .ctag::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--green)}
+.ctag.locked{color:var(--lite);}
+.ctag.locked::before{background:var(--lite);}
 .cname{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;margin-bottom:6px}
 .cdesc{font-size:12px;color:var(--text2);line-height:1.5}
 .ctags{display:flex;gap:5px;flex-wrap:wrap;margin-top:10px}
 .cpill{font-size:9px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;padding:3px 9px;border-radius:999px;background:rgba(91,58,247,.07);color:var(--accent);border:1.5px solid rgba(91,58,247,.13)}
+.cpill.lite-pill{background:rgba(245,158,11,.1);color:var(--lite);border-color:rgba(245,158,11,.25);}
 .card.soon{opacity:.52;cursor:default;pointer-events:none}
 
-.featured{margin-bottom:32px;background:linear-gradient(135deg,var(--accent) 0%,#7c3aed 50%,var(--accent3) 100%);border-radius:22px;padding:26px 30px;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;box-shadow:0 10px 40px rgba(91,58,247,.22);animation:fadeUp .45s .15s ease both;position:relative;overflow:hidden}
+/* Lite-locked card overlay */
+.card.lite-locked{position:relative;cursor:pointer;}
+.card.lite-locked .cimg::after{
+  content:'🔒 LITE';position:absolute;inset:0;
+  background:rgba(245,158,11,.15);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Syne',sans-serif;font-size:13px;font-weight:800;
+  color:var(--lite);letter-spacing:2px;
+  backdrop-filter:blur(1px);
+}
+
+.featured{margin-bottom:28px;background:linear-gradient(135deg,var(--accent) 0%,#7c3aed 50%,var(--accent3) 100%);border-radius:22px;padding:26px 30px;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;box-shadow:0 10px 40px rgba(91,58,247,.22);animation:fadeUp .45s .15s ease both;position:relative;overflow:hidden}
 .featured::before{content:'🎮';position:absolute;right:24px;top:50%;transform:translateY(-50%);font-size:80px;opacity:.1;pointer-events:none}
 .featured h2{font-family:'Syne',sans-serif;font-size:21px;font-weight:800;color:#fff;line-height:1.2;margin-bottom:5px}
 .featured p{font-size:13px;color:rgba(255,255,255,.72);line-height:1.5}
@@ -86,7 +159,6 @@ header{display:flex;align-items:center;justify-content:space-between;flex-wrap:w
 .widget-label.yt::before{content:'';width:8px;height:8px;border-radius:50%;background:#ef4444;box-shadow:0 0 0 3px rgba(239,68,68,.15);animation:ytb 1.5s linear infinite}
 @keyframes ytb{50%{opacity:0}}
 .widget-label.dc::before{content:'';width:8px;height:8px;border-radius:50%;background:#5865f2;box-shadow:0 0 0 3px rgba(88,101,242,.18)}
-
 .yt-frame-wrap{width:100%;border-radius:16px;overflow:hidden;border:1.5px solid var(--border);box-shadow:var(--shadow);line-height:0}
 .dc-frame-wrap{width:100%;border-radius:16px;overflow:hidden;line-height:0;background:#1e1f22;border:1.5px solid #3a3d44;box-shadow:var(--shadow2)}
 .yt-frame-wrap iframe,.dc-frame-wrap iframe{display:block;width:100%;border:none;background:transparent}
@@ -115,10 +187,16 @@ header{display:flex;align-items:center;justify-content:space-between;flex-wrap:w
 .log-text{font-size:11px;color:var(--text2);line-height:1.5}
 .sb-play{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border:none;padding:14px;font-family:'Syne',sans-serif;font-size:14px;font-weight:800;letter-spacing:2px;border-radius:13px;cursor:pointer;margin-top:auto;transition:.18s;box-shadow:0 4px 18px rgba(91,58,247,.28);width:100%}
 .sb-play:hover{filter:brightness(1.08);transform:translateY(-1px);box-shadow:0 8px 28px rgba(91,58,247,.36)}
+.sb-play.lite-locked-btn{background:linear-gradient(135deg,var(--lite),var(--lite2));box-shadow:0 4px 18px rgba(245,158,11,.28);}
+.sb-play.lite-locked-btn:hover{box-shadow:0 8px 28px rgba(245,158,11,.4);}
+
+/* Lite gate inside sidebar */
+.sb-lite-gate{background:rgba(245,158,11,.07);border:1.5px solid rgba(245,158,11,.2);border-radius:12px;padding:14px 16px;margin-bottom:10px;font-size:12px;color:var(--text2);line-height:1.6;display:none;}
+.sb-lite-gate b{color:var(--lite);}
 
 #modal-bg{display:none;position:fixed;inset:0;z-index:500;background:rgba(26,22,37,.38);backdrop-filter:blur(7px);align-items:center;justify-content:center}
 #modal-bg.open{display:flex}
-.modal{background:var(--surface);border:1.5px solid var(--border);border-radius:22px;padding:28px;width:min(360px,94vw);display:flex;flex-direction:column;gap:18px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 70px rgba(26,22,37,.16);animation:popIn .2s ease both}
+.modal{background:var(--surface);border:1.5px solid var(--border);border-radius:22px;padding:28px;width:min(380px,94vw);display:flex;flex-direction:column;gap:18px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 70px rgba(26,22,37,.16);animation:popIn .2s ease both}
 @keyframes popIn{from{opacity:0;transform:scale(.96) translateY(8px)}}
 .modal h2{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;letter-spacing:1px}
 .modal label{font-size:10px;font-weight:700;letter-spacing:2px;color:var(--text3);text-transform:uppercase;display:block;margin-bottom:6px}
@@ -149,6 +227,17 @@ header{display:flex;align-items:center;justify-content:space-between;flex-wrap:w
 .fs-wl-val{font-family:'Syne',sans-serif;font-size:22px;font-weight:800}
 .fs-wl-lbl{font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.5px;margin-top:2px}
 
+/* Subscription section in modal */
+.sub-section{background:linear-gradient(135deg,rgba(245,158,11,.06),rgba(251,191,36,.03));border:1.5px solid rgba(245,158,11,.2);border-radius:14px;padding:16px;}
+.sub-section-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:var(--lite);margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.sub-active-badge{background:linear-gradient(135deg,var(--lite),var(--lite2));color:#fff;font-size:9px;font-weight:800;padding:2px 8px;border-radius:999px;letter-spacing:1px;}
+.sub-inactive-note{font-size:11px;color:var(--text2);line-height:1.6;margin-bottom:10px;}
+.sub-activate-input{display:flex;gap:7px;margin-top:8px;}
+.sub-activate-input input{flex:1;background:var(--bg2);border:1.5px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:12px;padding:8px 11px;border-radius:8px;outline:none;transition:.15s;}
+.sub-activate-input input:focus{border-color:var(--lite);box-shadow:0 0 0 3px rgba(245,158,11,.1);}
+.sub-activate-btn{background:linear-gradient(135deg,var(--lite),var(--lite2));color:#fff;border:none;padding:8px 14px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:.15s;white-space:nowrap;}
+.sub-activate-btn:hover{filter:brightness(1.07);}
+
 @keyframes slideDown{from{opacity:0;transform:translateY(-14px)}}
 @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}}
 @media(max-width:640px){
@@ -158,6 +247,8 @@ header{display:flex;align-items:center;justify-content:space-between;flex-wrap:w
   .featured{padding:18px}
   .cimg{width:110px}
   #sidebar.open{width:100vw;padding:18px 16px 24px}
+  .sub-banner-inner{flex-direction:column;align-items:flex-start}
+  .sub-banner-right{align-items:flex-start}
 }
 </style>
 </head>
@@ -170,12 +261,11 @@ header{display:flex;align-items:center;justify-content:space-between;flex-wrap:w
       <button id="sign-in-btn" onclick="doSignIn()">
         <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="">Sign in with Google
       </button>
-      
       <div id="user-chip" onclick="openModal()">
         <div id="u-avatar" class="u-badge"></div>
         <span class="uname" id="u-name">Player</span>
+        <span class="lite-chip-badge" id="lite-chip-badge" style="display:none">LITE ✦</span>
       </div>
-      
       <div class="icon-btn" id="settings-btn" onclick="openModal()" style="display:none" title="Settings">⚙</div>
       <a class="icon-btn" href="leaderboard.html" title="Leaderboard">🏆</a>
       <div class="badge"><div class="dot"></div>ONLINE</div>
@@ -189,10 +279,37 @@ header{display:flex;align-items:center;justify-content:space-between;flex-wrap:w
   </div>
 
   <div class="stats">
-    <div class="stat-card"><div class="stat-val">3</div><div class="stat-lbl">Games Available</div></div>
+    <div class="stat-card"><div class="stat-val">5</div><div class="stat-lbl">Games Available</div></div>
     <div class="stat-card"><div class="stat-val">5</div><div class="stat-lbl">Levels to Beat</div></div>
-    <div class="stat-card"><div class="stat-val">Free</div><div class="stat-lbl">Always</div></div>
+    <div class="stat-card"><div class="stat-val" id="stat-free">Free</div><div class="stat-lbl">Always</div></div>
     <div class="stat-card"><div class="stat-val">🏆</div><div class="stat-lbl">Live Leaderboard</div></div>
+  </div>
+
+  <!-- ── SUBSCRIPTION BANNER ── -->
+  <div id="sub-banner">
+    <div class="sub-banner-inner">
+      <div class="sub-banner-left">
+        <div class="sub-banner-eyebrow"><span></span> PLAYCONSOLE4U LITE</div>
+        <div class="sub-banner-title">Unlock <span>Premium Games</span><br>for ₹39 / month</div>
+        <div class="sub-banner-desc">
+          Get access to <b style="color:#fff">Camo Chameleon</b> and <b style="color:#fff">Tumble Life</b> — 
+          our most intense multiplayer experiences. <br>
+          First month just <b style="color:var(--lite)">₹39</b>, then ₹49/month. 
+          Purchase subscriptions in our Discord server.
+        </div>
+      </div>
+      <div class="sub-banner-right">
+        <div class="sub-price-row">
+          <div class="sub-price-first">₹39<span style="font-size:14px;color:rgba(255,255,255,.5)"> /first month</span></div>
+          <div class="sub-price-renewal">₹49/month after that</div>
+          <div class="sub-price-note">Cancel anytime · No auto-charge</div>
+        </div>
+        <a class="sub-discord-btn" href="https://discord.gg/dS4pgC9J5H" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 00-4.885-1.515.074.074 0 00-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 00-5.487 0 12.64 12.64 0 00-.617-1.25.077.077 0 00-.079-.037A19.736 19.736 0 003.677 4.37a.07.07 0 00-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 00.031.057 19.9 19.9 0 005.993 3.03.078.078 0 00.084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 00-.041-.106 13.107 13.107 0 01-1.872-.892.077.077 0 01-.008-.128 10.2 10.2 0 00.372-.292.074.074 0 01.077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 01.078.01c.12.098.246.198.373.292a.077.077 0 01-.006.127 12.299 12.299 0 01-1.873.892.077.077 0 00-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 00.084.028 19.839 19.839 0 006.002-3.03.077.077 0 00.032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 00-.031-.03z"/></svg>
+          Buy in Discord
+        </a>
+      </div>
+    </div>
   </div>
 
   <div class="featured">
@@ -208,10 +325,8 @@ header{display:flex;align-items:center;justify-content:space-between;flex-wrap:w
       <div class="slabel">// Games</div>
       <div class="grid">
 
-        <div class="card" id="c1" onclick="openSB(this,'CUBE PLATFORMER','5 levels of precision platforming. Wall-jump, spin, and race to beat your best time — every second counts!','images/CubePlatformer/cubeplatformer.png','games/CubePlatformer/game.html',['PLATFORMER','5 LEVELS','WALL-JUMP','TIMER'],cubeLogs)">
-          <div class="cimg">
-            <img src="images/CubePlatformer/cubeplatformer.png" alt="Cube Platformer" loading="lazy" onerror="this.style.display='none';this.parentElement.innerHTML='<div class=cimg-placeholder>🟦</div>'">
-          </div>
+        <div class="card" id="c1" onclick="openSB(this,'CUBE PLATFORMER','5 levels of precision platforming. Wall-jump, spin, and race to beat your best time — every second counts!','images/CubePlatformer/cubeplatformer.png','games/CubePlatformer/game.html',['PLATFORMER','5 LEVELS','WALL-JUMP','TIMER'],cubeLogs,false)">
+          <div class="cimg"><img src="images/CubePlatformer/cubeplatformer.png" alt="Cube Platformer" loading="lazy" onerror="this.style.display='none';this.parentElement.innerHTML='<div class=cimg-placeholder>🟦</div>'"></div>
           <div class="cbody">
             <div class="ctag">READY</div>
             <div class="cname">Cube Platformer</div>
@@ -220,10 +335,8 @@ header{display:flex;align-items:center;justify-content:space-between;flex-wrap:w
           </div>
         </div>
 
-        <div class="card" id="c2" onclick="openSB(this,'FLOPPYSTICKS','A wild brawl set in nature. Beat the AI or challenge a friend locally — grab weapons, go ragdoll, and win 3 rounds!','images/FloppySticks/floppysticks.png','games/FloppySticks/game.html',['BRAWLER','LOCAL PVP','WEAPONS','RAGDOLL'],floppyLogs)">
-          <div class="cimg" style="background:linear-gradient(135deg,#dcfce7,#bbf7d0)">
-            <img src="images/FloppySticks/floppysticks.png" alt="FloppySticks" loading="lazy" onerror="this.style.display='none';this.parentElement.innerHTML='<div class=cimg-placeholder>🥊</div>'">
-          </div>
+        <div class="card" id="c2" onclick="openSB(this,'FLOPPYSTICKS','A wild brawl set in nature. Beat the AI or challenge a friend locally — grab weapons, go ragdoll, and win 3 rounds!','images/FloppySticks/floppysticks.png','games/FloppySticks/game.html',['BRAWLER','LOCAL PVP','WEAPONS','RAGDOLL'],floppyLogs,false)">
+          <div class="cimg" style="background:linear-gradient(135deg,#dcfce7,#bbf7d0)"><img src="images/FloppySticks/floppysticks.png" alt="FloppySticks" loading="lazy" onerror="this.style.display='none';this.parentElement.innerHTML='<div class=cimg-placeholder>🥊</div>'"></div>
           <div class="cbody">
             <div class="ctag">READY</div>
             <div class="cname">FloppySticks</div>
@@ -232,15 +345,25 @@ header{display:flex;align-items:center;justify-content:space-between;flex-wrap:w
           </div>
         </div>
 
-        <div class="card" id="c3" onclick="openSB(this,'TUMBLE LIFE','High-velocity structural physics and intense peer-to-peer multiplayer stumbling. Share room codes to crash instantly into friends!','images/TumbleLife/tumblelife.png','games/TumbleLife/game.html',['MULTIPLAYER','PEERJS','PHYSICS','SANDBOX'],tumbleLogs)">
-          <div class="cimg" style="background:linear-gradient(135deg,#e0f2fe,#bae6fd)">
-            <img src="images/TumbleLife/tumblelife.png" alt="Tumble Life" loading="lazy" onerror="this.style.display='none';this.parentElement.innerHTML='<div class=cimg-placeholder>🏃‍♂️</div>'">
-          </div>
+        <!-- LITE LOCKED: Tumble Life -->
+        <div class="card lite-locked" id="c3" onclick="openSB(this,'TUMBLE LIFE','High-velocity structural physics and intense peer-to-peer multiplayer stumbling. Share room codes to crash instantly into friends!','images/TumbleLife/tumblelife.png','games/TumbleLife/game.html',['MULTIPLAYER','PEERJS','PHYSICS','SANDBOX','LITE'],tumbleLogs,true)">
+          <div class="cimg" style="background:linear-gradient(135deg,#e0f2fe,#bae6fd)"><img src="images/TumbleLife/tumblelife.png" alt="Tumble Life" loading="lazy" onerror="this.style.display='none';this.parentElement.innerHTML='<div class=cimg-placeholder>🏃‍♂️</div>'"></div>
           <div class="cbody">
-            <div class="ctag">READY</div>
+            <div class="ctag locked">LITE EXCLUSIVE</div>
             <div class="cname">Tumble Life</div>
-            <div class="cdesc">High-speed physics sandbox setup. Hook up via room codes for immediate multiplayer chaos!</div>
-            <div class="ctags"><span class="cpill">Multiplayer</span><span class="cpill">PeerJS</span><span class="cpill">Physics</span><span class="cpill">Sandbox</span></div>
+            <div class="cdesc">High-speed physics sandbox. Hook up via room codes for immediate multiplayer chaos!</div>
+            <div class="ctags"><span class="cpill">Multiplayer</span><span class="cpill">Physics</span><span class="cpill lite-pill">✦ LITE</span></div>
+          </div>
+        </div>
+
+        <!-- LITE LOCKED: Camo Chameleon -->
+        <div class="card lite-locked" id="c4" onclick="openSB(this,'CAMO CHAMELEON','Hide from the hunter by painting yourself to match the walls. One hunter, many seekers — blend in or get tagged!','images/CamoChameleon/camocha.png','games/CamoChameleon/game.html',['MULTIPLAYER','HIDE & SEEK','PAINT','HUNTER','LITE'],camoLogs,true)">
+          <div class="cimg" style="background:linear-gradient(135deg,#d1fae5,#a7f3d0)"><img src="images/CamoChameleon/camocha.png" alt="Camo Chameleon" loading="lazy" onerror="this.style.display='none';this.parentElement.innerHTML='<div class=cimg-placeholder>🦎</div>'"></div>
+          <div class="cbody">
+            <div class="ctag locked">LITE EXCLUSIVE</div>
+            <div class="cname">Camo Chameleon</div>
+            <div class="cdesc">Paint yourself to match the walls. One hunter, many seekers — blend in or get caught!</div>
+            <div class="ctags"><span class="cpill">Multiplayer</span><span class="cpill">Hide &amp; Seek</span><span class="cpill">Paint</span><span class="cpill lite-pill">✦ LITE</span></div>
           </div>
         </div>
 
@@ -269,9 +392,14 @@ header{display:flex;align-items:center;justify-content:space-between;flex-wrap:w
   <div class="sb-t" id="sbt"></div>
   <div class="sb-d" id="sbd"></div>
   <div class="sb-tags" id="sbta"></div>
+  <div class="sb-lite-gate" id="sb-lite-gate">
+    🔒 <b>LITE subscribers only.</b><br>
+    This game requires a PlayConsole4u Lite subscription.<br>
+    Join our <a href="https://discord.gg/dS4pgC9J5H" target="_blank" style="color:var(--lite);font-weight:700">Discord server</a> and purchase for <b>₹39</b> first month, ₹49/month after.
+  </div>
   <div class="sb-log-label">Update Log</div>
   <div class="update-log" id="sb-log"></div>
-  <button class="sb-play" onclick="if(goHref)location.href=goHref">▶ &nbsp; PLAY NOW</button>
+  <button class="sb-play" id="sb-play-btn" onclick="handlePlayClick()">▶ &nbsp; PLAY NOW</button>
 </div>
 
 <div id="modal-bg" onclick="if(event.target===this)closeModal()">
@@ -283,6 +411,33 @@ header{display:flex;align-items:center;justify-content:space-between;flex-wrap:w
     </div>
     <button class="mbtn pri" onclick="saveUsername()">Save Username</button>
     <div class="mmsg" id="mmsg"></div>
+    <hr class="mdiv">
+
+    <!-- Subscription section -->
+    <div class="sub-section">
+      <div class="sub-section-title">
+        ✦ PlayConsole4u Lite
+        <span class="sub-active-badge" id="sub-active-badge" style="display:none">ACTIVE</span>
+      </div>
+      <div id="sub-inactive-area">
+        <div class="sub-inactive-note">
+          Unlock <b>Camo Chameleon</b> and <b>Tumble Life</b>.<br>
+          <b style="color:var(--lite)">₹39</b> first month · <b>₹49/month</b> after · Buy in Discord.
+        </div>
+        <div class="sub-activate-input">
+          <input id="lite-code-inp" type="text" placeholder="Enter activation code…" autocomplete="off">
+          <button class="sub-activate-btn" onclick="tryActivateLite()">Activate</button>
+        </div>
+        <div class="mmsg" id="lite-msg" style="margin-top:6px"></div>
+      </div>
+      <div id="sub-active-area" style="display:none">
+        <div class="mstat"><span>Status</span><span style="color:#16a34a;font-weight:800">✓ Active</span></div>
+        <div class="mstat"><span>Plan</span><span>Lite</span></div>
+        <div class="mstat"><span>First Time Lite</span><span id="m-ftl">—</span></div>
+        <div class="mstat"><span>Renews</span><span id="m-renews">—</span></div>
+      </div>
+    </div>
+
     <hr class="mdiv">
     <div>
       <label>Best Times — Cube Platformer</label>
@@ -328,60 +483,129 @@ const floppyLogs=[
 const tumbleLogs=[
   {ver:'v1.0',text:'Initial Launch — Sandbox tumble simulation with real-time PeerJS infrastructure code matching.'}
 ];
+const camoLogs=[
+  {ver:'v1.1',text:'Round system, hunter & seeker roles, collision improvements.'},
+  {ver:'v1.0',text:'Initial launch — Paint-based hide & seek multiplayer with Firebase auth.'}
+];
 
-let activeC=null,goHref='';
+let activeC=null, goHref='', goIsLite=false;
+let userLiteActive=false;
 
-function openSB(el,t,d,img,href,tags,logs){
-  if(activeC)activeC.classList.remove('active');
-  el.classList.add('active');activeC=el;
+// ── Dev console shortcut: type Lite:true to activate for current user ─────────
+// Usage in browser console: Lite = true
+const _liteProxy = { set(t,p,v){ if(p==='true'&&v===true){ const u=window.FB?.currentUser(); if(u){ window.FB.activateLite(u.uid).then(()=>{ alert('✦ Lite activated! Refresh page.'); }); } else { alert('Sign in first.'); } } return true; } };
+window.Lite = new Proxy({}, _liteProxy);
+
+function openSB(el,t,d,img,href,tags,logs,isLite){
+  if(activeC) activeC.classList.remove('active');
+  el.classList.add('active'); activeC=el;
   document.getElementById('sbt').textContent=t;
   document.getElementById('sbd').textContent=d;
   document.getElementById('sbi').src=img;
   document.getElementById('sbta').innerHTML=tags.map(x=>`<span class="pill">${x}</span>`).join('');
-  goHref=href;
+  goHref=href; goIsLite=!!isLite;
   document.getElementById('sb-log').innerHTML=(logs||[]).map(e=>`<div class="log-entry"><span class="log-ver">${e.ver}</span><span class="log-text">${e.text}</span></div>`).join('');
+
+  const gate=document.getElementById('sb-lite-gate');
+  const playBtn=document.getElementById('sb-play-btn');
+  if(isLite&&!userLiteActive){
+    gate.style.display='block';
+    playBtn.textContent='🔒 Lite Required';
+    playBtn.className='sb-play lite-locked-btn';
+  } else {
+    gate.style.display='none';
+    playBtn.textContent='▶  PLAY NOW';
+    playBtn.className='sb-play';
+  }
+
   document.getElementById('sidebar').classList.add('open');
   document.getElementById('veil').classList.add('on');
 }
+
 function closeSB(){
   document.getElementById('sidebar').classList.remove('open');
   document.getElementById('veil').classList.remove('on');
   if(activeC){activeC.classList.remove('active');activeC=null;}
 }
 
+function handlePlayClick(){
+  if(goIsLite&&!userLiteActive){
+    openModal();
+    return;
+  }
+  if(goHref) location.href=goHref;
+}
+
+// Lite-locked card clicks
+document.querySelectorAll('.card.lite-locked').forEach(card=>{
+  const origClick = card.getAttribute('onclick');
+  // onclick already set via HTML attr, we intercept in openSB based on goIsLite
+});
+
 async function doSignIn(){try{await window.FB.signInGoogle();}catch(e){console.error(e);}}
 async function doSignOut(){await window.FB.signOut();closeModal();}
 function fmt(s){return s==null?'—':s<60?s.toFixed(2)+'s':`${Math.floor(s/60)}m ${(s%60).toFixed(0)}s`;}
 function initials(name){const p=String(name||'Player').trim().split(/\s+/).filter(Boolean);return((p[0]?.[0]||'P')+(p[1]?.[0]||'')).toUpperCase();}
 function hueFor(s){return[...String(s||'')].reduce((a,c)=>a+c.charCodeAt(0),0)%360;}
+function fmtDate(ts){if(!ts)return'—';return new Date(ts).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});}
 
 async function refreshUI(user){
-  const sb=document.getElementById('sign-in-btn'), chip=document.getElementById('user-chip'), settBtn=document.getElementById('settings-btn');
-  if(!user){sb.style.display='flex';chip.style.display='none';settBtn.style.display='none';return;}
+  const sb=document.getElementById('sign-in-btn'),chip=document.getElementById('user-chip'),settBtn=document.getElementById('settings-btn');
+  if(!user){
+    sb.style.display='flex';chip.style.display='none';settBtn.style.display='none';
+    userLiteActive=false;
+    document.getElementById('sub-banner').style.display='block'; // show banner to non-signed users too
+    return;
+  }
   sb.style.display='none';chip.style.display='flex';settBtn.style.display='flex';
-  
+
   const profile=await window.FB.getProfile(user.uid);
   const name=profile.n||user.displayName||'Player';
   document.getElementById('u-name').textContent=name;
   document.getElementById('uname-inp').value=name;
   document.getElementById('m-email').textContent=user.email||'—';
-  
+
   const av=document.getElementById('u-avatar');
   const imgUrl=profile.ph||user.photoURL;
-  if(imgUrl){
-    av.innerHTML=`<img src="${imgUrl}" alt="Avatar" referrerpolicy="no-referrer">`;
-    av.style.background='transparent';
-  }else{
-    av.textContent=initials(name);
-    av.style.background=`linear-gradient(135deg,hsl(${hueFor(name)} 70% 42%),hsl(${(hueFor(name)+40)%360} 75% 55%))`;
+  if(imgUrl){av.innerHTML=`<img src="${imgUrl}" alt="Avatar" referrerpolicy="no-referrer">`;av.style.background='transparent';}
+  else{av.textContent=initials(name);av.style.background=`linear-gradient(135deg,hsl(${hueFor(name)} 70% 42%),hsl(${(hueFor(name)+40)%360} 75% 55%))`;}
+
+  // Subscription check
+  const sub=await window.FB.getSubscription(user.uid);
+  userLiteActive=sub.active===true;
+
+  const liteBadge=document.getElementById('lite-chip-badge');
+  const banner=document.getElementById('sub-banner');
+  if(userLiteActive){
+    liteBadge.style.display='inline-block';
+    banner.style.display='none'; // hide selling banner for active subs
+    // Update card appearances
+    document.querySelectorAll('.card.lite-locked').forEach(c=>{
+      c.classList.remove('lite-locked');
+      c.querySelector('.ctag')?.classList.remove('locked');
+      c.querySelector('.ctag').textContent='READY';
+    });
+    // Modal sub section
+    document.getElementById('sub-active-badge').style.display='inline-block';
+    document.getElementById('sub-inactive-area').style.display='none';
+    document.getElementById('sub-active-area').style.display='block';
+    document.getElementById('m-ftl').textContent=sub.FTL?'Yes (₹39 rate applied)':'No';
+    document.getElementById('m-renews').textContent=fmtDate(sub.next);
+  } else {
+    liteBadge.style.display='none';
+    banner.style.display='block';
+    document.getElementById('sub-active-badge').style.display='none';
+    document.getElementById('sub-inactive-area').style.display='block';
+    document.getElementById('sub-active-area').style.display='none';
   }
-  
+
   const times=await window.FB.getMyTimes(user.uid);
   document.getElementById('m-done').textContent=Object.keys(times).length+'/5';
   const tg=document.getElementById('times-grid');
   let html='';
   for(let i=1;i<=5;i++){const e=times[String(i)];html+=`<div class="tnode"><div class="tn">LV${i}</div><div class="tt">${e?fmt(e.t):'—'}</div></div>`;}
   tg.innerHTML=html;
+
   try{
     const fs=await window.FB.getMatchStats(user.uid);
     const fw=fs.w??0,fl2=fs.l??0;
@@ -392,7 +616,29 @@ async function refreshUI(user){
   }catch(e){console.warn('[FS W/L]',e.message);}
 }
 
+async function tryActivateLite(){
+  const u=window.FB?.currentUser(); if(!u){alert('Sign in first.');return;}
+  const inp=document.getElementById('lite-code-inp').value.trim();
+  const msg=document.getElementById('lite-msg');
+  // The activation code is "Lite:true" (case-sensitive, exact match)
+  if(inp!=='Lite:true'){
+    msg.className='mmsg err';msg.textContent='Invalid code.';
+    setTimeout(()=>msg.textContent='',2500);
+    return;
+  }
+  msg.className='mmsg';msg.textContent='Activating…';
+  try{
+    await window.FB.activateLite(u.uid);
+    msg.className='mmsg ok';msg.textContent='✓ Lite activated! Reloading…';
+    setTimeout(()=>location.reload(),1200);
+  }catch(e){
+    msg.className='mmsg err';msg.textContent='Error: '+e.message;
+  }
+}
+
 window.FB.onAuthChange(user=>refreshUI(user));
+// Always show sub banner initially (will hide if user has Lite)
+document.getElementById('sub-banner').style.display='block';
 
 function openModal(){document.getElementById('modal-bg').classList.add('open');}
 function closeModal(){document.getElementById('modal-bg').classList.remove('open');}
