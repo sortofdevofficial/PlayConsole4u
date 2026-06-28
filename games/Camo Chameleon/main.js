@@ -12,7 +12,7 @@ const keys = { w:false, a:false, s:false, d:false, ' ':false, Shift:false };
 let gameStarted = false;
 let activeTool = 'brush', brushColor = '#c0392b', brushRadius = 20;
 
-// Camera
+// Camera (manual third-person)
 let camYaw = 0, camPitch = 0.38, camZoom = 1;
 let orbiting = false, dragMoved = false, lastMx = 0, lastMy = 0;
 
@@ -25,29 +25,30 @@ let fbUser = null;
 let myName = 'Player';
 let myWins = 0;
 let myKills = 0;
-let myLikes = 0;
-let roundKills = 0;
+let roundKills = 0; // tags made this round as hunter
 
 // ─── Multiplayer / Lobby ──────────────────────────────────────────────────────
 let peer=null, myPeerId=null;
-let conns = {};          
-let remotePlayers = {};  
-let lobbyMembers = {};   // peerId → { name, role, wins, uid }
+let conns = {};          // peerId → DataConnection
+let remotePlayers = {};  // peerId → Player
+let lobbyMembers = {};   // peerId → { name, role, wins }
 const PLAYER_COLORS = ['#c8cdd4','#e8a0a0','#a0c8a0','#a0b8e8','#e8d0a0','#c8a0d0','#d0c0a0'];
 let myColor = PLAYER_COLORS[Math.floor(Math.random()*PLAYER_COLORS.length)];
-let myRole = null; 
+let myRole = null; // 'hunter' | 'seeker' | null
 
 // ─── Round System ─────────────────────────────────────────────────────────────
-const ROUND_DURATION = 60; 
-const TAG_DISTANCE   = 0.6; 
+const ROUND_DURATION = 60; // seconds
+const TAG_DISTANCE   = 0.6; // world units
 const MIN_PLAYERS    = 2;
 
-let roundState = 'lobby'; 
+let roundState = 'lobby'; // 'lobby' | 'countdown' | 'playing' | 'ended'
 let roundTimer  = 0;
 let roundNumber = 0;
-let taggedSeekers = new Set(); 
-let amIHost = false; 
+let taggedSeekers = new Set(); // peerIds of tagged seekers
+let amIHost = false; // host drives round logic + broadcasts round events
+let roundInterval = null;
 
+// ─── Init ─────────────────────────────────────────────────────────────────────
 init();
 animate();
 
@@ -64,6 +65,7 @@ function init() {
     camera = new THREE.PerspectiveCamera(65, window.innerWidth/window.innerHeight, 0.01, 200);
     camera.position.set(0, 4, 8);
 
+    // Menu auto-rotate only
     menuControls = new OrbitControls(camera, renderer.domElement);
     menuControls.enableDamping = true; menuControls.dampingFactor = 0.08;
     menuControls.autoRotate = true; menuControls.autoRotateSpeed = 1.2;
@@ -76,6 +78,7 @@ function init() {
     raycaster = new THREE.Raycaster();
     mouse = new THREE.Vector2();
 
+    // ── Keyboard
     window.addEventListener('keydown', e => {
         if (!gameStarted) return;
         if (e.code==='Space')  { e.preventDefault(); player.jump(); }
@@ -88,6 +91,7 @@ function init() {
         if (e.code==='ShiftLeft'||e.code==='ShiftRight') keys.Shift=false;
     });
 
+    // ── Pointer (left-click drag = orbit; no-drag click = paint)
     window.addEventListener('pointerdown', e => {
         if (!gameStarted||e.button!==0) return;
         if (e.target.closest('.hud-panel')||e.target.closest('#mobile-controls')||e.target.closest('#round-overlay')) return;
@@ -119,46 +123,113 @@ function init() {
     setupMobile();
 }
 
+// ─── Firebase Auth (UPDATED WITH EXPLICIT ERROR CAPTURING) ───────────────────
 function setupFirebase() {
-    if (typeof FB==='undefined') return;
+    const authMsg = document.getElementById('auth-msg');
+
+    if (typeof FB==='undefined') {
+        if (authMsg) authMsg.textContent = "Error: firebase.js failed to load. Check file path!";
+        return;
+    }
+
     FB.onAuthChange(async user => {
         fbUser = user;
         if (user) {
+            if (authMsg) authMsg.textContent = ""; 
             myName = user.displayName||'Player';
             document.getElementById('user-name').textContent = myName;
             document.getElementById('user-avatar').src = user.photoURL||'';
-            document.getElementById('user-info').style.display = 'flex';
-            document.getElementById('auth-gate').style.display = 'none';
             
+            // Sync layout states safely
+            const userCard = document.getElementById('user-info');
+            if (userCard) userCard.style.display = 'flex';
+            
+            const authScreen = document.getElementById('auth-screen') || document.getElementById('auth-gate');
+            if (authScreen) authScreen.style.display = 'none';
+
+            const mainMenu = document.getElementById('main-menu');
+            if (mainMenu) mainMenu.style.display = 'flex';
+
             const stats = await FB.getStats ? await FB.getStats(user.uid) : await FB.getMatchStats(user.uid);
-            myWins = stats.w||0; myKills = stats.k||0; myLikes = stats.likes||0;
+            myWins = stats.w||0; myKills = stats.k||0;
             
-            document.getElementById('menu-wins').textContent = myWins;
-            document.getElementById('menu-likes').textContent = myLikes;
+            const menuWins = document.getElementById('menu-wins');
+            if (menuWins) menuWins.textContent = myWins;
             
-            document.getElementById('btn-play').disabled = false;
-            document.getElementById('btn-play').textContent = 'JOIN LOBBY';
+            const btnPlay = document.getElementById('btn-play');
+            if (btnPlay) {
+                btnPlay.disabled = false;
+                btnPlay.textContent = 'JOIN LOBBY';
+            }
             updateLobbyStatus();
         } else {
-            document.getElementById('user-info').style.display = 'none';
-            document.getElementById('auth-gate').style.display = 'block';
-            document.getElementById('btn-play').disabled = true;
-            document.getElementById('btn-play').textContent = 'Sign in to play';
+            const userCard = document.getElementById('user-info');
+            if (userCard) userCard.style.display = 'none';
+
+            const mainMenu = document.getElementById('main-menu');
+            if (mainMenu) mainMenu.style.display = 'none';
+
+            const authScreen = document.getElementById('auth-screen') || document.getElementById('auth-gate');
+            if (authScreen) authScreen.style.display = 'flex';
+
+            const btnPlay = document.getElementById('btn-play');
+            if (btnPlay) {
+                btnPlay.disabled = true;
+                btnPlay.textContent = 'Sign in to play';
+            }
         }
     });
-    document.getElementById('btn-signin').addEventListener('click', ()=>FB.signInGoogle());
-    document.getElementById('btn-signout').addEventListener('click', ()=>FB.signOut());
+
+    // Wrapped login click with promise try/catch block
+    document.getElementById('btn-signin').addEventListener('click', async () => {
+        try {
+            if (authMsg) {
+                authMsg.textContent = "Opening Google Sign-in...";
+                authMsg.style.color = "#94a3b8";
+            }
+            await FB.signInGoogle();
+        } catch (error) {
+            console.error("Sign-in Failed:", error);
+            if (authMsg) {
+                authMsg.style.color = "#fc8181";
+                if (error.code === 'auth/popup-closed-by-user') {
+                    authMsg.textContent = "Sign-in window closed before completion.";
+                } else {
+                    authMsg.textContent = error.message || "Connection blocked by authentication server.";
+                }
+            }
+        }
+    });
+    
+    document.getElementById('btn-signout').addEventListener('click', () => FB.signOut());
 }
 
+// ─── UI Setup ─────────────────────────────────────────────────────────────────
 function setupUI() {
     document.getElementById('btn-play').addEventListener('click', () => {
         if (!fbUser) return;
         enterGame();
     });
 
-    const picker=document.getElementById('html-color-picker');
-    const hexLbl=document.getElementById('color-hex-label');
-    picker.addEventListener('input', e=>{ brushColor=e.target.value; hexLbl.textContent=brushColor.toUpperCase(); });
+    // Adaptive support for updated semantic style.css class structures
+    const picker = document.getElementById('color-picker') || document.getElementById('html-color-picker');
+    const hexLbl = document.getElementById('color-hex') || document.getElementById('color-hex-label');
+    
+    if (picker && hexLbl) {
+        picker.addEventListener('input', e => { 
+            brushColor = e.target.value; 
+            hexLbl.textContent = brushColor.toUpperCase(); 
+        });
+    }
+
+    // Dynamic Swatches integration support
+    document.querySelectorAll('.swatch').forEach(swatch => {
+        swatch.addEventListener('click', (e) => {
+            brushColor = e.target.dataset.c;
+            if (picker) picker.value = brushColor;
+            if (hexLbl) hexLbl.textContent = brushColor.toUpperCase();
+        });
+    });
 
     document.querySelectorAll('.tool-btn').forEach(b=>b.addEventListener('click',e=>{
         document.querySelectorAll('.tool-btn').forEach(x=>x.classList.remove('active'));
@@ -168,22 +239,8 @@ function setupUI() {
     document.querySelectorAll('.size-btn').forEach(b=>b.addEventListener('click',e=>{
         document.querySelectorAll('.size-btn').forEach(x=>x.classList.remove('active'));
         e.currentTarget.classList.add('active');
-        brushRadius=parseInt(e.currentTarget.dataset.radius);
+        brushRadius=parseInt(e.currentTarget.dataset.radius || e.currentTarget.dataset.r);
     }));
-
-    // Like Button Event Delegation
-    document.getElementById('players-list').addEventListener('click', e => {
-        const btn = e.target.closest('.p-like-btn');
-        if (btn && window.FB) {
-            const targetUid = btn.dataset.uid;
-            if (targetUid) {
-                // Instantly feedback in UI
-                btn.classList.add('liked');
-                btn.disabled = true;
-                FB.likePlayer(targetUid);
-            }
-        }
-    });
 }
 
 function enterGame() {
@@ -195,8 +252,12 @@ function enterGame() {
 
     document.getElementById('hud-username').textContent=myName;
     document.getElementById('hud-avatar').src=fbUser?.photoURL||'';
-    document.getElementById('hud-wins').textContent=myWins;
-    document.getElementById('hud-likes').textContent=myLikes;
+    
+    const hudWins = document.getElementById('hud-wins');
+    if (hudWins) hudWins.textContent = myWins;
+    
+    const hudLikes = document.getElementById('hud-likes');
+    if (hudLikes) hudLikes.textContent = myLikes;
 
     player.setName(myName);
     player.group.position.set((Math.random()-0.5)*4, 0, (Math.random()-0.5)*4);
@@ -210,15 +271,17 @@ function updateFreezeUI() {
     document.getElementById('freeze-indicator').style.display = player.frozen ? 'block' : 'none';
 }
 
+// ─── Players Sidebar ──────────────────────────────────────────────────────────
 function rebuildPlayersList() {
     const list = document.getElementById('players-list');
+    if (!list) return;
     list.innerHTML='';
 
     // Me
     const me = document.createElement('div');
     me.className='player-entry me';
     const roleIcon = myRole==='hunter'?'🔴':myRole==='seeker'?'🔵':'⚪';
-    me.innerHTML=`<span class="p-dot" style="background:${myColor}"></span><span class="p-name">${myName}</span><span class="p-role">${roleIcon}</span><span class="p-wins">🏆${myWins}</span>`;
+    me.innerHTML=`<span class="p-dot" style="background:${myColor}"></span><span class="p-name">${myName} (You)</span><span class="p-role">${roleIcon}</span><span class="p-wins">🏆${myWins}</span>`;
     list.appendChild(me);
 
     // Others
@@ -226,13 +289,10 @@ function rebuildPlayersList() {
         const el=document.createElement('div');
         el.className='player-entry';
         el.id='ple-'+pid;
+        if (taggedSeekers.has(pid)) el.classList.add('tagged');
         const ri=m.role==='hunter'?'🔴':m.role==='seeker'?'🔵':'⚪';
         const clr=remotePlayers[pid]?remotePlayers[pid].baseSkinColor:'#888';
-        
-        // Only show like button if we have their Firebase UID
-        const likeHtml = m.uid ? `<button class="p-like-btn" data-uid="${m.uid}">❤️</button>` : '';
-        
-        el.innerHTML=`<span class="p-dot" style="background:${clr}"></span><span class="p-name">${m.name||'Player'}</span><span class="p-role">${ri}</span><span class="p-wins">🏆${m.wins||0}</span>${likeHtml}`;
+        el.innerHTML=`<span class="p-dot" style="background:${clr}"></span><span class="p-name">${m.name||'Player'}</span><span class="p-role">${ri}</span><span class="p-wins">🏆${m.wins||0}</span>`;
         list.appendChild(el);
     });
 }
@@ -244,6 +304,7 @@ function updateLobbyStatus() {
     if (el) el.textContent = need>0 ? `Need ${need} more player${need>1?'s':''} to start` : `${total} players in lobby`;
 }
 
+// ─── Round System ──────────────────────────────────────────────────────────────
 function electHost() {
     const allIds=[myPeerId,...Object.keys(conns)].sort();
     amIHost = allIds[0]===myPeerId;
@@ -295,20 +356,23 @@ function applyRoles(roles) {
 function updateRoleBadge() {
     const panel=document.getElementById('role-panel');
     const badge=document.getElementById('role-badge');
-    if (!myRole) { panel.style.display='none'; return; }
-    panel.style.display='block';
-    if (myRole==='hunter') {
-        badge.textContent='🔴 YOU ARE THE HUNTER';
-        badge.className='role-hunter';
-    } else {
-        badge.textContent='🔵 YOU ARE A SEEKER — HIDE!';
-        badge.className='role-seeker';
+    if (!myRole) { if (panel) panel.style.display='none'; return; }
+    if (panel) panel.style.display='block';
+    if (badge) {
+        if (myRole==='hunter') {
+            badge.textContent='🔴 YOU ARE THE HUNTER';
+            badge.className='role-hunter';
+        } else {
+            badge.textContent='🔵 YOU ARE A SEEKER — HIDE!';
+            badge.className='role-seeker';
+        }
     }
 }
 
 function updateRoundUI() {
     const lbl=document.getElementById('round-label');
     const tmr=document.getElementById('round-timer');
+    if (!lbl || !tmr) return;
     if (roundState==='playing') {
         lbl.textContent=`Round ${roundNumber}`;
         tmr.textContent=`${Math.ceil(roundTimer)}s`;
@@ -388,14 +452,13 @@ async function endRound(hunterWon) {
     if (fbUser) {
         if (iWon) {
             myWins++;
-            document.getElementById('hud-wins').textContent=myWins;
-            document.getElementById('menu-wins').textContent=myWins;
+            const hWins = document.getElementById('hud-wins'); if (hWins) hWins.textContent=myWins;
+            const mWins = document.getElementById('menu-wins'); if (mWins) mWins.textContent=myWins;
         }
         myKills += roundKills;
-        const recordFn = FB.recordRound || FB.recordMatch;
         if (FB.recordRound) {
             await FB.recordRound(fbUser.uid, { won: iWon, kills: roundKills, role: myRole });
-        } else {
+        } else if (FB.recordMatch) {
             await FB.recordMatch(fbUser.uid, iWon);
         }
     }
@@ -418,6 +481,7 @@ async function endRound(hunterWon) {
 
 function showOverlay(title,sub,duration) {
     const ov=document.getElementById('round-overlay');
+    if (!ov) return;
     document.getElementById('overlay-title').textContent=title;
     document.getElementById('overlay-sub').textContent=sub;
     ov.style.display='flex';
@@ -440,9 +504,8 @@ async function firestoreAnnounce() {
     const db=firebase.firestore();
     const lobbyDoc=db.collection('cc_lobby').doc('main');
 
-    // Share our Firebase UID so others can like us!
     await lobbyDoc.set({
-        [myPeerId]: { name:myName, wins:myWins, uid: fbUser?.uid, ts:Date.now() }
+        [myPeerId]: { name:myName, wins:myWins, ts:Date.now() }
     },{ merge:true });
 
     window.addEventListener('beforeunload', ()=>{
@@ -457,11 +520,8 @@ async function firestoreAnnounce() {
             if (pid===myPeerId) return;
             if (Date.now()-info.ts>30000) return; 
             if (!conns[pid]) {
-                const c=peer.connect(pid,{
-                    reliable:false,serialization:'json',
-                    metadata:{name:myName,wins:myWins,uid:fbUser?.uid}
-                });
-                c.on('open',()=>onConnectionReady(c,pid,info.name,info.wins,info.uid));
+                const c=peer.connect(pid,{reliable:false,serialization:'json',metadata:{name:myName,wins:myWins}});
+                c.on('open',()=>onConnectionReady(c,pid,info.name,info.wins));
             }
         });
 
@@ -484,13 +544,13 @@ function onIncomingConn(conn) {
     conn.on('open',()=>{
         const pid=conn.peer;
         const meta=conn.metadata||{};
-        onConnectionReady(conn,pid,meta.name,meta.wins,meta.uid);
+        onConnectionReady(conn,pid,meta.name,meta.wins);
     });
 }
 
-function onConnectionReady(conn,pid,name,wins,uid) {
+function onConnectionReady(conn,pid,name,wins) {
     conns[pid]=conn;
-    lobbyMembers[pid]={ name, wins:wins||0, role:null, uid:uid };
+    lobbyMembers[pid]={ name, wins:wins||0, role:null };
 
     const idx=Object.keys(remotePlayers).length%PLAYER_COLORS.length;
     const rp=new Player(scene,PLAYER_COLORS[idx],true);
@@ -564,8 +624,10 @@ function handlePaint(e) {
             player.executePaintMatrix(hit.object,hit.uv,brushColor,brushRadius,activeTool);
     } else if (activeTool==='picker') {
         brushColor='#'+hit.object.material.color.getHexString();
-        document.getElementById('html-color-picker').value=brushColor;
-        document.getElementById('color-hex-label').textContent=brushColor.toUpperCase();
+        const picker = document.getElementById('color-picker') || document.getElementById('html-color-picker');
+        const hexLbl = document.getElementById('color-hex') || document.getElementById('color-hex-label');
+        if (picker) picker.value=brushColor;
+        if (hexLbl) hexLbl.textContent=brushColor.toUpperCase();
     }
 }
 
@@ -585,7 +647,8 @@ function updateCamera() {
 function setupMobile() {
     const zone=document.getElementById('joystick-zone');
     const knob=document.getElementById('joystick-knob');
-    if(!zone) return; // simple guard
+    if (!zone || !knob) return;
+    
     zone.addEventListener('touchstart',e=>{
         e.preventDefault();
         const t=e.changedTouches[0];
@@ -606,15 +669,23 @@ function setupMobile() {
     const endJ=()=>{ joyActive=false; mob.x=0; mob.z=0; knob.style.transform='translate(-50%,-50%)'; };
     window.addEventListener('touchend',endJ);
     window.addEventListener('touchcancel',endJ);
-    document.getElementById('mob-jump').addEventListener('touchstart',e=>{e.preventDefault();player.jump();},{passive:false});
-    document.getElementById('mob-freeze').addEventListener('touchstart',e=>{e.preventDefault();player.toggleFreeze();updateFreezeUI();},{passive:false});
+    
+    const mbJump = document.getElementById('mob-jump');
+    if (mbJump) mbJump.addEventListener('touchstart',e=>{e.preventDefault();player.jump();},{passive:false});
+    
+    const mbFreeze = document.getElementById('mob-freeze');
+    if (mbFreeze) mbFreeze.addEventListener('touchstart',e=>{e.preventDefault();player.toggleFreeze();updateFreezeUI();},{passive:false});
+    
     const sb=document.getElementById('mob-sprint');
-    sb.addEventListener('touchstart',e=>{e.preventDefault();mob.sprint=true;},{passive:false});
-    sb.addEventListener('touchend',()=>mob.sprint=false);
+    if (sb) {
+        sb.addEventListener('touchstart',e=>{e.preventDefault();mob.sprint=true;},{passive:false});
+        sb.addEventListener('touchend',()=>mob.sprint=false);
+    }
 }
 
 // ─── Animate ──────────────────────────────────────────────────────────────────
 let netT=0;
+
 function animate() {
     requestAnimationFrame(animate);
     const delta=Math.min(clock.getDelta(),0.1);
@@ -633,6 +704,7 @@ function animate() {
     updateCamera();
     tickRound(delta);
 
+    // Broadcast position ~20Hz
     netT+=delta;
     if (netT>0.05) {
         netT=0;
