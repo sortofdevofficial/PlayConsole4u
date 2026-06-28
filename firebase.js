@@ -1,4 +1,4 @@
-// firebase.js v3.1 - Enhanced Production Edition
+// firebase.js v3.2 - Ultra-Fast Optimistic Caching Edition
 // users/{uid}                     → { n, e, ph }
 // users/{uid}/G/CP/L/{VER}        → CubePlatformer times
 // users/{uid}/G/FS                → { w, l, k, h, s }  
@@ -17,7 +17,7 @@ firebase.initializeApp({
 
 const _a = firebase.auth();
 const _d = firebase.firestore();
-const VER = '3';
+const VER = '3.2';
 
 // ── Cache ──────────────────────────────────────────────────────────────────────
 const _c = {};
@@ -65,8 +65,17 @@ async function getProfile(uid) {
 }
 
 async function saveProfile(uid,name) {
-  cD('p_'+uid);
-  await uRef(uid).set({n:name},{merge:true});
+  const key = 'p_'+uid;
+  const current = cG(key) || {};
+  current.n = name;
+  cS(key, current, 60000); // Instant local cache update
+  
+  try {
+    await uRef(uid).set({n:name},{merge:true});
+  } catch(e) {
+    cD(key); // Rollback on failure
+    console.error('[FB] saveProfile failed:', e.message);
+  }
 }
 
 // ── Subscription ──────────────────────────────────────────────────────────────
@@ -91,15 +100,16 @@ async function activateLite(uid) {
     start: now, next: now + 30*24*60*60*1000,
     activatedBy: 'admin', price: isFirstTime ? 39 : 49,
   };
+  cS('sub_'+uid, data, 30000); // Cache instantly
   await subRef(uid).set(data, {merge:true});
-  cD('sub_'+uid);
   console.log('[FB] Lite activated for', uid, isFirstTime?'(₹39 first time)':'(₹49 renewal)');
   return data;
 }
 
 async function deactivateLite(uid) {
-  cD('sub_'+uid);
-  await subRef(uid).set({ active:false }, {merge:true});
+  const data = { active: false };
+  cS('sub_'+uid, data, 30000);
+  await subRef(uid).set(data, {merge:true});
 }
 
 async function isLiteActive(uid) {
@@ -121,8 +131,11 @@ async function saveLevelTime(uid,lvl,secs) {
     const upd={};
     upd[f]={...(all[f]||{}),lp:now,uk:true};
     if(rec){upd[f].t=t;upd[f].ts=now;}
+    
+    // Save locally to cache instantly before awaiting database
+    const ct=cG('t_'+uid)||{}; ct[f]=upd[f]; cS('t_'+uid,ct);
+    
     await ref.set(upd,{merge:true});
-    const ct=cG('t_'+uid)||{};ct[f]=upd[f];cS('t_'+uid,ct);
     return {saved:true,isRecord:rec,prev};
   } catch(e){console.error('[FB] saveLevelTime:',e.message);return{saved:false,isRecord:false,prev:null};}
 }
@@ -137,37 +150,66 @@ async function unlockLevel(uid,lvl) {
     const tk='t_'+uid,ct=cG(tk)||{},f=String(lvl);
     if(ct[f]?.uk)return;
     const u={};u[f]={...(ct[f]||{}),uk:true};
-    await lRef(uid).set(u,{merge:true});ct[f]=u[f];cS(tk,ct);
+    ct[f]=u[f]; cS(tk,ct); // Instant cache write
+    await lRef(uid).set(u,{merge:true});
   }catch(e){console.warn('[FB] unlockLevel:',e.message);}
 }
 
 // ── FloppySticks W/L ──────────────────────────────────────────────────────────
 async function recordMatch(uid,won) {
-  cD('fs_'+uid);
+  const key = 'fs_'+uid;
+  const current = cG(key) || { w: 0, l: 0 };
+  if(won) current.w++; else current.l++;
+  cS(key, current, 60000); // Optimistic UI update
+
   const INC=firebase.firestore.FieldValue.increment;
   try{
     await fsRef(uid).set(won?{w:INC(1),l:INC(0)}:{w:INC(0),l:INC(1)},{merge:true});
-  }catch(e){console.error('[FB] recordMatch:',e.message);throw e;}
+  }catch(e){
+    cD(key); // Evict cache on failure
+    console.error('[FB] recordMatch:',e.message);
+    throw e;
+  }
 }
 
 async function getMatchStats(uid) {
-  try{const s=await fsRef(uid).get();const v=s.exists?s.data():{};return{w:v.w||0,l:v.l||0};}
-  catch(e){console.warn('[FB] getMatchStats:',e.message);return{w:0,l:0};}
+  const h = cG('fs_'+uid); if(h) return h;
+  try{
+    const s=await fsRef(uid).get();
+    const v=s.exists?s.data():{};
+    const stats = {w:v.w||0,l:v.l||0};
+    cS('fs_'+uid, stats, 60000);
+    return stats;
+  } catch(e){
+    console.warn('[FB] getMatchStats:',e.message);
+    return {w:0,l:0};
+  }
 }
 
 // ── Camo Chameleon Stats & Likes (G/CC) ───────────────────────────────────────
 async function recordRound(uid,{won,kills=0,role}){
-  cD('cc_'+uid);
+  const key = 'cc_'+uid;
+  const current = cG(key) || {w:0,l:0,k:0,h:0,s:0,likes:0};
+  
+  // Optimistically speed up visual updates locally
+  if(won) current.w++; else current.l++;
+  current.k += kills;
+  if(role==='hunter') current.h++;
+  if(role==='seeker') current.s++;
+  cS(key, current, 60000);
+
   const INC=firebase.firestore.FieldValue.increment;
   const upd={
     w:INC(won?1:0), l:INC(!won?1:0),
-    k:INC(kills), 
-    h:INC(role==='hunter'?1:0), 
-    s:INC(role==='seeker'?1:0),
+    k:INC(kills), h:INC(role==='hunter'?1:0), s:INC(role==='seeker'?1:0),
   };
   try{
     await ccRef(uid).set(upd,{merge:true});
-  }catch(e){console.error('[FB] recordRound:',e.message);throw e;}
+  }catch(e){
+    cD(key); // clear bad cache if network fails
+    console.error('[FB] recordRound:',e.message);
+    throw e;
+  }
 }
 
 async function getStats(uid){
@@ -176,10 +218,12 @@ async function getStats(uid){
     const s=await ccRef(uid).get();
     const v=s.exists?s.data():{};
     const statsData = {w:v.w||0,l:v.l||0,k:v.k||0,h:v.h||0,s:v.s||0,likes:v.likes||0};
-    cS('cc_'+uid, statsData, 15000); // Cache for 15 seconds to eliminate excessive read spam
+    cS('cc_'+uid, statsData, 30000); // 30-second cache hit speed
     return statsData;
+  } catch(e){
+    console.warn('[FB] getStats:',e.message);
+    return {w:0,l:0,k:0,h:0,s:0,likes:0};
   }
-  catch(e){console.warn('[FB] getStats:',e.message);return{w:0,l:0,k:0,h:0,s:0,likes:0};}
 }
 
 async function likePlayer(targetUid) {
@@ -189,18 +233,22 @@ async function likePlayer(targetUid) {
   try {
     const likeDoc = ccRef(targetUid).collection('Likes').doc(me.uid);
     const snap = await likeDoc.get();
+    if (snap.exists) return false; 
     
-    if (snap.exists) return false; // Already honor-liked this player
+    // Update local cache data structure immediately so UI reflects the honor like
+    const targetKey = 'cc_'+targetUid;
+    const currentTargetStats = cG(targetKey);
+    if(currentTargetStats) {
+      currentTargetStats.likes++;
+      cS(targetKey, currentTargetStats, 30000);
+    }
     
-    // Save to subcollection tracking who voted and when
     await likeDoc.set({ by: me.uid, t: Date.now() });
-    
-    // Increment absolute counter
     await ccRef(targetUid).set({ likes: firebase.firestore.FieldValue.increment(1) }, { merge: true });
-    cD('cc_'+targetUid); // Evict cache so update renders immediately
     return true;
   } catch (e) {
-    console.error("[FB] Error giving honor:", e.message);
+    cD('cc_'+targetUid);
+    console.error("[FB] Error liking player:", e.message);
     return false;
   }
 }
