@@ -18,12 +18,12 @@
 <div id="main-menu">
   <div class="menu-box">
     <h1 class="game-title">CAMO CHAMELEON</h1>
-    <p class="subtitle">Studio Edition</p>
+    <p class="subtitle">Speed Edition</p>
     
     <div id="auth-gate">
-      <p class="gate-msg">Lite Exclusive · Sign in to verify access</p>
+      <p class="gate-msg">Authenticating session variables...</p>
       <button id="btn-signin">
-        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="" style="width:18px; height:18px; vertical-align:middle; margin-right:8px;">
+        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="" style="width:16px; height:16px; vertical-align:middle; margin-right:8px;">
         Sign in with Google
       </button>
       <p id="auth-msg" class="auth-msg"></p>
@@ -39,15 +39,13 @@
     </div>
 
     <div class="controls-list">
-      <p><b>WASD</b> — Move</p>
-      <p><b>Space ×2</b> — Double Jump</p>
-      <p><b>Shift</b> — Sprint</p>
-      <p><b>F</b> — Freeze in place</p>
-      <p><b>Hold Left-click</b> — Paint / drag brush</p>
-      <p><b>Right-drag</b> — Orbit camera</p>
+      <p><b>WASD</b> — Extreme Run</p>
+      <p><b>Space ×2</b> — High Velocity Jump</p>
+      <p><b>Shift</b> — Super Sprint</p>
+      <p><b>F</b> — Freeze Tag Toggle</p>
     </div>
 
-    <button id="btn-play" disabled>Sign in to play</button>
+    <button id="btn-play" disabled>Connecting...</button>
     <p id="lobby-status" class="lobby-status"></p>
   </div>
 </div>
@@ -74,26 +72,22 @@
     <div class="sidebar-section">
       <span class="section-title">Color</span>
       <div class="color-picker-wrapper">
-        <input type="color" id="html-color-picker" value="#c0392b">
-        <span id="color-hex-label">#C0392B</span>
+        <input type="color" id="html-color-picker" value="#ef4444">
+        <span id="color-hex-label">#EF4444</span>
       </div>
       <div class="swatches">
-        <div class="swatch" style="background:#c0392b" data-c="#c0392b"></div>
-        <div class="swatch" style="background:#e67e22" data-c="#e67e22"></div>
-        <div class="swatch" style="background:#f1c40f" data-c="#f1c40f"></div>
-        <div class="swatch" style="background:#27ae60" data-c="#27ae60"></div>
-        <div class="swatch" style="background:#2980b9" data-c="#2980b9"></div>
-        <div class="swatch" style="background:#8e44ad" data-c="#8e44ad"></div>
-        <div class="swatch" style="background:#ecf0f1" data-c="#ecf0f1"></div>
-        <div class="swatch" style="background:#2c3e50" data-c="#2c3e50"></div>
+        <div class="swatch" style="background:#ef4444" data-c="#ef4444"></div>
+        <div class="swatch" style="background:#f59e0b" data-c="#f59e0b"></div>
+        <div class="swatch" style="background:#10b981" data-c="#10b981"></div>
+        <div class="swatch" style="background:#3b82f6" data-c="#3b82f6"></div>
+        <div class="swatch" style="background:#a855f7" data-c="#a855f7"></div>
+        <div class="swatch" style="background:#f43f5e" data-c="#f43f5e"></div>
       </div>
     </div>
     <div class="sidebar-section">
       <span class="section-title">Tool</span>
       <button class="tool-btn active" data-tool="brush">🎨 Brush</button>
       <button class="tool-btn" data-tool="bucket">🪣 Bucket</button>
-      <div class="tool-divider"></div>
-      <button class="tool-btn" data-tool="picker">💧 Picker</button>
     </div>
     <div class="sidebar-section">
       <span class="section-title">Size</span>
@@ -101,7 +95,6 @@
         <button class="size-btn" data-r="8">S</button>
         <button class="size-btn active" data-r="20">M</button>
         <button class="size-btn" data-r="40">L</button>
-        <button class="size-btn" data-r="70">XL</button>
       </div>
     </div>
   </div>
@@ -111,7 +104,7 @@
     <div id="players-list"></div>
   </div>
 
-  <div id="freeze-indicator">❄️ FROZEN — F to unfreeze</div>
+  <div id="freeze-indicator">❄️ FROZEN</div>
 
   <div id="round-overlay" style="display:none">
     <div id="overlay-title"></div>
@@ -120,8 +113,7 @@
   
   <div id="honor-screen" style="display:none">
     <div class="honor-box">
-      <h2 class="honor-title">GIVE HONOR</h2>
-      <p class="honor-sub">Support the best painters this round!</p>
+      <h2 class="honor-title">HONOR RATING</h2>
       <div id="honor-list"></div>
     </div>
   </div>
@@ -129,9 +121,9 @@
   <div id="mobile-controls">
     <div id="joystick-zone"><div id="joystick-base"><div id="joystick-knob"></div></div></div>
     <div id="action-btns">
-      <button class="mob-btn" id="mob-jump">⬆︎<br><small>Jump</small></button>
-      <button class="mob-btn" id="mob-sprint">⚡<br><small>Sprint</small></button>
-      <button class="mob-btn" id="mob-freeze">❄️<br><small>Freeze</small></button>
+      <button class="mob-btn" id="mob-jump">Jump</button>
+      <button class="mob-btn" id="mob-sprint">Sprint</button>
+      <button class="mob-btn" id="mob-freeze">Freeze</button>
     </div>
   </div>
 

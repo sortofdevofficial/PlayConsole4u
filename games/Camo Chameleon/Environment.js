@@ -1,105 +1,87 @@
 import * as THREE from 'three';
+import Tire from './stuff/tire.js';
 
 export default class Environment {
     constructor(scene) {
         this.targets = [];
         this.colliders = [];
 
-        // Sky gradient via background color + fog
-        scene.background = new THREE.Color('#87ceeb');
-        scene.fog = new THREE.Fog('#c9e8f5', 40, 80);
+        // Sky atmosphere + foggy horizon styling
+        scene.background = new THREE.Color('#0f172a');
+        scene.fog = new THREE.Fog('#1e293b', 30, 90);
 
-        // Lighting
-        const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+        // Responsive Lighting Engine
+        const ambient = new THREE.AmbientLight(0xffffff, 0.85);
         scene.add(ambient);
 
-        const sun = new THREE.DirectionalLight(0xfff5e0, 1.2);
-        sun.position.set(20, 40, 15);
+        const sun = new THREE.DirectionalLight(0xffffff, 1.4);
+        sun.position.set(30, 50, 20);
         sun.castShadow = true;
-        sun.shadow.mapSize.set(1024, 1024);
-        sun.shadow.camera.top = sun.shadow.camera.right = 20;
-        sun.shadow.camera.bottom = sun.shadow.camera.left = -20;
-        sun.shadow.camera.near = 0.5; sun.shadow.camera.far = 80;
+        sun.shadow.mapSize.set(2048, 2048);
+        sun.shadow.camera.top = sun.shadow.camera.right = 30;
+        sun.shadow.camera.bottom = sun.shadow.camera.left = -30;
+        sun.shadow.camera.near = 0.5; sun.shadow.camera.far = 100;
         scene.add(sun);
 
-        // Hemisphere sky light
-        scene.add(new THREE.HemisphereLight(0x87ceeb, 0x4a7c59, 0.4));
+        scene.add(new THREE.HemisphereLight(0x38bdf8, 0x1e3a1e, 0.45));
 
-        // Sun disc in sky
-        const sunDisc = new THREE.Mesh(
-            new THREE.CircleGeometry(2, 32),
-            new THREE.MeshBasicMaterial({ color: '#fff5c0', side: THREE.DoubleSide })
-        );
-        sunDisc.position.set(30, 35, -30);
-        sunDisc.lookAt(0, 0, 0);
-        scene.add(sunDisc);
-
-        // Clouds (flat planes)
-        const cloudMat = new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.85, side: THREE.DoubleSide });
-        [[  8, 18, -20, 5, 1.5], [-10, 20, -15, 4, 1.2], [15, 22, -10, 3, 1], [-5, 16, 10, 4, 1.3]].forEach(([x,y,z,w,h]) => {
-            const c = new THREE.Mesh(new THREE.PlaneGeometry(w, h), cloudMat);
-            c.position.set(x, y, z); c.rotation.x = -0.1;
-            scene.add(c);
-        });
-
-        // Floor — grass
-        const floor = new THREE.Mesh(
-            new THREE.PlaneGeometry(50, 50),
-            new THREE.MeshStandardMaterial({ color: '#5a8a3c', roughness: 0.95 })
-        );
-        floor.rotation.x = -Math.PI / 2;
-        floor.receiveShadow = true;
-        scene.add(floor);
-        this.targets.push(floor);
-
-        // Invisible arena walls
-        [
-            [0, 0, 25, 50, 6, 1],
-            [0, 0,-25, 50, 6, 1],
-            [25, 0, 0,  1, 6, 50],
-            [-25,0, 0,  1, 6, 50],
-        ].forEach(([x,y,z,w,h,d]) => this._addCollider(x, y, z, w, h, d));
-
-        // 5 colored paint walls — varied positions and sizes
-        const wallDefs = [
-            { x:-10, z:-8,  rotY: 0,    color:'#b83232', w:3.5, h:2.5, d:0.4 },
-            { x: -3, z: 6,  rotY: 0.5,  color:'#2e8b57', w:3, h:2, d:0.4 },
-            { x:  5, z:-4,  rotY:-0.3,  color:'#2060a0', w:3.5, h:3, d:0.4 },
-            { x: 10, z: 5,  rotY: 0,    color:'#c07820', w:3, h:2.2, d:0.4 },
-            { x:  0, z: 0,  rotY: 0.8,  color:'#7040a0', w:2.5, h:2.5, d:0.4 },
+        // 🟩 Floating Grass Platform (Everything else is the void!)
+        const platformGeo = new THREE.BoxGeometry(50, 4, 50);
+        
+        // Green Grass top, dark brown earthen soil profile matching side segments
+        const materials = [
+            new THREE.MeshStandardMaterial({ color: '#27272a', roughness: 0.9 }), // sides
+            new THREE.MeshStandardMaterial({ color: '#27272a', roughness: 0.9 }), // sides
+            new THREE.MeshStandardMaterial({ color: '#22c55e', roughness: 0.85 }), // TOP (Vibrant Grass)
+            new THREE.MeshStandardMaterial({ color: '#18181b', roughness: 1.0 }), // bottom
+            new THREE.MeshStandardMaterial({ color: '#27272a', roughness: 0.9 }), // sides
+            new THREE.MeshStandardMaterial({ color: '#27272a', roughness: 0.9 })  // sides
         ];
 
-        wallDefs.forEach(w => {
-            const mesh = new THREE.Mesh(
+        const islandMesh = new THREE.Mesh(platformGeo, materials);
+        islandMesh.position.set(0, -2, 0); // Surfaces sit perfectly at y=0
+        islandMesh.receiveShadow = true;
+        scene.add(islandMesh);
+        this.targets.push(islandMesh);
+
+        // Invisible Arena Guard rails around the edge of the floating platform
+        [
+            [0, 2, 25, 50, 4, 0.5],
+            [0, 2, -25, 50, 4, 0.5],
+            [25, 2, 0, 0.5, 4, 50],
+            [-25, 2, 0, 0.5, 4, 50]
+        ].forEach(([x,y,z,w,h,d]) => this._addCollider(x, y, z, w, h, d));
+
+        // High-fidelity architectural canvas paint walls
+        const structuralWalls = [
+            { x: -12, z: -10, rotY: 0.2, color: '#ef4444', w: 6, h: 4, d: 0.5 },
+            { x: 12,  z: 10,  rotY: -0.4, color: '#3b82f6', w: 6, h: 4, d: 0.5 },
+            { x: -8,  z: 12,  rotY: 1.1,  color: '#eab308', w: 5, h: 3.5, d: 0.5 },
+            { x: 10,  z: -12, rotY: -0.8, color: '#10b981', w: 7, h: 5, d: 0.5 },
+            { x: 0,   z: 0,   rotY: 0.0,  color: '#a855f7', w: 8, h: 4.5, d: 0.6 }
+        ];
+
+        structuralWalls.forEach(w => {
+            const wallMesh = new THREE.Mesh(
                 new THREE.BoxGeometry(w.w, w.h, w.d),
-                new THREE.MeshStandardMaterial({ color: w.color, roughness: 0.8 })
+                new THREE.MeshStandardMaterial({ color: w.color, roughness: 0.4, metalness: 0.1 })
             );
-            mesh.position.set(w.x, w.h / 2, w.z);
-            mesh.rotation.y = w.rotY;
-            mesh.castShadow = true;
-            mesh.receiveShadow = true;
-            scene.add(mesh);
-            this.targets.push(mesh);
-            // AABB collider (axis-aligned, ignores rotation — close enough for small walls)
-            this._addCollider(w.x, w.h / 2, w.z, w.w + 0.3, w.h, w.d + 0.3);
+            wallMesh.position.set(w.x, w.h / 2, w.z);
+            wallMesh.rotation.y = w.rotY;
+            wallMesh.castShadow = true;
+            wallMesh.receiveShadow = true;
+            scene.add(wallMesh);
+            this.targets.push(wallMesh);
+            
+            // Perfect Axis-Aligned Cover Bounds
+            this._addCollider(w.x, w.h / 2, w.z, w.w + 0.4, w.h, w.d + 0.4);
         });
 
-        // Platform
-        const plat = new THREE.Mesh(
-            new THREE.BoxGeometry(4, 0.3, 4),
-            new THREE.MeshStandardMaterial({ color: '#8b6914', roughness: 0.9 })
-        );
-        plat.position.set(0, 1.5, -10);
-        plat.castShadow = true; plat.receiveShadow = true;
-        scene.add(plat);
-        this.targets.push(plat);
-        this._addCollider(0, 1.5, -10, 4, 0.3, 4);
-
-        // Some trees for visual dressing
-        this._addTree(scene, -18, 0, -8);
-        this._addTree(scene,  16, 0, -12);
-        this._addTree(scene, -14, 0, 14);
-        this._addTree(scene,  18, 0, 10);
+        // 📁 Internal Asset Folder Instantiations (stuff/)
+        this.tireProp = new Tire(scene);
+        this.tireProp.mesh.position.set(-4, 0.5, -6);
+        this.targets.push(this.tireProp.mesh);
+        this._addCollider(-4, 0.5, -6, 1.2, 1.0, 1.2);
     }
 
     _addCollider(cx, cy, cz, w, h, d) {
@@ -108,23 +90,5 @@ export default class Environment {
             minY: cy - h/2, maxY: cy + h/2,
             minZ: cz - d/2, maxZ: cz + d/2,
         });
-    }
-
-    _addTree(scene, x, y, z) {
-        const trunk = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.1, 0.14, 0.9, 8),
-            new THREE.MeshStandardMaterial({ color: '#6b4226' })
-        );
-        trunk.position.set(x, 0.45, z);
-        trunk.castShadow = true;
-        scene.add(trunk);
-
-        const leaves = new THREE.Mesh(
-            new THREE.SphereGeometry(0.7, 8, 8),
-            new THREE.MeshStandardMaterial({ color: '#3a7d44' })
-        );
-        leaves.position.set(x, 1.5, z);
-        leaves.castShadow = true;
-        scene.add(leaves);
     }
 }

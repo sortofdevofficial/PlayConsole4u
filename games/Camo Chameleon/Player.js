@@ -59,13 +59,13 @@ export default class Player {
         const cv=document.createElement('canvas'); cv.width=256; cv.height=48;
         const ctx=cv.getContext('2d');
         ctx.clearRect(0,0,256,48);
-        ctx.fillStyle='rgba(0,0,0,0.55)'; this._rrect(ctx,4,4,248,40,8); ctx.fill();
-        ctx.fillStyle='#fff'; ctx.font='bold 20px Segoe UI';
+        ctx.fillStyle='rgba(15,23,42,0.85)'; this._rrect(ctx,4,4,248,40,10); ctx.fill();
+        ctx.fillStyle='#fff'; ctx.font='bold 22px system-ui';
         ctx.textAlign='center'; ctx.textBaseline='middle';
-        ctx.fillText(name.slice(0,16),128,26);
+        ctx.fillText(name.slice(0,16),128,24);
         const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv),transparent:true,depthTest:false}));
         sp.scale.set(0.7,0.13,1);
-        sp.position.y=this.height+0.07;
+        sp.position.y=this.height+0.12;
         this.modelGroup.add(sp); this.nameLabel=sp;
     }
 
@@ -73,28 +73,20 @@ export default class Player {
 
     setRole(role) {
         if (this.roleLabel) this.modelGroup.remove(this.roleLabel);
-        
-        // ── SPECTATOR LOGIC: Invisible if spectator ──
-        if (role === 'spectator') {
-            this.modelGroup.visible = false;
-            this.roleLabel = null;
-            return;
-        } else {
-            this.modelGroup.visible = true;
-        }
-
+        if (role === 'spectator') { this.modelGroup.visible = false; this.roleLabel = null; return; } 
+        else { this.modelGroup.visible = true; }
         if (!role) { this.roleLabel=null; return; }
         const cv=document.createElement('canvas'); cv.width=200; cv.height=40;
         const ctx=cv.getContext('2d');
         ctx.clearRect(0,0,200,40);
-        ctx.fillStyle=role==='hunter'?'rgba(180,30,30,0.7)':'rgba(30,100,180,0.7)';
+        ctx.fillStyle=role==='hunter'?'rgba(239,68,68,0.9)':'rgba(59,130,246,0.9)';
         this._rrect(ctx,2,2,196,36,8); ctx.fill();
-        ctx.fillStyle='#fff'; ctx.font='bold 16px Segoe UI';
+        ctx.fillStyle='#fff'; ctx.font='bold 18px system-ui';
         ctx.textAlign='center'; ctx.textBaseline='middle';
         ctx.fillText(role==='hunter'?'🔴 HUNTER':'🔵 SEEKER',100,20);
         const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv),transparent:true,depthTest:false}));
         sp.scale.set(0.56,0.11,1);
-        sp.position.y=this.height+0.2;
+        sp.position.y=this.height+0.27;
         this.modelGroup.add(sp); this.roleLabel=sp;
     }
 
@@ -103,16 +95,16 @@ export default class Player {
         const ctx=cv.getContext('2d');
         ctx.fillStyle=this.baseSkinColor; ctx.fillRect(0,0,256,256);
         const tex=new THREE.CanvasTexture(cv);
-        mesh.material=new THREE.MeshStandardMaterial({map:tex,roughness:0.75,metalness:0.05});
-        mesh.castShadow=true;
+        mesh.material=new THREE.MeshStandardMaterial({map:tex,roughness:0.6,metalness:0.1});
+        mesh.castShadow=true; mesh.receiveShadow=true;
         this.paintLayers.set(mesh.uuid,{canvas:cv,ctx,texture:tex});
         this.paintableMeshes.push(mesh);
     }
 
     jump() {
         if (this.frozen||this.jumpsLeft<=0) return;
-        // ── FASTER JUMP ──
-        this.velocity.y = this.jumpsLeft===2 ? 7.5 : 5.5; 
+        // FAST ROCKET JUMP PHYSICS
+        this.velocity.y = this.jumpsLeft===2 ? 11.0 : 9.0; 
         this.jumpsLeft--;
         this.isGrounded=false;
         this._dust();
@@ -121,11 +113,11 @@ export default class Player {
     toggleFreeze() { this.frozen=!this.frozen; }
 
     _dust() {
-        const mat=new THREE.MeshBasicMaterial({color:'#aab4be',transparent:true,opacity:0.6});
-        for(let i=0;i<5;i++){
-            const p=new THREE.Mesh(new THREE.SphereGeometry(0.015,5,5),mat.clone());
+        const mat=new THREE.MeshBasicMaterial({color:'#ffffff',transparent:true,opacity:0.8});
+        for(let i=0;i<7;i++){
+            const p=new THREE.Mesh(new THREE.SphereGeometry(0.02,6,6),mat.clone());
             p.position.copy(this.group.position); p.position.y+=0.02;
-            p.userData={vx:(Math.random()-.5)*0.6,vy:Math.random()*0.4,vz:(Math.random()-.5)*0.6,life:1};
+            p.userData={vx:(Math.random()-.5)*1.2,vy:Math.random()*0.8,vz:(Math.random()-.5)*1.2,life:1.0};
             this.scene.add(p); this.particles.push(p);
         }
     }
@@ -147,11 +139,11 @@ export default class Player {
             } else if (ox < oz) {
                 if (pos.x - ex.minX < ex.maxX - pos.x) pos.x = box.minX - r - 0.001;
                 else pos.x = box.maxX + r + 0.001;
-                vel.x *= 0.1;
+                vel.x *= 0.01;
             } else {
                 if (pos.z - ex.minZ < ex.maxZ - pos.z) pos.z = box.minZ - r - 0.001;
                 else pos.z = box.maxZ + r + 0.001;
-                vel.z *= 0.1;
+                vel.z *= 0.01;
             }
         }
         return grounded;
@@ -163,22 +155,25 @@ export default class Player {
         this.direction.set( (keys.d?1:0)-(keys.a?1:0), 0, (keys.s?1:0)-(keys.w?1:0) );
         if (this.direction.lengthSq()>0) this.direction.normalize();
 
-        // ── FASTER MOVEMENT ──
-        const speed    = isSprinting ? 14 : 8.5;   
-        const accel    = 70;
-        const friction = 20;
+        // ⚡ INSTANT SONIC FAST SPEEDS ⚡
+        const speed    = isSprinting ? 36.0 : 22.0;   
+        const accel    = 160.0;
+        const friction = 35.0;
 
-        this.velocity.x += this.direction.x * speed * accel * delta * delta;
-        this.velocity.z += this.direction.z * speed * accel * delta * delta;
+        this.velocity.x += this.direction.x * speed * accel * delta;
+        this.velocity.z += this.direction.z * speed * accel * delta;
+        
+        // Anti-ice snappiness calculation
         this.velocity.x -= this.velocity.x * friction * delta;
         this.velocity.z -= this.velocity.z * friction * delta;
 
         const hspd = Math.sqrt(this.velocity.x**2+this.velocity.z**2);
         if (hspd > speed) { const sc = speed/hspd; this.velocity.x *= sc; this.velocity.z *= sc; }
 
-        this.velocity.y -= 25 * delta;
+        // Heavy drop gravity for high speeds
+        this.velocity.y -= 38 * delta;
 
-        const STEPS = 2; const dt = delta / STEPS;
+        const STEPS = 3; const dt = delta / STEPS;
         const pos = this.group.position.clone();
 
         for (let step=0; step<STEPS; step++) {
@@ -186,12 +181,12 @@ export default class Player {
             pos.y += this.velocity.y * dt;
             pos.z += this.velocity.z * dt;
 
-            // Stop at floor (y=0) ONLY if inside the arena bounds (void check)
-            if (pos.y <= 0 && pos.x > -23 && pos.x < 23 && pos.z > -23 && pos.z < 23) {
+            // Strict Arena Platform bounds check (Fall into void outside 25x25)
+            if (pos.y <= 0 && pos.x >= -25 && pos.x <= 25 && pos.z >= -25 && pos.z <= 25) {
                 pos.y = 0;
                 if (this.velocity.y < 0) {
                     if (!this.isGrounded) this._dust();
-                    this.velocity.y = 0; this.isGrounded = true; this.jumpsLeft  = 2;
+                    this.velocity.y = 0; this.isGrounded = true; this.jumpsLeft = 2;
                 }
             }
 
@@ -202,33 +197,32 @@ export default class Player {
 
         this.group.position.copy(pos);
 
-        // Animations
+        // High frequency responsive run animation cycles
         const spd=Math.sqrt(this.velocity.x**2+this.velocity.z**2);
         if (spd>0.08) {
             const ta=Math.atan2(this.velocity.x,this.velocity.z);
             let diff=ta-this.modelGroup.rotation.y;
             diff=Math.atan2(Math.sin(diff),Math.cos(diff));
-            this.modelGroup.rotation.y+=diff*22*delta;
+            this.modelGroup.rotation.y+=diff*35*delta;
             if (this.isGrounded) {
-                this.moveTime+=spd*delta*28;
+                this.moveTime+=spd*delta*1.8;
                 const w=Math.sin(this.moveTime);
-                this.legL.rotation.x= w*0.7; this.legR.rotation.x=-w*0.7;
-                this.armL.rotation.x=-w*0.6; this.armR.rotation.x= w*0.6;
+                this.legL.rotation.x= w*0.8;  this.legR.rotation.x=-w*0.8;
+                this.armL.rotation.x=-w*0.75; this.armR.rotation.x= w*0.75;
             }
         } else {
-            const t=20*delta;
+            const t=25*delta;
             this.legL.rotation.x=THREE.MathUtils.lerp(this.legL.rotation.x,0,t);
             this.legR.rotation.x=THREE.MathUtils.lerp(this.legR.rotation.x,0,t);
             this.armL.rotation.x=THREE.MathUtils.lerp(this.armL.rotation.x,0,t);
             this.armR.rotation.x=THREE.MathUtils.lerp(this.armR.rotation.x,0,t);
         }
 
-        // Particles
         for(let i=this.particles.length-1;i>=0;i--){
             const p=this.particles[i];
             p.position.x+=p.userData.vx*delta; p.position.y+=p.userData.vy*delta; p.position.z+=p.userData.vz*delta;
             p.scale.setScalar(Math.max(0,p.userData.life));
-            p.userData.life-=3*delta;
+            p.userData.life-=4*delta;
             if(p.userData.life<=0){this.scene.remove(p);this.particles.splice(i,1);}
         }
     }
