@@ -8,31 +8,28 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script src="../../firebase.js"></script>
+<script src="/PlayConsole4u/firebase.js"></script>
 <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 <script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}</script>
 </head>
 <body>
 <canvas id="canvas3d"></canvas>
 
-<div id="auth-gate">
-  <div class="auth-box">
-    <div class="auth-logo">🦎</div>
-    <h1>Camo Chameleon</h1>
-    <p class="auth-sub">Lite Exclusive · Sign in to verify access</p>
-    <button id="btn-signin">
-      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="">
-      Sign in with Google
-    </button>
-    <p id="auth-msg" class="auth-msg"></p>
-  </div>
-</div>
-
-<div id="main-menu" style="display:none">
+<div id="main-menu">
   <div class="menu-box">
     <h1 class="game-title">CAMO CHAMELEON</h1>
     <p class="subtitle">Studio Edition</p>
-    <div id="user-info">
+    
+    <div id="auth-gate">
+      <p class="gate-msg">Lite Exclusive · Sign in to verify access</p>
+      <button id="btn-signin">
+        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="" style="width:18px; height:18px; vertical-align:middle; margin-right:8px;">
+        Sign in with Google
+      </button>
+      <p id="auth-msg" class="auth-msg"></p>
+    </div>
+
+    <div id="user-info" style="display:none">
       <img id="user-avatar" src="" alt="">
       <div>
         <div id="user-name"></div>
@@ -40,6 +37,7 @@
       </div>
       <button id="btn-signout" class="small-btn">Sign Out</button>
     </div>
+
     <div class="controls-list">
       <p><b>WASD</b> — Move</p>
       <p><b>Space ×2</b> — Double Jump</p>
@@ -49,7 +47,8 @@
       <p><b>Right-drag</b> — Orbit camera</p>
       <p><b>Scroll</b> — Zoom</p>
     </div>
-    <button id="btn-play">JOIN LOBBY</button>
+
+    <button id="btn-play" disabled>Sign in to play</button>
     <p id="lobby-status" class="lobby-status"></p>
   </div>
 </div>
