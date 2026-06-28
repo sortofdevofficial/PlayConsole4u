@@ -1,4 +1,4 @@
-// firebase.js v3.1
+// firebase.js v3.1 - Enhanced Production Edition
 // users/{uid}                     → { n, e, ph }
 // users/{uid}/G/CP/L/{VER}        → CubePlatformer times
 // users/{uid}/G/FS                → { w, l, k, h, s }  
@@ -151,7 +151,6 @@ async function recordMatch(uid,won) {
 }
 
 async function getMatchStats(uid) {
-  cD('fs_'+uid);
   try{const s=await fsRef(uid).get();const v=s.exists?s.data():{};return{w:v.w||0,l:v.l||0};}
   catch(e){console.warn('[FB] getMatchStats:',e.message);return{w:0,l:0};}
 }
@@ -162,7 +161,9 @@ async function recordRound(uid,{won,kills=0,role}){
   const INC=firebase.firestore.FieldValue.increment;
   const upd={
     w:INC(won?1:0), l:INC(!won?1:0),
-    k:INC(kills), h:INC(role==='seeker'?1:0), s:INC(role==='hunter'?1:0),
+    k:INC(kills), 
+    h:INC(role==='hunter'?1:0), 
+    s:INC(role==='seeker'?1:0),
   };
   try{
     await ccRef(uid).set(upd,{merge:true});
@@ -170,32 +171,36 @@ async function recordRound(uid,{won,kills=0,role}){
 }
 
 async function getStats(uid){
-  cD('cc_'+uid);
-  try{const s=await ccRef(uid).get();const v=s.exists?s.data():{};return{w:v.w||0,l:v.l||0,k:v.k||0,h:v.h||0,s:v.s||0,likes:v.likes||0};}
+  const h=cG('cc_'+uid); if(h) return h;
+  try{
+    const s=await ccRef(uid).get();
+    const v=s.exists?s.data():{};
+    const statsData = {w:v.w||0,l:v.l||0,k:v.k||0,h:v.h||0,s:v.s||0,likes:v.likes||0};
+    cS('cc_'+uid, statsData, 15000); // Cache for 15 seconds to eliminate excessive read spam
+    return statsData;
+  }
   catch(e){console.warn('[FB] getStats:',e.message);return{w:0,l:0,k:0,h:0,s:0,likes:0};}
 }
 
 async function likePlayer(targetUid) {
   const me = currentUser();
-  if (!me || me.uid === targetUid) return false; // Can't like yourself or if not logged in
+  if (!me || me.uid === targetUid) return false;
   
   try {
     const likeDoc = ccRef(targetUid).collection('Likes').doc(me.uid);
     const snap = await likeDoc.get();
     
-    if (snap.exists) {
-      console.log("[FB] You already liked this player.");
-      return false; 
-    }
+    if (snap.exists) return false; // Already honor-liked this player
     
-    // Save to the subcollection inside CC
+    // Save to subcollection tracking who voted and when
     await likeDoc.set({ by: me.uid, t: Date.now() });
     
-    // Increment the total counter on the CC document
+    // Increment absolute counter
     await ccRef(targetUid).set({ likes: firebase.firestore.FieldValue.increment(1) }, { merge: true });
+    cD('cc_'+targetUid); // Evict cache so update renders immediately
     return true;
   } catch (e) {
-    console.error("[FB] Error liking player:", e.message);
+    console.error("[FB] Error giving honor:", e.message);
     return false;
   }
 }

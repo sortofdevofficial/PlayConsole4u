@@ -1,6 +1,5 @@
 import * as THREE from 'three';
-
-const S = 0.2; // 5x scale factor
+const S = 0.2; 
 
 export default class Player {
     constructor(scene, color = '#c8cdd4', isRemote = false) {
@@ -18,15 +17,13 @@ export default class Player {
         this.moveTime = 0;
         this.particles = [];
 
-        // Tight capsule for accurate collision
-        this.radius = 0.07;   // horizontal half-width
-        this.height = 0.55;   // total standing height
+        this.radius = 0.07;   
+        this.height = 0.55;   
 
         this.baseSkinColor = color;
         this.paintableMeshes = [];
         this.paintLayers = new Map();
 
-        // Build body parts
         const headGeo  = new THREE.SphereGeometry(0.45*S, 20, 20);
         const torsoGeo = new THREE.CapsuleGeometry(0.35*S, 0.8*S, 8, 16);
         const limbGeo  = new THREE.CapsuleGeometry(0.12*S, 0.6*S, 6, 8);
@@ -76,6 +73,16 @@ export default class Player {
 
     setRole(role) {
         if (this.roleLabel) this.modelGroup.remove(this.roleLabel);
+        
+        // ── SPECTATOR LOGIC: Invisible if spectator ──
+        if (role === 'spectator') {
+            this.modelGroup.visible = false;
+            this.roleLabel = null;
+            return;
+        } else {
+            this.modelGroup.visible = true;
+        }
+
         if (!role) { this.roleLabel=null; return; }
         const cv=document.createElement('canvas'); cv.width=200; cv.height=40;
         const ctx=cv.getContext('2d');
@@ -104,7 +111,8 @@ export default class Player {
 
     jump() {
         if (this.frozen||this.jumpsLeft<=0) return;
-        this.velocity.y = this.jumpsLeft===2 ? 5.5 : 3.8;
+        // ── FASTER JUMP ──
+        this.velocity.y = this.jumpsLeft===2 ? 7.5 : 5.5; 
         this.jumpsLeft--;
         this.isGrounded=false;
         this._dust();
@@ -122,54 +130,27 @@ export default class Player {
         }
     }
 
-    // ── Improved AABB collision — sub-step to prevent tunnelling ──────────────
     resolveCollisions(pos, vel, colliders) {
         const r=this.radius, h=this.height;
         let grounded=false;
-
         for (const box of colliders) {
-            // Expanded box: player footprint
-            const ex={
-                minX:box.minX-r, maxX:box.maxX+r,
-                minY:box.minY,   maxY:box.maxY+h,
-                minZ:box.minZ-r, maxZ:box.maxZ+r,
-            };
+            const ex={ minX:box.minX-r, maxX:box.maxX+r, minY:box.minY, maxY:box.maxY+h, minZ:box.minZ-r, maxZ:box.maxZ+r };
             if (pos.x<=ex.minX||pos.x>=ex.maxX) continue;
             if (pos.y<=ex.minY||pos.y>=ex.maxY) continue;
             if (pos.z<=ex.minZ||pos.z>=ex.maxZ) continue;
-
-            // Penetration on each axis
             const ox = Math.min(ex.maxX-pos.x, pos.x-ex.minX);
             const oy = Math.min(ex.maxY-pos.y, pos.y-ex.minY);
             const oz = Math.min(ex.maxZ-pos.z, pos.z-ex.minZ);
-
-            // Resolve on axis with smallest penetration
             if (oy < ox && oy < oz) {
-                // Vertical — floor or ceiling
-                if (pos.y - ex.minY < ex.maxY - pos.y) {
-                    // Hit ceiling
-                    pos.y = box.minY - h - 0.001;
-                    if (vel.y > 0) vel.y = 0;
-                } else {
-                    // Land on top
-                    pos.y = box.maxY + 0.001;
-                    if (vel.y < 0) { vel.y = 0; grounded = true; }
-                }
+                if (pos.y - ex.minY < ex.maxY - pos.y) { pos.y = box.minY - h - 0.001; if (vel.y > 0) vel.y = 0; }
+                else { pos.y = box.maxY + 0.001; if (vel.y < 0) { vel.y = 0; grounded = true; } }
             } else if (ox < oz) {
-                // Push on X
-                if (pos.x - ex.minX < ex.maxX - pos.x) {
-                    pos.x = box.minX - r - 0.001;
-                } else {
-                    pos.x = box.maxX + r + 0.001;
-                }
-                vel.x *= 0.1; // kill most horizontal momentum
+                if (pos.x - ex.minX < ex.maxX - pos.x) pos.x = box.minX - r - 0.001;
+                else pos.x = box.maxX + r + 0.001;
+                vel.x *= 0.1;
             } else {
-                // Push on Z
-                if (pos.z - ex.minZ < ex.maxZ - pos.z) {
-                    pos.z = box.minZ - r - 0.001;
-                } else {
-                    pos.z = box.maxZ + r + 0.001;
-                }
+                if (pos.z - ex.minZ < ex.maxZ - pos.z) pos.z = box.minZ - r - 0.001;
+                else pos.z = box.maxZ + r + 0.001;
                 vel.z *= 0.1;
             }
         }
@@ -179,38 +160,25 @@ export default class Player {
     update(keys, isSprinting, delta, colliders=[]) {
         if (this.isRemote || this.frozen) return;
 
-        // Direction from keys
-        this.direction.set(
-            (keys.d?1:0)-(keys.a?1:0), 0,
-            (keys.s?1:0)-(keys.w?1:0)
-        );
+        this.direction.set( (keys.d?1:0)-(keys.a?1:0), 0, (keys.s?1:0)-(keys.w?1:0) );
         if (this.direction.lengthSq()>0) this.direction.normalize();
 
-        const speed    = isSprinting ? 9 : 5.5;   // much faster
-        const accel    = 60;
-        const friction = 18;
+        // ── FASTER MOVEMENT ──
+        const speed    = isSprinting ? 14 : 8.5;   
+        const accel    = 70;
+        const friction = 20;
 
-        // Accelerate
         this.velocity.x += this.direction.x * speed * accel * delta * delta;
         this.velocity.z += this.direction.z * speed * accel * delta * delta;
-
-        // Friction
         this.velocity.x -= this.velocity.x * friction * delta;
         this.velocity.z -= this.velocity.z * friction * delta;
 
-        // Cap horizontal speed
         const hspd = Math.sqrt(this.velocity.x**2+this.velocity.z**2);
-        if (hspd > speed) {
-            const sc = speed/hspd;
-            this.velocity.x *= sc; this.velocity.z *= sc;
-        }
+        if (hspd > speed) { const sc = speed/hspd; this.velocity.x *= sc; this.velocity.z *= sc; }
 
-        // Gravity
-        this.velocity.y -= 22 * delta;
+        this.velocity.y -= 25 * delta;
 
-        // Sub-step integration (2 steps) to reduce tunnelling at high speed
-        const STEPS = 2;
-        const dt = delta / STEPS;
+        const STEPS = 2; const dt = delta / STEPS;
         const pos = this.group.position.clone();
 
         for (let step=0; step<STEPS; step++) {
@@ -218,30 +186,23 @@ export default class Player {
             pos.y += this.velocity.y * dt;
             pos.z += this.velocity.z * dt;
 
-            // Floor
-            if (pos.y <= 0) {
+            // Stop at floor (y=0) ONLY if inside the arena bounds (void check)
+            if (pos.y <= 0 && pos.x > -23 && pos.x < 23 && pos.z > -23 && pos.z < 23) {
                 pos.y = 0;
                 if (this.velocity.y < 0) {
                     if (!this.isGrounded) this._dust();
-                    this.velocity.y = 0;
-                    this.isGrounded = true;
-                    this.jumpsLeft  = 2;
+                    this.velocity.y = 0; this.isGrounded = true; this.jumpsLeft  = 2;
                 }
             }
 
-            // Box collisions
             const hitBox = this.resolveCollisions(pos, this.velocity, colliders);
             if (hitBox) { this.isGrounded=true; this.jumpsLeft=2; }
             if (pos.y > 0.01 && !hitBox) this.isGrounded = false;
         }
 
-        // Arena bounds
-        const B=23;
-        pos.x=Math.max(-B,Math.min(B,pos.x));
-        pos.z=Math.max(-B,Math.min(B,pos.z));
         this.group.position.copy(pos);
 
-        // ── Animations ────────────────────────────────────────────────────────
+        // Animations
         const spd=Math.sqrt(this.velocity.x**2+this.velocity.z**2);
         if (spd>0.08) {
             const ta=Math.atan2(this.velocity.x,this.velocity.z);

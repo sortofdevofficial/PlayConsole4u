@@ -8,7 +8,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script src="/PlayConsole4u/firebase.js"></script>
+<script src="../../firebase.js"></script>
 <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 <script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}</script>
 </head>
@@ -33,7 +33,7 @@
       <img id="user-avatar" src="" alt="">
       <div>
         <div id="user-name"></div>
-        <div class="wins-row">🏆 <span id="menu-wins">0</span> Wins</div>
+        <div class="wins-row">🏆 <span id="menu-wins">0</span> Wins <span class="dot-sep">•</span> ❤️ <span id="menu-likes">0</span> Likes</div>
       </div>
       <button id="btn-signout" class="small-btn">Sign Out</button>
     </div>
@@ -45,7 +45,6 @@
       <p><b>F</b> — Freeze in place</p>
       <p><b>Hold Left-click</b> — Paint / drag brush</p>
       <p><b>Right-drag</b> — Orbit camera</p>
-      <p><b>Scroll</b> — Zoom</p>
     </div>
 
     <button id="btn-play" disabled>Sign in to play</button>
@@ -99,10 +98,10 @@
     <div class="sidebar-section">
       <span class="section-title">Size</span>
       <div class="size-group">
-        <button class="size-btn" data-radius="8">S</button>
-        <button class="size-btn active" data-radius="20">M</button>
-        <button class="size-btn" data-radius="40">L</button>
-        <button class="size-btn" data-radius="70">XL</button>
+        <button class="size-btn" data-r="8">S</button>
+        <button class="size-btn active" data-r="20">M</button>
+        <button class="size-btn" data-r="40">L</button>
+        <button class="size-btn" data-r="70">XL</button>
       </div>
     </div>
   </div>
@@ -117,6 +116,14 @@
   <div id="round-overlay" style="display:none">
     <div id="overlay-title"></div>
     <div id="overlay-sub"></div>
+  </div>
+  
+  <div id="honor-screen" style="display:none">
+    <div class="honor-box">
+      <h2 class="honor-title">GIVE HONOR</h2>
+      <p class="honor-sub">Support the best painters this round!</p>
+      <div id="honor-list"></div>
+    </div>
   </div>
 
   <div id="mobile-controls">

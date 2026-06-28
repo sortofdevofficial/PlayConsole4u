@@ -12,43 +12,38 @@ const keys = { w:false, a:false, s:false, d:false, ' ':false, Shift:false };
 let gameStarted = false;
 let activeTool = 'brush', brushColor = '#c0392b', brushRadius = 20;
 
-// Camera (manual third-person)
 let camYaw = 0, camPitch = 0.38, camZoom = 1;
 let orbiting = false, dragMoved = false, lastMx = 0, lastMy = 0;
 
-// Mobile
 const mob = { x:0, z:0, sprint:false };
 let joyActive=false, joyId=null, joyOrigin={x:0,y:0};
 
 // ─── Auth & Firebase ─────────────────────────────────────────────────────────
 let fbUser = null;
 let myName = 'Player';
-let myWins = 0;
-let myKills = 0;
-let roundKills = 0; // tags made this round as hunter
+let myWins = 0, myLikes = 0;
+let roundKills = 0; 
 
-// ─── Multiplayer / Lobby ──────────────────────────────────────────────────────
+// ─── Multiplayer (Self Cleaning) ──────────────────────────────────────────────
 let peer=null, myPeerId=null;
-let conns = {};          // peerId → DataConnection
-let remotePlayers = {};  // peerId → Player
-let lobbyMembers = {};   // peerId → { name, role, wins }
+let conns = {};          
+let remotePlayers = {};  
+let lobbyMembers = {};   // peerId → { name, role, wins, uid }
 const PLAYER_COLORS = ['#c8cdd4','#e8a0a0','#a0c8a0','#a0b8e8','#e8d0a0','#c8a0d0','#d0c0a0'];
 let myColor = PLAYER_COLORS[Math.floor(Math.random()*PLAYER_COLORS.length)];
-let myRole = null; // 'hunter' | 'seeker' | null
+let myRole = null; 
 
 // ─── Round System ─────────────────────────────────────────────────────────────
-const ROUND_DURATION = 60; // seconds
-const TAG_DISTANCE   = 0.6; // world units
-const MIN_PLAYERS    = 2;
+const ROUND_DURATION = 60; 
+const TAG_DISTANCE   = 0.6; 
+const MIN_PLAYERS    = 2;  
 
-let roundState = 'lobby'; // 'lobby' | 'countdown' | 'playing' | 'ended'
+let roundState = 'lobby'; 
 let roundTimer  = 0;
 let roundNumber = 0;
-let taggedSeekers = new Set(); // peerIds of tagged seekers
-let amIHost = false; // host drives round logic + broadcasts round events
-let roundInterval = null;
+let taggedSeekers = new Set(); 
+let amIHost = false; 
 
-// ─── Init ─────────────────────────────────────────────────────────────────────
 init();
 animate();
 
@@ -65,7 +60,6 @@ function init() {
     camera = new THREE.PerspectiveCamera(65, window.innerWidth/window.innerHeight, 0.01, 200);
     camera.position.set(0, 4, 8);
 
-    // Menu auto-rotate only
     menuControls = new OrbitControls(camera, renderer.domElement);
     menuControls.enableDamping = true; menuControls.dampingFactor = 0.08;
     menuControls.autoRotate = true; menuControls.autoRotateSpeed = 1.2;
@@ -78,7 +72,7 @@ function init() {
     raycaster = new THREE.Raycaster();
     mouse = new THREE.Vector2();
 
-    // ── Keyboard
+    // ── Input Listeners
     window.addEventListener('keydown', e => {
         if (!gameStarted) return;
         if (e.code==='Space')  { e.preventDefault(); player.jump(); }
@@ -90,11 +84,9 @@ function init() {
         if (e.key in keys) keys[e.key] = false;
         if (e.code==='ShiftLeft'||e.code==='ShiftRight') keys.Shift=false;
     });
-
-    // ── Pointer (left-click drag = orbit; no-drag click = paint)
     window.addEventListener('pointerdown', e => {
         if (!gameStarted||e.button!==0) return;
-        if (e.target.closest('.hud-panel')||e.target.closest('#mobile-controls')||e.target.closest('#round-overlay')) return;
+        if (e.target.closest('.hud-panel')||e.target.closest('#mobile-controls')||e.target.closest('#round-overlay')||e.target.closest('#honor-screen')) return;
         orbiting=true; dragMoved=false; lastMx=e.clientX; lastMy=e.clientY;
     });
     window.addEventListener('pointermove', e => {
@@ -107,7 +99,7 @@ function init() {
     });
     window.addEventListener('pointerup', e => {
         if (!gameStarted||e.button!==0) return;
-        if (!dragMoved && !e.target.closest('.hud-panel') && !e.target.closest('#mobile-controls')) handlePaint(e);
+        if (!dragMoved && !e.target.closest('.hud-panel') && !e.target.closest('#mobile-controls') && !e.target.closest('#honor-screen')) handlePaint(e);
         orbiting=false;
     });
     window.addEventListener('contextmenu', e=>e.preventDefault());
@@ -123,23 +115,60 @@ function init() {
     setupMobile();
 }
 
-// ─── Firebase Auth ─────────────────────────────────────────────────────────────
+// ─── Deep Subscription Check ──────────────────────────────────────────────────
 function setupFirebase() {
     if (typeof FB==='undefined') return;
     FB.onAuthChange(async user => {
         fbUser = user;
         if (user) {
-            myName = user.displayName||'Player';
-            document.getElementById('user-name').textContent = myName;
-            document.getElementById('user-avatar').src = user.photoURL||'';
-            document.getElementById('user-info').style.display = 'flex';
-            document.getElementById('auth-gate').style.display = 'none';
-            const stats = await FB.getStats ? await FB.getStats(user.uid) : await FB.getMatchStats(user.uid);
-            myWins = stats.w||0; myKills = stats.k||0;
-            document.getElementById('menu-wins').textContent = myWins;
-            document.getElementById('btn-play').disabled = false;
-            document.getElementById('btn-play').textContent = 'JOIN LOBBY';
-            updateLobbyStatus();
+            const authMsgEl = document.getElementById('auth-msg');
+            const btnPlayEl = document.getElementById('btn-play');
+            
+            authMsgEl.textContent = "Verifying Lite subscription...";
+            authMsgEl.style.color = "#94a3b8";
+
+            try {
+                const stats = await FB.getStats ? await FB.getStats(user.uid) : {w:0, likes:0};
+                myWins = stats.w||0; 
+                myLikes = stats.likes||0;
+
+                const db = firebase.firestore();
+                const subDoc = await db.collection('users').doc(user.uid).collection('subscription').doc('info').get();
+
+                if (!subDoc.exists) {
+                    authMsgEl.textContent = "❌ Access Denied: No profile found.";
+                    authMsgEl.style.color = "#fc8181";
+                    return;
+                }
+
+                const subData = subDoc.data();
+                if (subData.active !== true || subData.plan !== 'lite') {
+                    authMsgEl.textContent = "❌ Access Denied: Requires active Lite plan.";
+                    authMsgEl.style.color = "#fc8181";
+                    
+                    document.getElementById('user-info').style.display = 'flex';
+                    document.getElementById('user-name').textContent = user.displayName || 'Unauthorized';
+                    return;
+                }
+
+                authMsgEl.textContent = ""; 
+                myName = user.displayName||'Player';
+                
+                document.getElementById('user-name').textContent = myName;
+                document.getElementById('user-avatar').src = user.photoURL||'';
+                document.getElementById('user-info').style.display = 'flex';
+                document.getElementById('auth-gate').style.display = 'none';
+                
+                document.getElementById('menu-wins').textContent = myWins;
+                document.getElementById('menu-likes').textContent = myLikes;
+                
+                btnPlayEl.disabled = false;
+                btnPlayEl.textContent = 'JOIN LOBBY';
+                updateLobbyStatus();
+
+            } catch (error) {
+                authMsgEl.textContent = "⚠️ Error verifying access.";
+            }
         } else {
             document.getElementById('user-info').style.display = 'none';
             document.getElementById('auth-gate').style.display = 'block';
@@ -162,15 +191,24 @@ function setupUI() {
     const hexLbl=document.getElementById('color-hex-label');
     picker.addEventListener('input', e=>{ brushColor=e.target.value; hexLbl.textContent=brushColor.toUpperCase(); });
 
+    document.querySelectorAll('.swatch').forEach(swatch => {
+        swatch.addEventListener('click', (e) => {
+            brushColor = e.target.dataset.c;
+            picker.value = brushColor;
+            hexLbl.textContent = brushColor.toUpperCase();
+        });
+    });
+
     document.querySelectorAll('.tool-btn').forEach(b=>b.addEventListener('click',e=>{
         document.querySelectorAll('.tool-btn').forEach(x=>x.classList.remove('active'));
         e.currentTarget.classList.add('active');
         activeTool=e.currentTarget.dataset.tool;
     }));
+    
     document.querySelectorAll('.size-btn').forEach(b=>b.addEventListener('click',e=>{
         document.querySelectorAll('.size-btn').forEach(x=>x.classList.remove('active'));
         e.currentTarget.classList.add('active');
-        brushRadius=parseInt(e.currentTarget.dataset.radius);
+        brushRadius=parseInt(e.currentTarget.dataset.r);
     }));
 }
 
@@ -193,24 +231,26 @@ function enterGame() {
     initMultiplayer();
 }
 
-// ─── Players Sidebar ──────────────────────────────────────────────────────────
+function updateFreezeUI() {
+    document.getElementById('freeze-indicator').style.display = player.frozen ? 'block' : 'none';
+}
+
 function rebuildPlayersList() {
     const list = document.getElementById('players-list');
     list.innerHTML='';
 
-    // Me
     const me = document.createElement('div');
     me.className='player-entry me';
-    const roleIcon = myRole==='hunter'?'🔴':myRole==='seeker'?'🔵':'⚪';
-    me.innerHTML=`<span class="p-dot" style="background:${myColor}"></span><span class="p-name">${myName} (You)</span><span class="p-role">${roleIcon}</span><span class="p-wins">🏆${myWins}</span>`;
+    const roleIcon = myRole==='hunter'?'🔴':myRole==='spectator'?'👻':myRole==='seeker'?'🔵':'⚪';
+    me.innerHTML=`<span class="p-dot" style="background:${myColor}"></span><span class="p-name">${myName}</span><span class="p-role">${roleIcon}</span><span class="p-wins">🏆${myWins}</span>`;
     list.appendChild(me);
 
-    // Others
     Object.entries(lobbyMembers).forEach(([pid,m])=>{
         const el=document.createElement('div');
         el.className='player-entry';
+        if (m.role === 'spectator') el.classList.add('spec');
         el.id='ple-'+pid;
-        const ri=m.role==='hunter'?'🔴':m.role==='seeker'?'🔵':'⚪';
+        const ri=m.role==='hunter'?'🔴':m.role==='spectator'?'👻':m.role==='seeker'?'🔵':'⚪';
         const clr=remotePlayers[pid]?remotePlayers[pid].baseSkinColor:'#888';
         el.innerHTML=`<span class="p-dot" style="background:${clr}"></span><span class="p-name">${m.name||'Player'}</span><span class="p-role">${ri}</span><span class="p-wins">🏆${m.wins||0}</span>`;
         list.appendChild(el);
@@ -224,7 +264,7 @@ function updateLobbyStatus() {
     if (el) el.textContent = need>0 ? `Need ${need} more player${need>1?'s':''} to start` : `${total} players in lobby`;
 }
 
-// ─── Round System ──────────────────────────────────────────────────────────────
+// ─── Round System & Late Joiners ──────────────────────────────────────────────
 function electHost() {
     const allIds=[myPeerId,...Object.keys(conns)].sort();
     amIHost = allIds[0]===myPeerId;
@@ -250,6 +290,7 @@ function beginRound(num) {
         const hunterIdx=Math.floor(Math.random()*allIds.length);
         const hunterPid=allIds[hunterIdx];
         const roles={};
+        
         allIds.forEach(pid=>{ roles[pid]=pid===hunterPid?'hunter':'seeker'; });
 
         if (amIHost) broadcastAll({ type:'roles', roles, round:roundNumber });
@@ -278,26 +319,18 @@ function updateRoleBadge() {
     const badge=document.getElementById('role-badge');
     if (!myRole) { panel.style.display='none'; return; }
     panel.style.display='block';
-    if (myRole==='hunter') {
-        badge.textContent='🔴 YOU ARE THE HUNTER';
-        badge.className='role-hunter';
-    } else {
-        badge.textContent='🔵 YOU ARE A SEEKER — HIDE!';
-        badge.className='role-seeker';
-    }
+    
+    if (myRole==='hunter') { badge.textContent='🔴 YOU ARE THE HUNTER'; badge.className='role-hunter'; } 
+    else if (myRole==='spectator') { badge.textContent='👻 SPECTATOR'; badge.className='role-seeker'; }
+    else { badge.textContent='🔵 YOU ARE A SEEKER — HIDE!'; badge.className='role-seeker'; }
 }
 
 function updateRoundUI() {
     const lbl=document.getElementById('round-label');
     const tmr=document.getElementById('round-timer');
-    if (roundState==='playing') {
-        lbl.textContent=`Round ${roundNumber}`;
-        tmr.textContent=`${Math.ceil(roundTimer)}s`;
-    } else if (roundState==='lobby') {
-        lbl.textContent='Lobby'; tmr.textContent='';
-    } else if (roundState==='ended') {
-        lbl.textContent='Round Over'; tmr.textContent='';
-    }
+    if (roundState==='playing') { lbl.textContent=`Round ${roundNumber}`; tmr.textContent=`${Math.ceil(roundTimer)}s`; } 
+    else if (roundState==='lobby') { lbl.textContent='Lobby'; tmr.textContent=''; } 
+    else if (roundState==='ended') { lbl.textContent='Round Over'; tmr.textContent=''; }
 }
 
 function tickRound(delta) {
@@ -308,8 +341,7 @@ function tickRound(delta) {
     if (amIHost) {
         if (myRole==='hunter') {
             Object.entries(remotePlayers).forEach(([pid,rp])=>{
-                if (taggedSeekers.has(pid)) return;
-                if (lobbyMembers[pid]?.role!=='seeker') return;
+                if (taggedSeekers.has(pid) || lobbyMembers[pid]?.role!=='seeker') return;
                 const dist=player.group.position.distanceTo(rp.group.position);
                 if (dist<TAG_DISTANCE) {
                     taggedSeekers.add(pid);
@@ -318,7 +350,7 @@ function tickRound(delta) {
                     handleTagged(pid);
                 }
             });
-        } else {
+        } else if (myRole==='seeker') {
             Object.entries(remotePlayers).forEach(([pid,rp])=>{
                 if (lobbyMembers[pid]?.role!=='hunter') return;
                 const dist=player.group.position.distanceTo(rp.group.position);
@@ -334,7 +366,9 @@ function tickRound(delta) {
             const role=pid===myPeerId?myRole:lobbyMembers[pid]?.role;
             return role==='seeker';
         });
-        const allTagged=seekerIds.every(pid=>taggedSeekers.has(pid));
+        
+        // Prevent auto-win if 0 seekers exist (like testing solo)
+        const allTagged = seekerIds.length > 0 && seekerIds.every(pid=>taggedSeekers.has(pid));
 
         if (allTagged||roundTimer<=0) {
             const hunterWon=allTagged;
@@ -346,17 +380,13 @@ function tickRound(delta) {
 
 function handleTagged(pid) {
     taggedSeekers.add(pid);
-    if (pid===myPeerId) {
+    if (pid===myPeerId && myRole==='seeker') {
         showOverlay('Tagged!','You were caught 😱', 2000);
-        if (myRole==='seeker') { player.frozen=true; updateFreezeUI(); }
+        player.frozen=true; updateFreezeUI(); 
     }
     const el=document.getElementById('ple-'+pid);
     if (el) el.classList.add('tagged');
     rebuildPlayersList();
-}
-
-function updateFreezeUI() {
-    document.getElementById('freeze-indicator').style.display = player.frozen ? 'block' : 'none';
 }
 
 async function endRound(hunterWon) {
@@ -368,21 +398,20 @@ async function endRound(hunterWon) {
 
     let msg=hunterWon?'Hunter wins! All seekers tagged!':'Seekers escape! Time ran out!';
     let sub=iWon?'🎉 You win!':'😔 You lose';
-    showOverlay(msg,sub,4000);
+    showOverlay(msg,sub,3000);
 
-    if (fbUser) {
+    if (fbUser && myRole !== 'spectator') {
         if (iWon) {
             myWins++;
             document.getElementById('hud-wins').textContent=myWins;
             document.getElementById('menu-wins').textContent=myWins;
         }
         myKills += roundKills;
-        if (FB.recordRound) {
-            await FB.recordRound(fbUser.uid, { won: iWon, kills: roundKills, role: myRole });
-        } else if (FB.recordMatch) {
-            await FB.recordMatch(fbUser.uid, iWon);
-        }
+        if (FB.recordRound) await FB.recordRound(fbUser.uid, { won: iWon, kills: roundKills, role: myRole });
     }
+
+    // Show Honor screen for 6 seconds after overlay ends
+    setTimeout(() => { showHonorScreen(); }, 3000);
 
     player.setRole(null); myRole=null;
     Object.values(remotePlayers).forEach(rp=>rp.setRole(null));
@@ -396,7 +425,7 @@ async function endRound(hunterWon) {
             rebuildPlayersList();
             broadcastAll({ type:'lobby_reset' });
             setTimeout(tryStartRound,3000);
-        }, 4500);
+        }, 10000); // Wait out the Honor Screen
     }
 }
 
@@ -408,7 +437,35 @@ function showOverlay(title,sub,duration) {
     setTimeout(()=>{ ov.style.display='none'; },duration);
 }
 
-// ─── Multiplayer ──────────────────────────────────────────────────────────────
+// ─── Honor System ──────────────────────────────────────────────────────────────
+function showHonorScreen() {
+    const scr = document.getElementById('honor-screen');
+    const list = document.getElementById('honor-list');
+    list.innerHTML = '';
+    
+    Object.entries(lobbyMembers).forEach(([pid, m]) => {
+        if (!m.uid || m.uid === fbUser.uid) return; // Cant like self
+        const row = document.createElement('div');
+        row.className = 'honor-player-row';
+        
+        row.innerHTML = `<span class="honor-player-name">${m.name}</span>
+                         <button class="honor-btn" data-uid="${m.uid}">❤️</button>`;
+        list.appendChild(row);
+    });
+
+    list.querySelectorAll('.honor-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const targetUid = e.currentTarget.dataset.uid;
+            e.currentTarget.classList.add('liked');
+            if (FB.likePlayer) await FB.likePlayer(targetUid);
+        });
+    });
+
+    scr.style.display = 'flex';
+    setTimeout(() => { scr.style.display = 'none'; }, 6000); // Close after 6s
+}
+
+// ─── Multiplayer (Self Cleaning Lobby - Zero interval writes!) ────────────────
 function initMultiplayer() {
     peer=new Peer(undefined,{
         host:'0.peerjs.com',port:443,secure:true,
@@ -424,58 +481,56 @@ async function firestoreAnnounce() {
     const db=firebase.firestore();
     const lobbyDoc=db.collection('cc_lobby').doc('main');
 
-    await lobbyDoc.set({
-        [myPeerId]: { name:myName, wins:myWins, ts:Date.now() }
-    },{ merge:true });
+    // WRITE ONCE
+    await lobbyDoc.set({ [myPeerId]: { name:myName, wins:myWins, uid:fbUser.uid, ts:Date.now() } },{ merge:true });
 
     window.addEventListener('beforeunload', ()=>{
-        db.collection('cc_lobby').doc('main').update({
-            [myPeerId]: firebase.firestore.FieldValue.delete()
-        }).catch(()=>{});
+        db.collection('cc_lobby').doc('main').update({ [myPeerId]: firebase.firestore.FieldValue.delete() }).catch(()=>{});
     });
 
+    // Watch for others joining
     lobbyDoc.onSnapshot(snap=>{
         const data=snap.data()||{};
         Object.entries(data).forEach(([pid,info])=>{
-            if (pid===myPeerId) return;
-            if (Date.now()-info.ts>30000) return;
-            if (!conns[pid]) {
-                const c=peer.connect(pid,{reliable:false,serialization:'json',metadata:{name:myName,wins:myWins}});
-                c.on('open',()=>onConnectionReady(c,pid,info.name,info.wins));
-            }
+            if (pid===myPeerId || conns[pid]) return;
+            const c=peer.connect(pid,{reliable:false,serialization:'json',metadata:{name:myName,wins:myWins,uid:info.uid}});
+            
+            c.on('open',()=>onConnectionReady(c,pid,info.name,info.wins,info.uid));
+            
+            // SELF CLEANING GHOSTS
+            c.on('error', () => { 
+                lobbyDoc.update({ [pid]: firebase.firestore.FieldValue.delete() }).catch(()=>{}); 
+            });
         });
-
-        Object.keys(lobbyMembers).forEach(pid=>{
-            if (!data[pid]) removePeer(pid);
-        });
-
-        updateLobbyStatus();
-        electHost();
-
-        lobbyDoc.update({ [myPeerId+'.ts']: Date.now() }).catch(()=>{});
     });
-
-    setInterval(()=>{
-        lobbyDoc.update({ [myPeerId+'.ts']: Date.now() }).catch(()=>{});
-    },10000);
 }
 
 function onIncomingConn(conn) {
     conn.on('open',()=>{
         const pid=conn.peer;
         const meta=conn.metadata||{};
-        onConnectionReady(conn,pid,meta.name,meta.wins);
+        onConnectionReady(conn,pid,meta.name,meta.wins,meta.uid);
     });
 }
 
-function onConnectionReady(conn,pid,name,wins) {
+function onConnectionReady(conn,pid,name,wins,uid) {
     conns[pid]=conn;
-    lobbyMembers[pid]={ name, wins:wins||0, role:null };
+    lobbyMembers[pid]={ name, wins:wins||0, role:null, uid };
 
     const idx=Object.keys(remotePlayers).length%PLAYER_COLORS.length;
     const rp=new Player(scene,PLAYER_COLORS[idx],true);
     rp.setName(name||'Player');
     remotePlayers[pid]=rp;
+
+    // LATE JOINER SYNC (Host sends them Spectator state)
+    if (amIHost && roundState === 'playing') {
+        const syncRoles = {};
+        Object.keys(lobbyMembers).forEach(id => syncRoles[id] = lobbyMembers[id].role);
+        syncRoles[pid] = 'spectator'; 
+        
+        broadcastAll({ type:'sync_state', roles:syncRoles, round:roundNumber, rTime:roundTimer });
+        applyRoles(syncRoles);
+    }
 
     rebuildPlayersList();
     updateLobbyStatus();
@@ -512,6 +567,11 @@ function handlePeerData(pid,data) {
             applyRoles(data.roles);
             roundState='playing'; roundTimer=ROUND_DURATION; updateRoundUI();
             break;
+        case 'sync_state':
+            roundNumber=data.round; roundTimer=data.rTime;
+            applyRoles(data.roles);
+            roundState='playing'; updateRoundUI();
+            break;
         case 'tagged':
             handleTagged(data.pid);
             break;
@@ -527,9 +587,7 @@ function handlePeerData(pid,data) {
     }
 }
 
-function broadcastAll(data) {
-    Object.values(conns).forEach(c=>{ try{c.send(data);}catch(e){} });
-}
+function broadcastAll(data) { Object.values(conns).forEach(c=>{ try{c.send(data);}catch(e){} }); }
 
 // ─── Paint ────────────────────────────────────────────────────────────────────
 function handlePaint(e) {
@@ -594,7 +652,7 @@ function setupMobile() {
     sb.addEventListener('touchend',()=>mob.sprint=false);
 }
 
-// ─── Animate ──────────────────────────────────────────────────────────────────
+// ─── Animate & Void Death Logic ───────────────────────────────────────────────
 let netT=0;
 
 function animate() {
@@ -614,6 +672,25 @@ function animate() {
     player.update(mk,sprinting,delta,environment.colliders);
     updateCamera();
     tickRound(delta);
+
+    // VOID DEATH
+    if (player.group.position.y < -3) {
+        if (roundState === 'playing') {
+            if (myRole === 'seeker' && !taggedSeekers.has(myPeerId)) {
+                taggedSeekers.add(myPeerId);
+                broadcastAll({ type:'tagged', pid:myPeerId, round:roundNumber });
+                handleTagged(myPeerId);
+            } else if (myRole === 'hunter' && amIHost) {
+                // If hunter falls off, they instantly lose!
+                broadcastAll({ type:'round_end', hunterWon: false, round:roundNumber });
+                endRound(false);
+            }
+        } else {
+            // Respawn up top if in lobby
+            player.group.position.set((Math.random()-0.5)*4, 5, (Math.random()-0.5)*4);
+            player.velocity.set(0,0,0);
+        }
+    }
 
     netT+=delta;
     if (netT>0.05) {
