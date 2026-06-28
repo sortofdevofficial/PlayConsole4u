@@ -5,462 +5,334 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PlayConsole4u</title>
 <link rel="icon" type="image/png" href="favicon.png">
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-:root{
-  --bg:#f4f2ee;--bg2:#ece9e3;--surface:#fff;--border:#e2ddd6;
-  --accent:#5b3af7;--accent2:#8b6fff;--accent3:#ff4f7b;--text:#1a1625;--text2:#6b6579;--text3:#a09ab0;--green:#16a34a;
-  --shadow:0 2px 16px rgba(91,58,247,.07);--shadow2:0 8px 32px rgba(91,58,247,.12);
-  --lite:#f59e0b;--lite2:#fbbf24;
-}
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#f4f2ee;--s:#fff;--b:#e2ddd6;--a:#5b3af7;--a2:#8b6fff;--a3:#ff4f7b;--t:#1a1625;--t2:#6b6579;--t3:#a09ab0;--g:#16a34a;--sh:0 2px 16px rgba(91,58,247,.07);--sh2:0 8px 32px rgba(91,58,247,.12);--am:#f59e0b}
+*{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
-body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--t);min-height:100vh}
 a{text-decoration:none}
-.wrap{position:relative;z-index:1;max-width:1200px;margin:0 auto;padding:28px 32px 60px}
-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:44px;animation:slideDown .4s ease both}
+.w{max-width:1200px;margin:0 auto;padding:28px 32px 60px}
+/* Header */
+header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:40px;animation:sd .4s ease both}
 .logo{display:flex;align-items:center;gap:10px;font-family:'Syne',sans-serif;font-size:15px;font-weight:800;letter-spacing:3px}
-.logo-box{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 4px 14px rgba(91,58,247,.28)}
-.header-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
-#sign-in-btn{display:flex;align-items:center;gap:8px;background:var(--surface);color:var(--text);border:1.5px solid var(--border);padding:8px 16px;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:.18s;box-shadow:var(--shadow)}
-#sign-in-btn:hover{border-color:var(--accent2);box-shadow:var(--shadow2);transform:translateY(-1px)}
-#sign-in-btn img{width:15px;height:15px}
-#user-chip{display:none;align-items:center;gap:10px;background:var(--surface);border:1.5px solid var(--border);border-radius:999px;padding:4px 14px 4px 4px;cursor:pointer;transition:.18s;box-shadow:var(--shadow)}
-#user-chip:hover{border-color:var(--accent);box-shadow:var(--shadow2);transform:translateY(-1px)}
-.u-badge{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;flex-shrink:0;overflow:hidden;background:#ccc;box-shadow:0 2px 6px rgba(0,0,0,.1)}
-.u-badge img{width:100%;height:100%;object-fit:cover;display:block}
-#user-chip .uname{font-size:13px;font-weight:700;color:var(--text);max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-
-/* Lite badge on chip */
-.lite-chip-badge{font-size:9px;font-weight:800;letter-spacing:.8px;background:linear-gradient(135deg,var(--lite),var(--lite2));color:#fff;padding:2px 7px;border-radius:999px;margin-left:2px;box-shadow:0 2px 6px rgba(245,158,11,.35)}
-
-.icon-btn{width:34px;height:34px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface);color:var(--text2);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.18s;font-size:15px;box-shadow:var(--shadow)}
-.icon-btn:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-1px);box-shadow:var(--shadow2)}
-.badge{font-size:10px;font-weight:700;background:var(--surface);color:var(--green);padding:6px 13px;border-radius:999px;border:1.5px solid rgba(22,163,74,.2);display:flex;align-items:center;gap:6px;box-shadow:var(--shadow)}
+.logo-box{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--a),var(--a2));display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 4px 14px rgba(91,58,247,.28)}
+.hr{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+#sin{display:flex;align-items:center;gap:8px;background:var(--s);color:var(--t);border:1.5px solid var(--b);padding:8px 16px;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:.18s;box-shadow:var(--sh)}
+#sin:hover{border-color:var(--a2);box-shadow:var(--sh2);transform:translateY(-1px)}
+#sin img{width:15px;height:15px}
+#chip{display:none;align-items:center;gap:8px;background:var(--s);border:1.5px solid var(--b);border-radius:999px;padding:4px 14px 4px 4px;cursor:pointer;transition:.18s;box-shadow:var(--sh)}
+#chip:hover{border-color:var(--a);box-shadow:var(--sh2);transform:translateY(-1px)}
+.ubadge{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;overflow:hidden;background:#ccc}
+.ubadge img{width:100%;height:100%;object-fit:cover}
+.uname{font-size:13px;font-weight:700;max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lite-pip{font-size:9px;font-weight:800;background:linear-gradient(135deg,var(--am),#fbbf24);color:#fff;padding:2px 7px;border-radius:999px;letter-spacing:.8px}
+.ibtn{width:34px;height:34px;border-radius:10px;border:1.5px solid var(--b);background:var(--s);color:var(--t2);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.18s;font-size:15px;box-shadow:var(--sh)}
+.ibtn:hover{border-color:var(--a);color:var(--a);transform:translateY(-1px);box-shadow:var(--sh2)}
+.onbadge{font-size:10px;font-weight:700;background:var(--s);color:var(--g);padding:6px 13px;border-radius:999px;border:1.5px solid rgba(22,163,74,.2);display:flex;align-items:center;gap:6px;box-shadow:var(--sh)}
 .dot{width:6px;height:6px;border-radius:50%;background:#22c55e;animation:dp 2s ease infinite}
 @keyframes dp{0%,100%{box-shadow:0 0 0 2px rgba(34,197,94,.2)}50%{box-shadow:0 0 0 6px rgba(34,197,94,0)}}
+/* Hero */
+.hero{margin-bottom:32px;animation:fu .45s .05s ease both}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;background:rgba(91,58,247,.07);border:1.5px solid rgba(91,58,247,.13);border-radius:999px;padding:5px 14px;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--a);margin-bottom:14px}
+.hero h1{font-family:'Syne',sans-serif;font-size:clamp(26px,4vw,50px);font-weight:800;line-height:1.1;letter-spacing:-1px;margin-bottom:10px}
+.hero h1 span{background:linear-gradient(135deg,var(--a),var(--a3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero p{font-size:15px;color:var(--t2);line-height:1.6;max-width:480px}
+/* Stats */
+.stats{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:28px;animation:fu .45s .1s ease both}
+.sc{background:var(--s);border:1.5px solid var(--b);border-radius:14px;padding:14px 20px;display:flex;flex-direction:column;gap:2px;box-shadow:var(--sh);transition:.18s;min-width:100px}
+.sc:hover{transform:translateY(-2px);box-shadow:var(--sh2);border-color:rgba(91,58,247,.18)}
+.sv{font-family:'Syne',sans-serif;font-size:22px;font-weight:800}
+.sl{font-size:11px;font-weight:600;color:var(--t3);letter-spacing:.4px}
 
-.hero{margin-bottom:36px;animation:fadeUp .45s .05s ease both}
-.hero-eyebrow{display:inline-flex;align-items:center;gap:8px;background:rgba(91,58,247,.07);border:1.5px solid rgba(91,58,247,.13);border-radius:999px;padding:5px 14px;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--accent);margin-bottom:16px}
-.hero h1{font-family:'Syne',sans-serif;font-size:clamp(26px,4vw,50px);font-weight:800;line-height:1.1;letter-spacing:-1px;margin-bottom:11px}
-.hero h1 span{background:linear-gradient(135deg,var(--accent),var(--accent3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.hero p{font-size:15px;color:var(--text2);line-height:1.6;max-width:480px}
+/* ── Subscription Banner ── */
+#sub-banner{display:none;margin-bottom:28px;border-radius:20px;overflow:hidden;border:2px solid var(--am);box-shadow:0 8px 40px rgba(245,158,11,.2);animation:fu .45s .12s ease both;background:#1c1000}
+.sbi{display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;padding:22px 26px}
+.sbl-eye{font-size:9px;font-weight:800;letter-spacing:3px;text-transform:uppercase;color:var(--am);margin-bottom:8px;display:flex;align-items:center;gap:7px}
+.sbl-eye i{width:6px;height:6px;border-radius:50%;background:var(--am);display:inline-block;animation:glow 1.5s ease infinite}
+@keyframes glow{0%,100%{box-shadow:0 0 8px var(--am)}50%{box-shadow:0 0 18px var(--am);opacity:.5}}
+.sbl-h{font-family:'Syne',sans-serif;font-size:19px;font-weight:800;color:#fff;line-height:1.2;margin-bottom:5px}
+.sbl-h span{color:var(--am)}
+.sbl-p{font-size:12px;color:rgba(255,255,255,.55);line-height:1.6;max-width:440px}
+.sbr{display:flex;flex-direction:column;align-items:flex-end;gap:10px;flex-shrink:0}
+.sbr-price{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:var(--am);line-height:1}
+.sbr-sub{font-size:10px;color:rgba(255,255,255,.35);margin-top:3px}
+.dc-btn{display:inline-flex;align-items:center;gap:8px;background:#5865f2;color:#fff;border:none;padding:11px 20px;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:.18s;white-space:nowrap;box-shadow:0 4px 16px rgba(88,101,242,.35);text-decoration:none}
+.dc-btn:hover{filter:brightness(1.1);transform:translateY(-2px)}
+.dc-btn svg{width:18px;height:18px}
 
-.stats{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:36px;animation:fadeUp .45s .1s ease both}
-.stat-card{background:var(--surface);border:1.5px solid var(--border);border-radius:14px;padding:14px 20px;display:flex;flex-direction:column;gap:2px;box-shadow:var(--shadow);transition:.18s;min-width:108px}
-.stat-card:hover{transform:translateY(-2px);box-shadow:var(--shadow2);border-color:rgba(91,58,247,.18)}
-.stat-val{font-family:'Syne',sans-serif;font-size:22px;font-weight:800}
-.stat-lbl{font-size:11px;font-weight:600;color:var(--text3);letter-spacing:.4px}
-
-/* ── SUBSCRIPTION BANNER ───────────────────────────────────────────────────── */
-#sub-banner{
-  display:none;
-  margin-bottom:28px;
-  background:linear-gradient(135deg,#1a0a00 0%,#3d1c00 50%,#1a0a00 100%);
-  border-radius:20px;padding:0;overflow:hidden;
-  border:2px solid var(--lite);
-  box-shadow:0 8px 40px rgba(245,158,11,.28),0 0 0 1px rgba(245,158,11,.1);
-  animation:fadeUp .45s .12s ease both;
-  position:relative;
-}
-#sub-banner::before{
-  content:'';position:absolute;inset:0;
-  background:linear-gradient(135deg,rgba(245,158,11,.08),rgba(251,191,36,.04));
-  pointer-events:none;
-}
-.sub-banner-inner{
-  display:flex;align-items:center;justify-content:space-between;
-  gap:20px;flex-wrap:wrap;padding:22px 28px;
-  position:relative;z-index:1;
-}
-.sub-banner-left{}
-.sub-banner-eyebrow{
-  display:inline-flex;align-items:center;gap:8px;
-  font-size:10px;font-weight:800;letter-spacing:3px;text-transform:uppercase;
-  color:var(--lite);margin-bottom:8px;
-}
-.sub-banner-eyebrow span{
-  display:inline-block;width:6px;height:6px;border-radius:50%;
-  background:var(--lite);box-shadow:0 0 8px var(--lite);
-  animation:litepulse 1.5s ease infinite;
-}
-@keyframes litepulse{0%,100%{opacity:1;box-shadow:0 0 8px var(--lite)}50%{opacity:.5;box-shadow:0 0 18px var(--lite)}}
-.sub-banner-title{
-  font-family:'Syne',sans-serif;font-size:20px;font-weight:800;
-  color:#fff;line-height:1.2;margin-bottom:5px;
-}
-.sub-banner-title span{color:var(--lite);}
-.sub-banner-desc{font-size:12.5px;color:rgba(255,255,255,.6);line-height:1.5;max-width:460px;}
-.sub-banner-right{display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0}
-.sub-price-row{text-align:right;}
-.sub-price-first{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:var(--lite);line-height:1;}
-.sub-price-note{font-size:10px;color:rgba(255,255,255,.45);margin-top:2px;}
-.sub-price-renewal{font-size:11px;color:rgba(255,255,255,.35);}
-.sub-discord-btn{
-  display:inline-flex;align-items:center;gap:8px;
-  background:linear-gradient(135deg,#5865f2,#7289da);
-  color:#fff;border:none;padding:11px 20px;border-radius:12px;
-  font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;
-  cursor:pointer;transition:.18s;white-space:nowrap;
-  box-shadow:0 4px 16px rgba(88,101,242,.35);
-  text-decoration:none;
-}
-.sub-discord-btn:hover{filter:brightness(1.1);transform:translateY(-2px);box-shadow:0 8px 24px rgba(88,101,242,.45);}
-.sub-discord-btn svg{width:18px;height:18px;flex-shrink:0}
-/* ─────────────────────────────────────────────────────────────────────────── */
-
-.slabel{font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--text3);margin-bottom:16px;display:flex;align-items:center;gap:10px}
-.slabel::after{content:'';flex:1;height:1px;background:var(--border)}
-
-.main-layout{display:grid;grid-template-columns:1fr 356px;gap:28px;align-items:start;animation:fadeUp .45s .18s ease both}
-@media(max-width:900px){.main-layout{grid-template-columns:1fr}}
-
-.grid{display:flex;flex-direction:column;gap:16px}
-.card{background:var(--surface);border:1.5px solid var(--border);border-radius:20px;overflow:hidden;cursor:pointer;transition:.2s;box-shadow:var(--shadow);display:flex}
-.card:hover{transform:translateY(-3px);box-shadow:var(--shadow2);border-color:rgba(91,58,247,.22)}
-.card.active{border-color:var(--accent);box-shadow:0 8px 28px rgba(91,58,247,.18)}
-.cimg{width:180px;flex-shrink:0;background:linear-gradient(135deg,#ede9fe,#fce7f3);position:relative;overflow:hidden}
-.cimg img{width:100%;height:100%;object-fit:cover;transition:transform .28s ease}
-.card:hover .cimg img{transform:scale(1.04)}
-.cimg-placeholder{width:100%;height:100%;min-height:120px;display:flex;align-items:center;justify-content:center;font-size:40px}
-.cbody{padding:18px 20px;flex:1;display:flex;flex-direction:column;justify-content:center}
-.ctag{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--green);margin-bottom:5px;display:flex;align-items:center;gap:5px}
-.ctag::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--green)}
-.ctag.locked{color:var(--lite);}
-.ctag.locked::before{background:var(--lite);}
-.cname{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;margin-bottom:6px}
-.cdesc{font-size:12px;color:var(--text2);line-height:1.5}
+/* Featured */
+.feat{margin-bottom:28px;background:linear-gradient(135deg,var(--a),#7c3aed,var(--a3));border-radius:22px;padding:26px 30px;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;box-shadow:0 10px 40px rgba(91,58,247,.22);animation:fu .45s .15s ease both;position:relative;overflow:hidden}
+.feat::before{content:'🎮';position:absolute;right:24px;top:50%;transform:translateY(-50%);font-size:80px;opacity:.1;pointer-events:none}
+.feat h2{font-family:'Syne',sans-serif;font-size:21px;font-weight:800;color:#fff;line-height:1.2;margin-bottom:5px}
+.feat p{font-size:13px;color:rgba(255,255,255,.72);line-height:1.5}
+.feat-btn{background:#fff;color:var(--a);border:none;padding:11px 22px;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:.18s;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.14)}
+.feat-btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.18)}
+/* Layout */
+.layout{display:grid;grid-template-columns:1fr 356px;gap:28px;align-items:start;animation:fu .45s .18s ease both}
+@media(max-width:900px){.layout{grid-template-columns:1fr}}
+.slabel{font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--t3);margin-bottom:16px;display:flex;align-items:center;gap:10px}
+.slabel::after{content:'';flex:1;height:1px;background:var(--b)}
+/* Cards */
+.grid{display:flex;flex-direction:column;gap:14px}
+.card{background:var(--s);border:1.5px solid var(--b);border-radius:20px;overflow:hidden;cursor:pointer;transition:.2s;box-shadow:var(--sh);display:flex}
+.card:hover{transform:translateY(-3px);box-shadow:var(--sh2);border-color:rgba(91,58,247,.22)}
+.card.active{border-color:var(--a);box-shadow:0 8px 28px rgba(91,58,247,.18)}
+.ci{width:180px;flex-shrink:0;background:linear-gradient(135deg,#ede9fe,#fce7f3);position:relative;overflow:hidden}
+.ci img{width:100%;height:100%;object-fit:cover;transition:transform .28s}
+.card:hover .ci img{transform:scale(1.04)}
+.ph{width:100%;height:100%;min-height:120px;display:flex;align-items:center;justify-content:center;font-size:40px}
+.cb{padding:18px 20px;flex:1;display:flex;flex-direction:column;justify-content:center}
+.ctag{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--g);margin-bottom:5px;display:flex;align-items:center;gap:5px}
+.ctag::before{content:'';width:5px;height:5px;border-radius:50%;background:currentColor}
+.ctag.lt{color:var(--am)}
+.cn{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;margin-bottom:5px}
+.cd{font-size:12px;color:var(--t2);line-height:1.5}
 .ctags{display:flex;gap:5px;flex-wrap:wrap;margin-top:10px}
-.cpill{font-size:9px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;padding:3px 9px;border-radius:999px;background:rgba(91,58,247,.07);color:var(--accent);border:1.5px solid rgba(91,58,247,.13)}
-.cpill.lite-pill{background:rgba(245,158,11,.1);color:var(--lite);border-color:rgba(245,158,11,.25);}
-.card.soon{opacity:.52;cursor:default;pointer-events:none}
-
-/* Lite-locked card overlay */
-.card.lite-locked{position:relative;cursor:pointer;}
-.card.lite-locked .cimg::after{
-  content:'🔒 LITE';position:absolute;inset:0;
-  background:rgba(245,158,11,.15);
-  display:flex;align-items:center;justify-content:center;
-  font-family:'Syne',sans-serif;font-size:13px;font-weight:800;
-  color:var(--lite);letter-spacing:2px;
-  backdrop-filter:blur(1px);
-}
-
-.featured{margin-bottom:28px;background:linear-gradient(135deg,var(--accent) 0%,#7c3aed 50%,var(--accent3) 100%);border-radius:22px;padding:26px 30px;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;box-shadow:0 10px 40px rgba(91,58,247,.22);animation:fadeUp .45s .15s ease both;position:relative;overflow:hidden}
-.featured::before{content:'🎮';position:absolute;right:24px;top:50%;transform:translateY(-50%);font-size:80px;opacity:.1;pointer-events:none}
-.featured h2{font-family:'Syne',sans-serif;font-size:21px;font-weight:800;color:#fff;line-height:1.2;margin-bottom:5px}
-.featured p{font-size:13px;color:rgba(255,255,255,.72);line-height:1.5}
-.featured-btn{background:#fff;color:var(--accent);border:none;padding:11px 22px;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:.18s;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.14)}
-.featured-btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.18)}
-
-.sidebar-col{display:flex;flex-direction:column;gap:14px;position:sticky;top:20px;align-self:start}
-@media(max-width:900px){.sidebar-col{position:static}}
-.widget-label{font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--text3);display:flex;align-items:center;gap:8px;margin-bottom:2px}
-.widget-label.yt::before{content:'';width:8px;height:8px;border-radius:50%;background:#ef4444;box-shadow:0 0 0 3px rgba(239,68,68,.15);animation:ytb 1.5s linear infinite}
+.cp{font-size:9px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;padding:3px 9px;border-radius:999px;background:rgba(91,58,247,.07);color:var(--a);border:1.5px solid rgba(91,58,247,.13)}
+.cp.lp{background:rgba(245,158,11,.1);color:var(--am);border-color:rgba(245,158,11,.25)}
+.card.soon{opacity:.5;cursor:default;pointer-events:none}
+/* Lite lock overlay on card image */
+.card.lk .ci::after{content:'🔒 LITE';position:absolute;inset:0;background:rgba(245,158,11,.13);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:12px;font-weight:800;color:var(--am);letter-spacing:2px;backdrop-filter:blur(1px)}
+/* Sidebar widgets */
+.sid{display:flex;flex-direction:column;gap:14px;position:sticky;top:20px;align-self:start}
+@media(max-width:900px){.sid{position:static}}
+.wl{font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--t3);display:flex;align-items:center;gap:8px;margin-bottom:2px}
+.wl.yt::before{content:'';width:8px;height:8px;border-radius:50%;background:#ef4444;box-shadow:0 0 0 3px rgba(239,68,68,.15);animation:ytb 1.5s linear infinite}
 @keyframes ytb{50%{opacity:0}}
-.widget-label.dc::before{content:'';width:8px;height:8px;border-radius:50%;background:#5865f2;box-shadow:0 0 0 3px rgba(88,101,242,.18)}
-.yt-frame-wrap{width:100%;border-radius:16px;overflow:hidden;border:1.5px solid var(--border);box-shadow:var(--shadow);line-height:0}
-.dc-frame-wrap{width:100%;border-radius:16px;overflow:hidden;line-height:0;background:#1e1f22;border:1.5px solid #3a3d44;box-shadow:var(--shadow2)}
-.yt-frame-wrap iframe,.dc-frame-wrap iframe{display:block;width:100%;border:none;background:transparent}
-.extend-btn{display:flex;align-items:center;justify-content:center;width:100%;padding:10px 14px;margin:2px 0 10px;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border:1px solid rgba(91,58,247,.18);box-shadow:0 6px 18px rgba(91,58,247,.16);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:800;transition:.18s}
-.extend-btn:hover{transform:translateY(-2px);filter:brightness(1.05);box-shadow:0 10px 26px rgba(91,58,247,.22)}
-
-#veil{position:fixed;inset:0;z-index:150;background:rgba(26,22,37,0);pointer-events:none;transition:background .22s ease}
+.wl.dc::before{content:'';width:8px;height:8px;border-radius:50%;background:#5865f2;box-shadow:0 0 0 3px rgba(88,101,242,.18)}
+.yfw{width:100%;border-radius:16px;overflow:hidden;border:1.5px solid var(--b);box-shadow:var(--sh);line-height:0}
+.dfw{width:100%;border-radius:16px;overflow:hidden;line-height:0;background:#1e1f22;border:1.5px solid #3a3d44;box-shadow:var(--sh2)}
+.yfw iframe,.dfw iframe{display:block;width:100%;border:none}
+.ext{display:flex;align-items:center;justify-content:center;width:100%;padding:10px 14px;margin:2px 0 10px;border-radius:12px;background:linear-gradient(135deg,var(--a),var(--a2));color:#fff;border:none;box-shadow:0 6px 18px rgba(91,58,247,.16);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:800;transition:.18s;text-decoration:none}
+.ext:hover{transform:translateY(-2px);filter:brightness(1.05)}
+/* Veil + slide panel */
+#veil{position:fixed;inset:0;z-index:150;background:rgba(26,22,37,0);pointer-events:none;transition:background .22s}
 #veil.on{background:rgba(26,22,37,.28);pointer-events:all;backdrop-filter:blur(3px)}
-#sidebar{position:fixed;top:0;right:0;height:100%;width:0;overflow:hidden;background:var(--surface);border-left:1px solid transparent;display:flex;flex-direction:column;transition:width .24s cubic-bezier(.4,0,.2,1),padding .22s;z-index:200;box-shadow:-6px 0 32px rgba(26,22,37,.07)}
-#sidebar.open{width:380px;border-left-color:var(--border);padding:24px 22px 28px}
-.sb-x{align-self:flex-end;width:32px;height:32px;border-radius:9px;border:1.5px solid var(--border);background:transparent;font-size:12px;cursor:pointer;color:var(--text2);display:flex;align-items:center;justify-content:center;transition:.15s}
-.sb-x:hover{background:rgba(91,58,247,.07);border-color:var(--accent);color:var(--accent)}
-.sb-imgw{margin:14px 0 10px;border-radius:14px;overflow:hidden;border:1.5px solid var(--border);box-shadow:var(--shadow)}
-.sb-imgw img{width:100%;display:block;aspect-ratio:16/9;object-fit:cover}
-.sb-t{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;margin-bottom:6px}
-.sb-d{font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:12px}
-.sb-tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
-.pill{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:4px 10px;border-radius:999px;background:rgba(91,58,247,.07);color:var(--accent);border:1.5px solid rgba(91,58,247,.13)}
-.sb-log-label{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text3);margin-bottom:8px;display:flex;align-items:center;gap:6px}
-.sb-log-label::after{content:'';flex:1;height:1px;background:var(--border)}
-.update-log{display:flex;flex-direction:column;gap:7px;margin-bottom:16px;max-height:160px;overflow-y:auto;padding-right:2px}
-.update-log::-webkit-scrollbar{width:3px}
-.update-log::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
-.log-entry{display:flex;gap:10px;align-items:flex-start}
-.log-ver{font-family:'Syne',sans-serif;font-size:9px;font-weight:800;color:var(--accent);background:rgba(91,58,247,.07);border:1.5px solid rgba(91,58,247,.13);border-radius:6px;padding:2px 6px;white-space:nowrap}
-.log-text{font-size:11px;color:var(--text2);line-height:1.5}
-.sb-play{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border:none;padding:14px;font-family:'Syne',sans-serif;font-size:14px;font-weight:800;letter-spacing:2px;border-radius:13px;cursor:pointer;margin-top:auto;transition:.18s;box-shadow:0 4px 18px rgba(91,58,247,.28);width:100%}
-.sb-play:hover{filter:brightness(1.08);transform:translateY(-1px);box-shadow:0 8px 28px rgba(91,58,247,.36)}
-.sb-play.lite-locked-btn{background:linear-gradient(135deg,var(--lite),var(--lite2));box-shadow:0 4px 18px rgba(245,158,11,.28);}
-.sb-play.lite-locked-btn:hover{box-shadow:0 8px 28px rgba(245,158,11,.4);}
-
-/* Lite gate inside sidebar */
-.sb-lite-gate{background:rgba(245,158,11,.07);border:1.5px solid rgba(245,158,11,.2);border-radius:12px;padding:14px 16px;margin-bottom:10px;font-size:12px;color:var(--text2);line-height:1.6;display:none;}
-.sb-lite-gate b{color:var(--lite);}
-
-#modal-bg{display:none;position:fixed;inset:0;z-index:500;background:rgba(26,22,37,.38);backdrop-filter:blur(7px);align-items:center;justify-content:center}
-#modal-bg.open{display:flex}
-.modal{background:var(--surface);border:1.5px solid var(--border);border-radius:22px;padding:28px;width:min(380px,94vw);display:flex;flex-direction:column;gap:18px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 70px rgba(26,22,37,.16);animation:popIn .2s ease both}
-@keyframes popIn{from{opacity:0;transform:scale(.96) translateY(8px)}}
-.modal h2{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;letter-spacing:1px}
-.modal label{font-size:10px;font-weight:700;letter-spacing:2px;color:var(--text3);text-transform:uppercase;display:block;margin-bottom:6px}
-.modal input{width:100%;background:var(--bg2);border:1.5px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;padding:10px 13px;border-radius:10px;outline:none;transition:.15s}
-.modal input:focus{border-color:var(--accent);background:#fff;box-shadow:0 0 0 3px rgba(91,58,247,.09)}
+#panel{position:fixed;top:0;right:0;height:100%;width:0;overflow:hidden;background:var(--s);border-left:1px solid transparent;display:flex;flex-direction:column;transition:width .24s cubic-bezier(.4,0,.2,1),padding .22s;z-index:200;box-shadow:-6px 0 32px rgba(26,22,37,.07)}
+#panel.open{width:380px;border-left-color:var(--b);padding:24px 22px 28px}
+.px{align-self:flex-end;width:32px;height:32px;border-radius:9px;border:1.5px solid var(--b);background:transparent;font-size:12px;cursor:pointer;color:var(--t2);display:flex;align-items:center;justify-content:center;transition:.15s}
+.px:hover{background:rgba(91,58,247,.07);border-color:var(--a);color:var(--a)}
+.piw{margin:14px 0 10px;border-radius:14px;overflow:hidden;border:1.5px solid var(--b);box-shadow:var(--sh)}
+.piw img{width:100%;display:block;aspect-ratio:16/9;object-fit:cover}
+.pt{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;margin-bottom:6px}
+.pd{font-size:13px;color:var(--t2);line-height:1.7;margin-bottom:12px}
+.ptags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.pill{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:4px 10px;border-radius:999px;background:rgba(91,58,247,.07);color:var(--a);border:1.5px solid rgba(91,58,247,.13)}
+.plg{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--t3);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.plg::after{content:'';flex:1;height:1px;background:var(--b)}
+.logs{display:flex;flex-direction:column;gap:7px;margin-bottom:16px;max-height:140px;overflow-y:auto}
+.logs::-webkit-scrollbar{width:3px}
+.logs::-webkit-scrollbar-thumb{background:var(--b);border-radius:3px}
+.le{display:flex;gap:10px;align-items:flex-start}
+.lv{font-family:'Syne',sans-serif;font-size:9px;font-weight:800;color:var(--a);background:rgba(91,58,247,.07);border:1.5px solid rgba(91,58,247,.13);border-radius:6px;padding:2px 6px;white-space:nowrap}
+.lt2{font-size:11px;color:var(--t2);line-height:1.5}
+/* Lite gate in panel */
+.pgate{background:rgba(245,158,11,.07);border:1.5px solid rgba(245,158,11,.18);border-radius:12px;padding:14px 16px;margin-bottom:12px;font-size:12px;color:var(--t2);line-height:1.7;display:none}
+.pgate b{color:var(--am)}
+.pgate a{color:var(--am);font-weight:700}
+.pb{background:linear-gradient(135deg,var(--a),var(--a2));color:#fff;border:none;padding:14px;font-family:'Syne',sans-serif;font-size:14px;font-weight:800;letter-spacing:2px;border-radius:13px;cursor:pointer;margin-top:auto;transition:.18s;box-shadow:0 4px 18px rgba(91,58,247,.28);width:100%}
+.pb:hover{filter:brightness(1.08);transform:translateY(-1px)}
+.pb.lkb{background:linear-gradient(135deg,var(--am),#fbbf24);box-shadow:0 4px 18px rgba(245,158,11,.28)}
+/* Modal */
+#mbg{display:none;position:fixed;inset:0;z-index:500;background:rgba(26,22,37,.38);backdrop-filter:blur(7px);align-items:center;justify-content:center}
+#mbg.open{display:flex}
+.modal{background:var(--s);border:1.5px solid var(--b);border-radius:22px;padding:28px;width:min(380px,94vw);display:flex;flex-direction:column;gap:18px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 70px rgba(26,22,37,.16);animation:pi .2s ease both}
+@keyframes pi{from{opacity:0;transform:scale(.96) translateY(8px)}}
+.modal h2{font-family:'Syne',sans-serif;font-size:18px;font-weight:800}
+.modal label{font-size:10px;font-weight:700;letter-spacing:2px;color:var(--t3);text-transform:uppercase;display:block;margin-bottom:6px}
+.mi{width:100%;background:#ece9e3;border:1.5px solid var(--b);color:var(--t);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;padding:10px 13px;border-radius:10px;outline:none;transition:.15s}
+.mi:focus{border-color:var(--a);background:#fff;box-shadow:0 0 0 3px rgba(91,58,247,.09)}
 .mrow{display:flex;gap:8px}
-.mbtn{flex:1;padding:11px;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:.15s}
-.mbtn.pri{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;box-shadow:0 4px 14px rgba(91,58,247,.22)}
-.mbtn.pri:hover{filter:brightness(1.07);transform:translateY(-1px)}
-.mbtn.red{background:rgba(239,68,68,.07);color:#ef4444;border:1.5px solid rgba(239,68,68,.2)}
-.mbtn.red:hover{background:rgba(239,68,68,.12)}
-.mbtn.ghost{background:var(--bg2);color:var(--text2);border:1.5px solid var(--border)}
-.mbtn.ghost:hover{border-color:var(--accent);color:var(--accent)}
-.mdiv{border:none;border-top:1px solid var(--border)}
-.mstat{display:flex;justify-content:space-between;font-size:12px;padding:3px 0}
-.mstat span:first-child{color:var(--text2);font-weight:600}
-.mstat span:last-child{font-weight:700}
-.mmsg{font-size:11px;font-weight:700;text-align:center;min-height:16px}
-.mmsg.ok{color:#16a34a}.mmsg.err{color:#ef4444}
-.times-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
-.tnode{background:var(--bg2);border-radius:9px;padding:7px 4px;text-align:center;border:1.5px solid var(--border);transition:.15s}
-.tnode:hover{border-color:rgba(91,58,247,.28);background:#fff}
-.tnode .tn{font-size:9px;font-weight:700;color:var(--text3);letter-spacing:1px}
-.tnode .tt{font-size:10px;font-weight:700;color:var(--accent);margin-top:2px}
-.fs-wl-row{display:flex;gap:10px}
-.fs-wl-card{flex:1;background:var(--bg2);border:1.5px solid var(--border);border-radius:12px;padding:12px;text-align:center;transition:.15s}
-.fs-wl-card:hover{border-color:rgba(91,58,247,.2)}
-.fs-wl-val{font-family:'Syne',sans-serif;font-size:22px;font-weight:800}
-.fs-wl-lbl{font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.5px;margin-top:2px}
+.mb{flex:1;padding:11px;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:.15s}
+.mb.pri{background:linear-gradient(135deg,var(--a),var(--a2));color:#fff;box-shadow:0 4px 14px rgba(91,58,247,.22)}
+.mb.pri:hover{filter:brightness(1.07);transform:translateY(-1px)}
+.mb.red{background:rgba(239,68,68,.07);color:#ef4444;border:1.5px solid rgba(239,68,68,.2)}
+.mb.red:hover{background:rgba(239,68,68,.12)}
+.mb.gh{background:#ece9e3;color:var(--t2);border:1.5px solid var(--b)}
+.mb.gh:hover{border-color:var(--a);color:var(--a)}
+hr{border:none;border-top:1px solid var(--b)}
+.ms{display:flex;justify-content:space-between;font-size:12px;padding:3px 0}
+.ms span:first-child{color:var(--t2);font-weight:600}
+.ms span:last-child{font-weight:700}
+.mm{font-size:11px;font-weight:700;text-align:center;min-height:16px}
+.mm.ok{color:#16a34a}.mm.err{color:#ef4444}
+.tg{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.tn{background:#ece9e3;border-radius:9px;padding:7px 4px;text-align:center;border:1.5px solid var(--b);transition:.15s}
+.tn:hover{border-color:rgba(91,58,247,.28);background:#fff}
+.tn .n{font-size:9px;font-weight:700;color:var(--t3);letter-spacing:1px}
+.tn .tt{font-size:10px;font-weight:700;color:var(--a);margin-top:2px}
+.wlr{display:flex;gap:10px}
+.wc{flex:1;background:#ece9e3;border:1.5px solid var(--b);border-radius:12px;padding:12px;text-align:center}
+.wv{font-family:'Syne',sans-serif;font-size:22px;font-weight:800}
+.wl2{font-size:10px;font-weight:700;color:var(--t3);letter-spacing:.5px;margin-top:2px}
+/* Subscription block in modal */
+.subblock{background:linear-gradient(135deg,rgba(245,158,11,.06),rgba(251,191,36,.02));border:1.5px solid rgba(245,158,11,.2);border-radius:14px;padding:16px}
+.sbtitle{font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:var(--am);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.sbact{background:linear-gradient(135deg,var(--am),#fbbf24);color:#fff;font-size:9px;font-weight:800;padding:2px 8px;border-radius:999px;letter-spacing:1px}
 
-/* Subscription section in modal */
-.sub-section{background:linear-gradient(135deg,rgba(245,158,11,.06),rgba(251,191,36,.03));border:1.5px solid rgba(245,158,11,.2);border-radius:14px;padding:16px;}
-.sub-section-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:var(--lite);margin-bottom:10px;display:flex;align-items:center;gap:8px;}
-.sub-active-badge{background:linear-gradient(135deg,var(--lite),var(--lite2));color:#fff;font-size:9px;font-weight:800;padding:2px 8px;border-radius:999px;letter-spacing:1px;}
-.sub-inactive-note{font-size:11px;color:var(--text2);line-height:1.6;margin-bottom:10px;}
-.sub-activate-input{display:flex;gap:7px;margin-top:8px;}
-.sub-activate-input input{flex:1;background:var(--bg2);border:1.5px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:12px;padding:8px 11px;border-radius:8px;outline:none;transition:.15s;}
-.sub-activate-input input:focus{border-color:var(--lite);box-shadow:0 0 0 3px rgba(245,158,11,.1);}
-.sub-activate-btn{background:linear-gradient(135deg,var(--lite),var(--lite2));color:#fff;border:none;padding:8px 14px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:.15s;white-space:nowrap;}
-.sub-activate-btn:hover{filter:brightness(1.07);}
-
-@keyframes slideDown{from{opacity:0;transform:translateY(-14px)}}
-@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}}
-@media(max-width:640px){
-  .wrap{padding:14px 12px 40px}
-  .hero h1{font-size:26px}
-  .stats{gap:8px}
-  .featured{padding:18px}
-  .cimg{width:110px}
-  #sidebar.open{width:100vw;padding:18px 16px 24px}
-  .sub-banner-inner{flex-direction:column;align-items:flex-start}
-  .sub-banner-right{align-items:flex-start}
-}
+@keyframes sd{from{opacity:0;transform:translateY(-14px)}}
+@keyframes fu{from{opacity:0;transform:translateY(16px)}}
+@media(max-width:640px){.w{padding:14px 12px 40px}.hero h1{font-size:26px}.ci{width:110px}#panel.open{width:100vw;padding:18px 16px 24px}.sbi{flex-direction:column}.sbr{align-items:flex-start}}
 </style>
 </head>
 <body>
-<div class="wrap">
+<div class="w">
 
-  <header>
-    <div class="logo"><div class="logo-box">🎮</div>PLAYCONSOLE4U</div>
-    <div class="header-right">
-      <button id="sign-in-btn" onclick="doSignIn()">
-        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="">Sign in with Google
-      </button>
-      <div id="user-chip" onclick="openModal()">
-        <div id="u-avatar" class="u-badge"></div>
-        <span class="uname" id="u-name">Player</span>
-        <span class="lite-chip-badge" id="lite-chip-badge" style="display:none">LITE ✦</span>
-      </div>
-      <div class="icon-btn" id="settings-btn" onclick="openModal()" style="display:none" title="Settings">⚙</div>
-      <a class="icon-btn" href="leaderboard.html" title="Leaderboard">🏆</a>
-      <div class="badge"><div class="dot"></div>ONLINE</div>
+<header>
+  <div class="logo"><div class="logo-box">🎮</div>PLAYCONSOLE4U</div>
+  <div class="hr">
+    <button id="sin" onclick="doIn()"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="">Sign in with Google</button>
+    <div id="chip" onclick="openM()">
+      <div id="uav" class="ubadge"></div>
+      <span class="uname" id="uname">Player</span>
+      <span class="lite-pip" id="litepip" style="display:none">LITE ✦</span>
     </div>
-  </header>
-
-  <div class="hero">
-    <div class="hero-eyebrow">✦ Free Browser Games</div>
-    <h1>Play. Compete.<br><span>Break Records.</span></h1>
-    <p>Jump into browser games — no downloads, no installs. Just click, play, and chase your best time.</p>
+    <div class="ibtn" id="setbtn" onclick="openM()" style="display:none" title="Settings">⚙</div>
+    <a class="ibtn" href="leaderboard.html" title="Leaderboard">🏆</a>
+    <div class="onbadge"><div class="dot"></div>ONLINE</div>
   </div>
+</header>
 
-  <div class="stats">
-    <div class="stat-card"><div class="stat-val">5</div><div class="stat-lbl">Games Available</div></div>
-    <div class="stat-card"><div class="stat-val">5</div><div class="stat-lbl">Levels to Beat</div></div>
-    <div class="stat-card"><div class="stat-val" id="stat-free">Free</div><div class="stat-lbl">Always</div></div>
-    <div class="stat-card"><div class="stat-val">🏆</div><div class="stat-lbl">Live Leaderboard</div></div>
-  </div>
+<div class="hero">
+  <div class="eyebrow">✦ Free Browser Games</div>
+  <h1>Play. Compete.<br><span>Break Records.</span></h1>
+  <p>Browser games — no downloads, no installs. Click, play, chase your best time.</p>
+</div>
 
-  <!-- ── SUBSCRIPTION BANNER ── -->
-  <div id="sub-banner">
-    <div class="sub-banner-inner">
-      <div class="sub-banner-left">
-        <div class="sub-banner-eyebrow"><span></span> PLAYCONSOLE4U LITE</div>
-        <div class="sub-banner-title">Unlock <span>Premium Games</span><br>for ₹39 / month</div>
-        <div class="sub-banner-desc">
-          Get access to <b style="color:#fff">Camo Chameleon</b> and <b style="color:#fff">Tumble Life</b> — 
-          our most intense multiplayer experiences. <br>
-          First month just <b style="color:var(--lite)">₹39</b>, then ₹49/month. 
-          Purchase subscriptions in our Discord server.
-        </div>
-      </div>
-      <div class="sub-banner-right">
-        <div class="sub-price-row">
-          <div class="sub-price-first">₹39<span style="font-size:14px;color:rgba(255,255,255,.5)"> /first month</span></div>
-          <div class="sub-price-renewal">₹49/month after that</div>
-          <div class="sub-price-note">Cancel anytime · No auto-charge</div>
-        </div>
-        <a class="sub-discord-btn" href="https://discord.gg/dS4pgC9J5H" target="_blank" rel="noopener">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 00-4.885-1.515.074.074 0 00-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 00-5.487 0 12.64 12.64 0 00-.617-1.25.077.077 0 00-.079-.037A19.736 19.736 0 003.677 4.37a.07.07 0 00-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 00.031.057 19.9 19.9 0 005.993 3.03.078.078 0 00.084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 00-.041-.106 13.107 13.107 0 01-1.872-.892.077.077 0 01-.008-.128 10.2 10.2 0 00.372-.292.074.074 0 01.077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 01.078.01c.12.098.246.198.373.292a.077.077 0 01-.006.127 12.299 12.299 0 01-1.873.892.077.077 0 00-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 00.084.028 19.839 19.839 0 006.002-3.03.077.077 0 00.032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 00-.031-.03z"/></svg>
-          Buy in Discord
-        </a>
-      </div>
-    </div>
-  </div>
+<div class="stats">
+  <div class="sc"><div class="sv">5</div><div class="sl">Games</div></div>
+  <div class="sc"><div class="sv">5</div><div class="sl">CP Levels</div></div>
+  <div class="sc"><div class="sv">Free</div><div class="sl">Always</div></div>
+  <div class="sc"><div class="sv">🏆</div><div class="sl">Leaderboard</div></div>
+</div>
 
-  <div class="featured">
+<!-- Sub Banner -->
+<div id="sub-banner">
+  <div class="sbi">
     <div>
-      <h2>New? Start Here.</h2>
-      <p>Cube Platformer is the perfect intro — master wall-jumps,<br>conquer all 5 levels, and claim your spot on the board.</p>
+      <div class="sbl-eye"><i></i>PLAYCONSOLE4U LITE</div>
+      <div class="sbl-h">Unlock <span>Premium Games</span></div>
+      <div class="sbl-p">Get <b style="color:#fff">Camo Chameleon</b> &amp; <b style="color:#fff">Tumble Life</b>. First month <b style="color:var(--am)">₹39</b>, then ₹49/month.<br>Purchase subscriptions <b style="color:#fff">in our Discord server</b>.</div>
     </div>
-    <button class="featured-btn" onclick="location.href='games/CubePlatformer/game.html'">▶ &nbsp;Play Now</button>
-  </div>
-
-  <div class="main-layout">
-    <div>
-      <div class="slabel">// Games</div>
-      <div class="grid">
-
-        <div class="card" id="c1" onclick="openSB(this,'CUBE PLATFORMER','5 levels of precision platforming. Wall-jump, spin, and race to beat your best time — every second counts!','images/CubePlatformer/cubeplatformer.png','games/CubePlatformer/game.html',['PLATFORMER','5 LEVELS','WALL-JUMP','TIMER'],cubeLogs,false)">
-          <div class="cimg"><img src="images/CubePlatformer/cubeplatformer.png" alt="Cube Platformer" loading="lazy" onerror="this.style.display='none';this.parentElement.innerHTML='<div class=cimg-placeholder>🟦</div>'"></div>
-          <div class="cbody">
-            <div class="ctag">READY</div>
-            <div class="cname">Cube Platformer</div>
-            <div class="cdesc">Wall-jump across 5 precision levels. Race the clock and hit the leaderboard.</div>
-            <div class="ctags"><span class="cpill">Platformer</span><span class="cpill">5 Levels</span><span class="cpill">Wall-Jump</span><span class="cpill">Timer</span></div>
-          </div>
-        </div>
-
-        <div class="card" id="c2" onclick="openSB(this,'FLOPPYSTICKS','A wild brawl set in nature. Beat the AI or challenge a friend locally — grab weapons, go ragdoll, and win 3 rounds!','images/FloppySticks/floppysticks.png','games/FloppySticks/game.html',['BRAWLER','LOCAL PVP','WEAPONS','RAGDOLL'],floppyLogs,false)">
-          <div class="cimg" style="background:linear-gradient(135deg,#dcfce7,#bbf7d0)"><img src="images/FloppySticks/floppysticks.png" alt="FloppySticks" loading="lazy" onerror="this.style.display='none';this.parentElement.innerHTML='<div class=cimg-placeholder>🥊</div>'"></div>
-          <div class="cbody">
-            <div class="ctag">READY</div>
-            <div class="cname">FloppySticks</div>
-            <div class="cdesc">Nature brawl with ragdoll physics. Grab weapons, smash your opponent, first to 3 wins!</div>
-            <div class="ctags"><span class="cpill">Brawler</span><span class="cpill">Local PvP</span><span class="cpill">Weapons</span><span class="cpill">Ragdoll</span></div>
-          </div>
-        </div>
-
-        <!-- LITE LOCKED: Tumble Life -->
-        <div class="card lite-locked" id="c3" onclick="openSB(this,'TUMBLE LIFE','High-velocity structural physics and intense peer-to-peer multiplayer stumbling. Share room codes to crash instantly into friends!','images/TumbleLife/tumblelife.png','games/TumbleLife/game.html',['MULTIPLAYER','PEERJS','PHYSICS','SANDBOX','LITE'],tumbleLogs,true)">
-          <div class="cimg" style="background:linear-gradient(135deg,#e0f2fe,#bae6fd)"><img src="images/TumbleLife/tumblelife.png" alt="Tumble Life" loading="lazy" onerror="this.style.display='none';this.parentElement.innerHTML='<div class=cimg-placeholder>🏃‍♂️</div>'"></div>
-          <div class="cbody">
-            <div class="ctag locked">LITE EXCLUSIVE</div>
-            <div class="cname">Tumble Life</div>
-            <div class="cdesc">High-speed physics sandbox. Hook up via room codes for immediate multiplayer chaos!</div>
-            <div class="ctags"><span class="cpill">Multiplayer</span><span class="cpill">Physics</span><span class="cpill lite-pill">✦ LITE</span></div>
-          </div>
-        </div>
-
-        <!-- LITE LOCKED: Camo Chameleon -->
-        <div class="card lite-locked" id="c4" onclick="openSB(this,'CAMO CHAMELEON','Hide from the hunter by painting yourself to match the walls. One hunter, many seekers — blend in or get tagged!','images/CamoChameleon/camocha.png','games/CamoChameleon/game.html',['MULTIPLAYER','HIDE & SEEK','PAINT','HUNTER','LITE'],camoLogs,true)">
-          <div class="cimg" style="background:linear-gradient(135deg,#d1fae5,#a7f3d0)"><img src="images/CamoChameleon/camocha.png" alt="Camo Chameleon" loading="lazy" onerror="this.style.display='none';this.parentElement.innerHTML='<div class=cimg-placeholder>🦎</div>'"></div>
-          <div class="cbody">
-            <div class="ctag locked">LITE EXCLUSIVE</div>
-            <div class="cname">Camo Chameleon</div>
-            <div class="cdesc">Paint yourself to match the walls. One hunter, many seekers — blend in or get caught!</div>
-            <div class="ctags"><span class="cpill">Multiplayer</span><span class="cpill">Hide &amp; Seek</span><span class="cpill">Paint</span><span class="cpill lite-pill">✦ LITE</span></div>
-          </div>
-        </div>
-
-        <div class="card soon">
-          <div class="cimg" style="background:linear-gradient(135deg,#f0fdf4,#dcfce7)"><div class="cimg-placeholder">🔒</div></div>
-          <div class="cbody"><div class="ctag" style="color:var(--text3)">COMING SOON</div><div class="cname" style="color:var(--text2)">Mystery Game</div><div class="cdesc">We're cooking something fun. Check back soon!</div></div>
-        </div>
-
+    <div class="sbr">
+      <div>
+        <div class="sbr-price">₹39<span style="font-size:13px;color:rgba(255,255,255,.4)">/first month</span></div>
+        <div class="sbr-sub">₹49/month after · No auto-charge</div>
       </div>
-    </div>
-
-    <div class="sidebar-col">
-      <div class="widget-label yt">YouTube</div>
-      <div class="yt-frame-wrap"><iframe src="widgets/Youtube/youtube.html" height="250" scrolling="no" title="YouTube Widget"></iframe></div>
-      <div class="widget-label dc" style="margin-top:6px">Discord Community</div>
-      <a class="extend-btn" href="https://sortofdevofficial.github.io/PlayConsole4u/widgets/Discord/discord.html" target="_blank" rel="noopener">Extend</a>
-      <div class="dc-frame-wrap"><iframe src="widgets/Discord/discord.html" height="680" scrolling="no" title="Discord Widget"></iframe></div>
+      <a class="dc-btn" href="https://discord.gg/dS4pgC9J5H" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 00-4.885-1.515.074.074 0 00-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 00-5.487 0 12.64 12.64 0 00-.617-1.25.077.077 0 00-.079-.037A19.736 19.736 0 003.677 4.37a.07.07 0 00-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 00.031.057 19.9 19.9 0 005.993 3.03.078.078 0 00.084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 00-.041-.106 13.107 13.107 0 01-1.872-.892.077.077 0 01-.008-.128 10.2 10.2 0 00.372-.292.074.074 0 01.077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 01.078.01c.12.098.246.198.373.292a.077.077 0 01-.006.127 12.299 12.299 0 01-1.873.892.077.077 0 00-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 00.084.028 19.839 19.839 0 006.002-3.03.077.077 0 00.032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 00-.031-.03z"/></svg>
+        Buy in Discord
+      </a>
     </div>
   </div>
 </div>
 
-<div id="veil" onclick="closeSB()"></div>
-<div id="sidebar">
-  <button class="sb-x" onclick="closeSB()">✕</button>
-  <div class="sb-imgw"><img id="sbi" src="" alt=""></div>
-  <div class="sb-t" id="sbt"></div>
-  <div class="sb-d" id="sbd"></div>
-  <div class="sb-tags" id="sbta"></div>
-  <div class="sb-lite-gate" id="sb-lite-gate">
-    🔒 <b>LITE subscribers only.</b><br>
-    This game requires a PlayConsole4u Lite subscription.<br>
-    Join our <a href="https://discord.gg/dS4pgC9J5H" target="_blank" style="color:var(--lite);font-weight:700">Discord server</a> and purchase for <b>₹39</b> first month, ₹49/month after.
-  </div>
-  <div class="sb-log-label">Update Log</div>
-  <div class="update-log" id="sb-log"></div>
-  <button class="sb-play" id="sb-play-btn" onclick="handlePlayClick()">▶ &nbsp; PLAY NOW</button>
+<div class="feat">
+  <div><h2>New? Start Here.</h2><p>Cube Platformer — master wall-jumps, beat 5 levels, claim your leaderboard spot.</p></div>
+  <button class="feat-btn" onclick="location.href='games/CubePlatformer/game.html'">▶ Play Now</button>
 </div>
 
-<div id="modal-bg" onclick="if(event.target===this)closeModal()">
+<div class="layout">
+  <div>
+    <div class="slabel">// Games</div>
+    <div class="grid">
+
+      <div class="card" id="c1" onclick="sb(this,'CUBE PLATFORMER','5 levels of precision platforming. Wall-jump, spin, and race to beat your best time — every second counts!','images/CubePlatformer/cubeplatformer.png','games/CubePlatformer/game.html',['PLATFORMER','5 LEVELS','WALL-JUMP','TIMER'],cL,0)">
+        <div class="ci"><img src="images/CubePlatformer/cubeplatformer.png" alt="" loading="lazy" onerror="this.style.display='none';this.parentElement.innerHTML='<div class=ph>🟦</div>'"></div>
+        <div class="cb"><div class="ctag">READY</div><div class="cn">Cube Platformer</div><div class="cd">Wall-jump across 5 precision levels. Race the clock, hit the leaderboard.</div><div class="ctags"><span class="cp">Platformer</span><span class="cp">5 Levels</span><span class="cp">Timer</span></div></div>
+      </div>
+
+      <div class="card" id="c2" onclick="sb(this,'FLOPPYSTICKS','A wild brawl set in nature. Beat the AI or challenge a friend locally — grab weapons, go ragdoll, and win 3 rounds!','images/FloppySticks/floppysticks.png','games/FloppySticks/game.html',['BRAWLER','LOCAL PVP','RAGDOLL'],fL,0)">
+        <div class="ci" style="background:linear-gradient(135deg,#dcfce7,#bbf7d0)"><img src="images/FloppySticks/floppysticks.png" alt="" loading="lazy" onerror="this.style.display='none';this.parentElement.innerHTML='<div class=ph>🥊</div>'"></div>
+        <div class="cb"><div class="ctag">READY</div><div class="cn">FloppySticks</div><div class="cd">Ragdoll brawl. Grab weapons, smash your opponent, first to 3 wins!</div><div class="ctags"><span class="cp">Brawler</span><span class="cp">Local PvP</span><span class="cp">Ragdoll</span></div></div>
+      </div>
+
+      <div class="card lk" id="c3" onclick="sb(this,'TUMBLE LIFE','High-velocity structural physics and intense peer-to-peer multiplayer stumbling. Share room codes to crash instantly into friends!','images/TumbleLife/tumblelife.png','games/TumbleLife/game.html',['MULTIPLAYER','PHYSICS','SANDBOX','✦ LITE'],tL,1)">
+        <div class="ci" style="background:linear-gradient(135deg,#e0f2fe,#bae6fd)"><img src="images/TumbleLife/tumblelife.png" alt="" loading="lazy" onerror="this.style.display='none';this.parentElement.innerHTML='<div class=ph>🏃</div>'"></div>
+        <div class="cb"><div class="ctag lt">LITE EXCLUSIVE</div><div class="cn">Tumble Life</div><div class="cd">High-speed physics sandbox. Room codes for instant multiplayer chaos!</div><div class="ctags"><span class="cp">Multiplayer</span><span class="cp">Physics</span><span class="cp lp">✦ LITE</span></div></div>
+      </div>
+
+      <div class="card lk" id="c4" onclick="sb(this,'CAMO CHAMELEON','Paint yourself to match the walls. One hunter, many seekers — blend in or get tagged. Multiplayer madness!','images/CamoChameleon/camocha.png','games/CamoChameleon/game.html',['MULTIPLAYER','HIDE & SEEK','PAINT','✦ LITE'],ccL,1)">
+        <div class="ci" style="background:linear-gradient(135deg,#d1fae5,#a7f3d0)"><img src="images/CamoChameleon/camocha.png" alt="" loading="lazy" onerror="this.style.display='none';this.parentElement.innerHTML='<div class=ph>🦎</div>'"></div>
+        <div class="cb"><div class="ctag lt">LITE EXCLUSIVE</div><div class="cn">Camo Chameleon</div><div class="cd">Paint yourself to match the walls. Hunter vs seekers — blend in or get caught!</div><div class="ctags"><span class="cp">Multiplayer</span><span class="cp">Hide &amp; Seek</span><span class="cp lp">✦ LITE</span></div></div>
+      </div>
+
+      <div class="card soon">
+        <div class="ci" style="background:linear-gradient(135deg,#f0fdf4,#dcfce7)"><div class="ph">🔒</div></div>
+        <div class="cb"><div class="ctag" style="color:var(--t3)">COMING SOON</div><div class="cn" style="color:var(--t2)">Mystery Game</div><div class="cd">Something fun is cooking. Check back soon!</div></div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="sid">
+    <div class="wl yt">YouTube</div>
+    <div class="yfw"><iframe src="widgets/Youtube/youtube.html" height="250" scrolling="no"></iframe></div>
+    <div class="wl dc" style="margin-top:6px">Discord Community</div>
+    <a class="ext" href="https://sortofdevofficial.github.io/PlayConsole4u/widgets/Discord/discord.html" target="_blank">Extend</a>
+    <div class="dfw"><iframe src="widgets/Discord/discord.html" height="680" scrolling="no"></iframe></div>
+  </div>
+</div>
+</div>
+
+<div id="veil" onclick="closeP()"></div>
+<div id="panel">
+  <button class="px" onclick="closeP()">✕</button>
+  <div class="piw"><img id="pi" src="" alt=""></div>
+  <div class="pt" id="pt"></div>
+  <div class="pd" id="pd"></div>
+  <div class="ptags" id="ptags"></div>
+  <div class="pgate" id="pgate">
+    🔒 <b>Lite subscribers only.</b><br>
+    Join our <a href="https://discord.gg/dS4pgC9J5H" target="_blank">Discord</a> and purchase for <b>₹39</b> first month, ₹49/month after.
+  </div>
+  <div class="plg">Update Log</div>
+  <div class="logs" id="plogs"></div>
+  <button class="pb" id="pb" onclick="play()">▶ PLAY NOW</button>
+</div>
+
+<div id="mbg" onclick="if(event.target===this)closeM()">
   <div class="modal">
     <h2>⚙ Settings</h2>
+    <div><label>Username</label><input class="mi" id="uninp" type="text" maxlength="20" placeholder="Enter username…"></div>
+    <button class="mb pri" onclick="saveUN()">Save Username</button>
+    <div class="mm" id="mm"></div>
+    <hr>
+    <!-- Subscription -->
+    <div class="subblock">
+      <div class="sbtitle">✦ Lite Subscription <span class="sbact" id="sbact" style="display:none">ACTIVE</span></div>
+      <div id="sub-off">
+        <div class="ms"><span>Status</span><span style="color:#ef4444">Inactive</span></div>
+        <div class="ms" style="margin-top:4px;font-size:11px;color:var(--t2)"><span>To subscribe</span><span><a href="https://discord.gg/dS4pgC9J5H" target="_blank" style="color:var(--am);font-weight:700">Buy in Discord →</a></span></div>
+        <div class="ms" style="margin-top:2px;font-size:11px;color:var(--t2)"><span>Price</span><span>₹39 first · ₹49/month</span></div>
+      </div>
+      <div id="sub-on" style="display:none">
+        <div class="ms"><span>Status</span><span style="color:#16a34a;font-weight:800">✓ Active</span></div>
+        <div class="ms"><span>First Time Lite</span><span id="m-ftl">—</span></div>
+        <div class="ms"><span>Renews</span><span id="m-ren">—</span></div>
+      </div>
+    </div>
+    <hr>
+    <div><label>Best Times — Cube Platformer</label><div class="tg" id="tg"></div></div>
+    <hr>
     <div>
-      <label>Username</label>
-      <input id="uname-inp" type="text" maxlength="20" placeholder="Enter username…">
-    </div>
-    <button class="mbtn pri" onclick="saveUsername()">Save Username</button>
-    <div class="mmsg" id="mmsg"></div>
-    <hr class="mdiv">
-
-    <!-- Subscription section -->
-    <div class="sub-section">
-      <div class="sub-section-title">
-        ✦ PlayConsole4u Lite
-        <span class="sub-active-badge" id="sub-active-badge" style="display:none">ACTIVE</span>
-      </div>
-      <div id="sub-inactive-area">
-        <div class="sub-inactive-note">
-          Unlock <b>Camo Chameleon</b> and <b>Tumble Life</b>.<br>
-          <b style="color:var(--lite)">₹39</b> first month · <b>₹49/month</b> after · Buy in Discord.
-        </div>
-        <div class="sub-activate-input">
-          <input id="lite-code-inp" type="text" placeholder="Enter activation code…" autocomplete="off">
-          <button class="sub-activate-btn" onclick="tryActivateLite()">Activate</button>
-        </div>
-        <div class="mmsg" id="lite-msg" style="margin-top:6px"></div>
-      </div>
-      <div id="sub-active-area" style="display:none">
-        <div class="mstat"><span>Status</span><span style="color:#16a34a;font-weight:800">✓ Active</span></div>
-        <div class="mstat"><span>Plan</span><span>Lite</span></div>
-        <div class="mstat"><span>First Time Lite</span><span id="m-ftl">—</span></div>
-        <div class="mstat"><span>Renews</span><span id="m-renews">—</span></div>
+      <label>FloppySticks</label>
+      <div class="wlr">
+        <div class="wc"><div class="wv" id="fsw" style="color:#16a34a">—</div><div class="wl2">WINS</div></div>
+        <div class="wc"><div class="wv" id="fsl" style="color:#ef4444">—</div><div class="wl2">LOSSES</div></div>
+        <div class="wc"><div class="wv" id="fsr" style="color:#5b3af7">—</div><div class="wl2">W/L</div></div>
       </div>
     </div>
-
-    <hr class="mdiv">
-    <div>
-      <label>Best Times — Cube Platformer</label>
-      <div class="times-grid" id="times-grid"></div>
-    </div>
-    <hr class="mdiv">
-    <div>
-      <label>FloppySticks Record</label>
-      <div class="fs-wl-row">
-        <div class="fs-wl-card"><div class="fs-wl-val" id="fs-wins" style="color:#16a34a">—</div><div class="fs-wl-lbl">WINS</div></div>
-        <div class="fs-wl-card"><div class="fs-wl-val" id="fs-losses" style="color:#ef4444">—</div><div class="fs-wl-lbl">LOSSES</div></div>
-        <div class="fs-wl-card"><div class="fs-wl-val" id="fs-ratio" style="color:#5b3af7">—</div><div class="fs-wl-lbl">W/L RATIO</div></div>
-      </div>
-    </div>
-    <hr class="mdiv">
+    <hr>
     <div>
       <label>Account</label>
-      <div class="mstat"><span>Email</span><span id="m-email">—</span></div>
-      <div class="mstat"><span>CP Levels done</span><span id="m-done">—</span></div>
+      <div class="ms"><span>Email</span><span id="me">—</span></div>
+      <div class="ms"><span>CP done</span><span id="md">—</span></div>
     </div>
     <div class="mrow">
-      <button class="mbtn ghost" onclick="closeModal()">Close</button>
-      <button class="mbtn red" onclick="doSignOut()">🚪 Logout</button>
+      <button class="mb gh" onclick="closeM()">Close</button>
+      <button class="mb red" onclick="doOut()">🚪 Logout</button>
     </div>
   </div>
 </div>
@@ -470,188 +342,96 @@ header{display:flex;align-items:center;justify-content:space-between;flex-wrap:w
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="firebase.js"></script>
 <script>
-const cubeLogs=[
-  {ver:'v1.2',text:'Fixed wall-jump sticking. Improved level 4 collision.'},
-  {ver:'v1.1',text:'Added per-level leaderboard with milliseconds accuracy.'},
-  {ver:'v1.0',text:'Initial release — 5 tracking levels setup global board.'}
-];
-const floppyLogs=[
-  {ver:'v1.2',text:'Tuned AI mechanics. Wins/Losses integrated live.'},
-  {ver:'v1.1',text:'Mobile interface adjustment configurations applied.'},
-  {ver:'v1.0',text:'Initial launch — Complete physics framework setup.'}
-];
-const tumbleLogs=[
-  {ver:'v1.0',text:'Initial Launch — Sandbox tumble simulation with real-time PeerJS infrastructure code matching.'}
-];
-const camoLogs=[
-  {ver:'v1.1',text:'Round system, hunter & seeker roles, collision improvements.'},
-  {ver:'v1.0',text:'Initial launch — Paint-based hide & seek multiplayer with Firebase auth.'}
-];
+const cL=[{ver:'v1.2',text:'Fixed wall-jump sticking. Improved level 4 collision.'},{ver:'v1.1',text:'Per-level leaderboard with ms accuracy.'},{ver:'v1.0',text:'Initial release — 5 tracking levels.'}];
+const fL=[{ver:'v1.2',text:'Tuned AI. W/L integrated live.'},{ver:'v1.1',text:'Mobile adjustments.'},{ver:'v1.0',text:'Initial launch — ragdoll physics.'}];
+const tL=[{ver:'v1.0',text:'Launch — sandbox tumble with PeerJS room matching.'}];
+const ccL=[{ver:'v1.1',text:'Round system, hunter & seeker roles, collision fix.'},{ver:'v1.0',text:'Launch — paint-based hide & seek multiplayer.'}];
 
-let activeC=null, goHref='', goIsLite=false;
-let userLiteActive=false;
+let aC=null,gH='',gLite=false,isLite=false;
 
-// ── Dev console shortcut: type Lite:true to activate for current user ─────────
-// Usage in browser console: Lite = true
-const _liteProxy = { set(t,p,v){ if(p==='true'&&v===true){ const u=window.FB?.currentUser(); if(u){ window.FB.activateLite(u.uid).then(()=>{ alert('✦ Lite activated! Refresh page.'); }); } else { alert('Sign in first.'); } } return true; } };
-window.Lite = new Proxy({}, _liteProxy);
-
-function openSB(el,t,d,img,href,tags,logs,isLite){
-  if(activeC) activeC.classList.remove('active');
-  el.classList.add('active'); activeC=el;
-  document.getElementById('sbt').textContent=t;
-  document.getElementById('sbd').textContent=d;
-  document.getElementById('sbi').src=img;
-  document.getElementById('sbta').innerHTML=tags.map(x=>`<span class="pill">${x}</span>`).join('');
-  goHref=href; goIsLite=!!isLite;
-  document.getElementById('sb-log').innerHTML=(logs||[]).map(e=>`<div class="log-entry"><span class="log-ver">${e.ver}</span><span class="log-text">${e.text}</span></div>`).join('');
-
-  const gate=document.getElementById('sb-lite-gate');
-  const playBtn=document.getElementById('sb-play-btn');
-  if(isLite&&!userLiteActive){
-    gate.style.display='block';
-    playBtn.textContent='🔒 Lite Required';
-    playBtn.className='sb-play lite-locked-btn';
-  } else {
-    gate.style.display='none';
-    playBtn.textContent='▶  PLAY NOW';
-    playBtn.className='sb-play';
-  }
-
-  document.getElementById('sidebar').classList.add('open');
+function sb(el,t,d,img,href,tags,logs,lite){
+  if(aC)aC.classList.remove('active');
+  el.classList.add('active');aC=el;
+  document.getElementById('pt').textContent=t;
+  document.getElementById('pd').textContent=d;
+  document.getElementById('pi').src=img;
+  document.getElementById('ptags').innerHTML=tags.map(x=>`<span class="pill">${x}</span>`).join('');
+  gH=href;gLite=!!lite;
+  document.getElementById('plogs').innerHTML=(logs||[]).map(e=>`<div class="le"><span class="lv">${e.ver}</span><span class="lt2">${e.text}</span></div>`).join('');
+  const gate=document.getElementById('pgate'),pb=document.getElementById('pb');
+  if(gLite&&!isLite){gate.style.display='block';pb.textContent='🔒 Lite Required';pb.className='pb lkb';}
+  else{gate.style.display='none';pb.textContent='▶ PLAY NOW';pb.className='pb';}
+  document.getElementById('panel').classList.add('open');
   document.getElementById('veil').classList.add('on');
 }
-
-function closeSB(){
-  document.getElementById('sidebar').classList.remove('open');
-  document.getElementById('veil').classList.remove('on');
-  if(activeC){activeC.classList.remove('active');activeC=null;}
-}
-
-function handlePlayClick(){
-  if(goIsLite&&!userLiteActive){
-    openModal();
-    return;
-  }
-  if(goHref) location.href=goHref;
-}
-
-// Lite-locked card clicks
-document.querySelectorAll('.card.lite-locked').forEach(card=>{
-  const origClick = card.getAttribute('onclick');
-  // onclick already set via HTML attr, we intercept in openSB based on goIsLite
-});
-
-async function doSignIn(){try{await window.FB.signInGoogle();}catch(e){console.error(e);}}
-async function doSignOut(){await window.FB.signOut();closeModal();}
-function fmt(s){return s==null?'—':s<60?s.toFixed(2)+'s':`${Math.floor(s/60)}m ${(s%60).toFixed(0)}s`;}
-function initials(name){const p=String(name||'Player').trim().split(/\s+/).filter(Boolean);return((p[0]?.[0]||'P')+(p[1]?.[0]||'')).toUpperCase();}
-function hueFor(s){return[...String(s||'')].reduce((a,c)=>a+c.charCodeAt(0),0)%360;}
-function fmtDate(ts){if(!ts)return'—';return new Date(ts).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});}
+function closeP(){document.getElementById('panel').classList.remove('open');document.getElementById('veil').classList.remove('on');if(aC){aC.classList.remove('active');aC=null;}}
+function play(){if(gLite&&!isLite){openM();return;}if(gH)location.href=gH;}
+function openM(){document.getElementById('mbg').classList.add('open');}
+function closeM(){document.getElementById('mbg').classList.remove('open');}
+async function doIn(){try{await FB.signInGoogle();}catch(e){console.error(e);}}
+async function doOut(){await FB.signOut();closeM();}
+const fmt=s=>s==null?'—':s<60?s.toFixed(2)+'s':`${Math.floor(s/60)}m ${(s%60).toFixed(0)}s`;
+const ini=n=>{const p=String(n||'P').trim().split(/\s+/).filter(Boolean);return((p[0]?.[0]||'P')+(p[1]?.[0]||'')).toUpperCase();};
+const hue=s=>[...String(s||'')].reduce((a,c)=>a+c.charCodeAt(0),0)%360;
+const fmtD=ts=>ts?new Date(ts).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}):'—';
 
 async function refreshUI(user){
-  const sb=document.getElementById('sign-in-btn'),chip=document.getElementById('user-chip'),settBtn=document.getElementById('settings-btn');
-  if(!user){
-    sb.style.display='flex';chip.style.display='none';settBtn.style.display='none';
-    userLiteActive=false;
-    document.getElementById('sub-banner').style.display='block'; // show banner to non-signed users too
-    return;
-  }
-  sb.style.display='none';chip.style.display='flex';settBtn.style.display='flex';
+  const sin=document.getElementById('sin'),chip=document.getElementById('chip'),sb2=document.getElementById('setbtn');
+  if(!user){sin.style.display='flex';chip.style.display='none';sb2.style.display='none';isLite=false;document.getElementById('sub-banner').style.display='block';return;}
+  sin.style.display='none';chip.style.display='flex';sb2.style.display='flex';
+  const p=await FB.getProfile(user.uid);
+  const nm=p.n||user.displayName||'Player';
+  document.getElementById('uname').textContent=nm;
+  document.getElementById('uninp').value=nm;
+  document.getElementById('me').textContent=user.email||'—';
+  const av=document.getElementById('uav');
+  const img=p.ph||user.photoURL;
+  if(img){av.innerHTML=`<img src="${img}" referrerpolicy="no-referrer">`;av.style.background='transparent';}
+  else{av.textContent=ini(nm);av.style.background=`linear-gradient(135deg,hsl(${hue(nm)} 70% 42%),hsl(${(hue(nm)+40)%360} 75% 55%))`;}
 
-  const profile=await window.FB.getProfile(user.uid);
-  const name=profile.n||user.displayName||'Player';
-  document.getElementById('u-name').textContent=name;
-  document.getElementById('uname-inp').value=name;
-  document.getElementById('m-email').textContent=user.email||'—';
-
-  const av=document.getElementById('u-avatar');
-  const imgUrl=profile.ph||user.photoURL;
-  if(imgUrl){av.innerHTML=`<img src="${imgUrl}" alt="Avatar" referrerpolicy="no-referrer">`;av.style.background='transparent';}
-  else{av.textContent=initials(name);av.style.background=`linear-gradient(135deg,hsl(${hueFor(name)} 70% 42%),hsl(${(hueFor(name)+40)%360} 75% 55%))`;}
-
-  // Subscription check
-  const sub=await window.FB.getSubscription(user.uid);
-  userLiteActive=sub.active===true;
-
-  const liteBadge=document.getElementById('lite-chip-badge');
-  const banner=document.getElementById('sub-banner');
-  if(userLiteActive){
-    liteBadge.style.display='inline-block';
-    banner.style.display='none'; // hide selling banner for active subs
-    // Update card appearances
-    document.querySelectorAll('.card.lite-locked').forEach(c=>{
-      c.classList.remove('lite-locked');
-      c.querySelector('.ctag')?.classList.remove('locked');
+  // Subscription
+  const sub=await FB.getSubscription(user.uid);
+  isLite=sub.active===true;
+  const pip=document.getElementById('litepip'),banner=document.getElementById('sub-banner');
+  if(isLite){
+    pip.style.display='inline-block';banner.style.display='none';
+    document.getElementById('sbact').style.display='inline-block';
+    document.getElementById('sub-off').style.display='none';
+    document.getElementById('sub-on').style.display='block';
+    document.getElementById('m-ftl').textContent=sub.FTL?'Yes (₹39)':'No';
+    document.getElementById('m-ren').textContent=fmtD(sub.next);
+    // Unlock locked cards visually
+    document.querySelectorAll('.card.lk').forEach(c=>{
+      c.classList.remove('lk');
+      c.querySelector('.ctag').className='ctag';
       c.querySelector('.ctag').textContent='READY';
     });
-    // Modal sub section
-    document.getElementById('sub-active-badge').style.display='inline-block';
-    document.getElementById('sub-inactive-area').style.display='none';
-    document.getElementById('sub-active-area').style.display='block';
-    document.getElementById('m-ftl').textContent=sub.FTL?'Yes (₹39 rate applied)':'No';
-    document.getElementById('m-renews').textContent=fmtDate(sub.next);
   } else {
-    liteBadge.style.display='none';
-    banner.style.display='block';
-    document.getElementById('sub-active-badge').style.display='none';
-    document.getElementById('sub-inactive-area').style.display='block';
-    document.getElementById('sub-active-area').style.display='none';
+    pip.style.display='none';banner.style.display='block';
+    document.getElementById('sbact').style.display='none';
+    document.getElementById('sub-off').style.display='block';
+    document.getElementById('sub-on').style.display='none';
   }
 
-  const times=await window.FB.getMyTimes(user.uid);
-  document.getElementById('m-done').textContent=Object.keys(times).length+'/5';
-  const tg=document.getElementById('times-grid');
-  let html='';
-  for(let i=1;i<=5;i++){const e=times[String(i)];html+=`<div class="tnode"><div class="tn">LV${i}</div><div class="tt">${e?fmt(e.t):'—'}</div></div>`;}
-  tg.innerHTML=html;
+  // CP times
+  const times=await FB.getMyTimes(user.uid);
+  document.getElementById('md').textContent=Object.keys(times).length+'/5';
+  let th='';for(let i=1;i<=5;i++){const e=times[String(i)];th+=`<div class="tn"><div class="n">LV${i}</div><div class="tt">${e?fmt(e.t):'—'}</div></div>`;}
+  document.getElementById('tg').innerHTML=th;
 
-  try{
-    const fs=await window.FB.getMatchStats(user.uid);
-    const fw=fs.w??0,fl2=fs.l??0;
-    document.getElementById('fs-wins').textContent=fw;
-    document.getElementById('fs-losses').textContent=fl2;
-    const r=document.getElementById('fs-ratio');
-    if(r)r.textContent=fl2>0?(fw/fl2).toFixed(2):(fw>0?'∞':'—');
-  }catch(e){console.warn('[FS W/L]',e.message);}
+  // FS stats
+  try{const fs=await FB.getMatchStats(user.uid);const w=fs.w||0,l=fs.l||0;document.getElementById('fsw').textContent=w;document.getElementById('fsl').textContent=l;document.getElementById('fsr').textContent=l>0?(w/l).toFixed(2):w>0?'∞':'—';}catch(e){}
 }
 
-async function tryActivateLite(){
-  const u=window.FB?.currentUser(); if(!u){alert('Sign in first.');return;}
-  const inp=document.getElementById('lite-code-inp').value.trim();
-  const msg=document.getElementById('lite-msg');
-  // The activation code is "Lite:true" (case-sensitive, exact match)
-  if(inp!=='Lite:true'){
-    msg.className='mmsg err';msg.textContent='Invalid code.';
-    setTimeout(()=>msg.textContent='',2500);
-    return;
-  }
-  msg.className='mmsg';msg.textContent='Activating…';
-  try{
-    await window.FB.activateLite(u.uid);
-    msg.className='mmsg ok';msg.textContent='✓ Lite activated! Reloading…';
-    setTimeout(()=>location.reload(),1200);
-  }catch(e){
-    msg.className='mmsg err';msg.textContent='Error: '+e.message;
-  }
-}
-
-window.FB.onAuthChange(user=>refreshUI(user));
-// Always show sub banner initially (will hide if user has Lite)
+FB.onAuthChange(u=>refreshUI(u));
 document.getElementById('sub-banner').style.display='block';
 
-function openModal(){document.getElementById('modal-bg').classList.add('open');}
-function closeModal(){document.getElementById('modal-bg').classList.remove('open');}
-
-async function saveUsername(){
-  const u=window.FB.currentUser();if(!u)return;
-  const v=document.getElementById('uname-inp').value.trim();
-  const msg=document.getElementById('mmsg');
-  if(!v||v.length<2){msg.className='mmsg err';msg.textContent='Min 2 characters';return;}
-  await window.FB.saveProfile(u.uid,v);
-  refreshUI(u);
-  msg.className='mmsg ok';msg.textContent='✓ Saved!';
-  setTimeout(()=>msg.textContent='',2000);
+async function saveUN(){
+  const u=FB.currentUser();if(!u)return;
+  const v=document.getElementById('uninp').value.trim(),msg=document.getElementById('mm');
+  if(!v||v.length<2){msg.className='mm err';msg.textContent='Min 2 chars';return;}
+  await FB.saveProfile(u.uid,v);refreshUI(u);
+  msg.className='mm ok';msg.textContent='✓ Saved!';setTimeout(()=>msg.textContent='',2000);
 }
 </script>
 </body>
