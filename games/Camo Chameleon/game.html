@@ -9,8 +9,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-<!-- FIX #1: Corrected path — was ../../firebase.js (broken), now ./firebase.js -->
-<script src="./firebase.js"></script>
+<script src="../../firebase.js"></script>
 <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 <script type="importmap">
   {
@@ -63,7 +62,6 @@
 
   <div class="hud-panel" id="players-panel">
     <div class="panel-label">PLAYERS IN ROOM</div>
-    <!-- FIX #2: Removed broken escaped quotes \" → " -->
     <div id="players-list"></div>
   </div>
 
@@ -87,7 +85,6 @@
   </div>
 </div>
 
-<!-- FIX #3: main.js was never loaded! This was the PRIMARY cause of the freeze. -->
 <script type="module" src="main.js"></script>
 </body>
 </html>
