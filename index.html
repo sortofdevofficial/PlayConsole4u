@@ -309,7 +309,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:10px;ma
 
       <div class="card lk" id="c3"
         onclick="openPanel(this,'TUMBLE LIFE','High-velocity physics sandbox with peer-to-peer multiplayer. Share room codes to crash instantly into friends!','images/TumbleLife/tumblelife.png','games/Tumble Life/game.html',['MULTIPLAYER','PHYSICS','SANDBOX','✦ LITE'],tL,1)">
-        <div class="ci" style="background:linear-gradient(135deg,#e0f2fe,#bae6fd)"><img src="images/TumbleLife/tumblelife.png" alt="" loading="lazy" onerror="this.style.display='none';this.parentElement.innerHTML='<div class=ph>🏃</div>'"></div>
+        <div class="ci" style="background:linear-gradient(135deg,#e0f2fe,#bae6fd)"><div class="ph">🏃</div></div>
         <div class="cb">
           <div class="ctag lt">LITE EXCLUSIVE</div>
           <div class="cn">Tumble Life</div>
@@ -320,7 +320,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:10px;ma
 
       <div class="card lk" id="c4"
         onclick="openPanel(this,'CAMO CHAMELEON','Paint yourself to match the walls. One hunter, many seekers — blend in or get tagged. Multiplayer madness!','images/CamoChameleon/camocha.png','games/Camo Chameleon/game.html',['MULTIPLAYER','HIDE & SEEK','PAINT','✦ LITE'],ccL,1)">
-        <div class="ci" style="background:linear-gradient(135deg,#d1fae5,#6ee7b7)"><img src="images/CamoChameleon/camocha.png" alt="" loading="lazy" onerror="this.style.display='none';this.parentElement.innerHTML='<div class=ph>🦎</div>'"></div>
+        <div class="ci" style="background:linear-gradient(135deg,#d1fae5,#6ee7b7)"><div class="ph">🦎</div></div>
         <div class="cb">
           <div class="ctag lt">LITE EXCLUSIVE</div>
           <div class="cn">Camo Chameleon</div>
@@ -421,6 +421,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:10px;ma
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <script src="firebase.js"></script>
 <script>
 const cL=[{ver:'v1.2',text:'Fixed wall-jump sticking. Improved level 4 collision.'},{ver:'v1.1',text:'Per-level leaderboard with ms accuracy.'},{ver:'v1.0',text:'Initial release — 5 tracking levels.'}];
