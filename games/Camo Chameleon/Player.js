@@ -38,11 +38,11 @@ export default class Player {
         this.torso = new THREE.Mesh(torsoGeo); 
         this.torso.position.y = 1.3 * S;
 
-        // Perfectly attached Left Arm System
+        // Perfectly attached Left Arm System (Aligned exactly to top capsule cap pivot)
         this.armL = new THREE.Group();
         const sL = new THREE.Mesh(jointGeo);
         const bL = new THREE.Mesh(limbGeo); 
-        bL.position.y = -0.25 * S;
+        bL.position.y = -0.275 * S; // Fixed pivot offset from -0.25 to -0.275
         this.armL.add(sL, bL); 
         this.armL.position.set(-0.52 * S, 1.75 * S, 0);
 
@@ -50,7 +50,7 @@ export default class Player {
         this.armR = new THREE.Group();
         const sR = new THREE.Mesh(jointGeo);
         const bR = new THREE.Mesh(limbGeo); 
-        bR.position.y = -0.25 * S;
+        bR.position.y = -0.275 * S; // Fixed pivot offset from -0.25 to -0.275
         this.armR.add(sR, bR); 
         this.armR.position.set(0.52 * S, 1.75 * S, 0);
 
@@ -58,7 +58,7 @@ export default class Player {
         this.legL = new THREE.Group();
         const hL = new THREE.Mesh(jointGeo);
         const tL = new THREE.Mesh(limbGeo); 
-        tL.position.y = -0.25 * S;
+        tL.position.y = -0.275 * S; // Fixed pivot offset from -0.25 to -0.275
         this.legL.add(hL, tL); 
         this.legL.position.set(-0.24 * S, 0.75 * S, 0);
 
@@ -66,7 +66,7 @@ export default class Player {
         this.legR = new THREE.Group();
         const hR = new THREE.Mesh(jointGeo);
         const tR = new THREE.Mesh(limbGeo); 
-        tR.position.y = -0.25 * S;
+        tR.position.y = -0.275 * S; // Fixed pivot offset from -0.25 to -0.275
         this.legR.add(hR, tR); 
         this.legR.position.set(0.24 * S, 0.75 * S, 0);
 
@@ -217,15 +217,15 @@ export default class Player {
     update(keys, isSprinting, delta, colliders = []) {
         if (this.isRemote || this.frozen) return;
 
-        // Use analog joystick values if available (jx/jz), else binary keys
-        const dx = keys.jx !== undefined ? keys.jx : (keys.d?1:0)-(keys.a?1:0);
-        const dz = keys.jz !== undefined ? keys.jz : (keys.s?1:0)-(keys.w?1:0);
+        // 🕹️ Check if joystick has actual active value, otherwise drop back to keyboard mapping!
+        const dx = Math.abs(keys.jx) > 0.01 ? keys.jx : (keys.d?1:0)-(keys.a?1:0);
+        const dz = Math.abs(keys.jz) > 0.01 ? keys.jz : (keys.s?1:0)-(keys.w?1:0);
         this.direction.set(dx, 0, dz);
+        
         // Clamp to unit circle (diagonal keyboard shouldn't be faster)
         const dlen = this.direction.length();
         if (dlen > 1) this.direction.divideScalar(dlen);
 
-        // 🏎️ Smoothed Velocity Curve Parameters (Slowed down a little bit as requested)
         const speed = isSprinting ? 7.0 : 4.2;
         const accel = 55.0;
         const friction = 12.0;
@@ -276,7 +276,7 @@ export default class Player {
             const w = Math.sin(this.moveTime);
 
             if (this.currentRole === 'seeker') {
-                // 🏃 Funny Hands Stretching Backwards Walk Animation
+                // 🏃 Hands stretching backward animation
                 this.armL.rotation.x = 1.5 + Math.sin(this.moveTime * 2) * 0.12; 
                 this.armR.rotation.x = 1.5 + Math.cos(this.moveTime * 2) * 0.12;
                 this.armL.rotation.z = -0.2;
@@ -327,15 +327,22 @@ export default class Player {
         this.legL.rotation.x = s.la || 0;
         this.legR.rotation.x = -(s.la || 0);
         
+        // 🌐 Replicate secondary arm rotations perfectly for multi-device harmony
         if (s.role === 'seeker') {
-            this.armL.rotation.x = 1.5;
-            this.armR.rotation.x = 1.5;
-        } else if (s.role === 'hunter') {
-            this.armR.rotation.x = -0.5;
-            this.armL.rotation.x = -(s.la || 0);
+            this.armL.rotation.x = 1.5 + Math.sin((s.moveTime || Date.now() * 0.01) * 2) * 0.12;
+            this.armR.rotation.x = 1.5 + Math.cos((s.moveTime || Date.now() * 0.01) * 2) * 0.12;
+            this.armL.rotation.z = -0.2;
+            this.armR.rotation.z = 0.2;
         } else {
-            this.armL.rotation.x = -(s.la || 0);
-            this.armR.rotation.x = s.la || 0;
+            this.armL.rotation.z = 0;
+            this.armR.rotation.z = 0;
+            if (s.role === 'hunter') {
+                this.armR.rotation.x = -0.5;
+                this.armL.rotation.x = -(s.la || 0);
+            } else {
+                this.armL.rotation.x = -(s.la || 0);
+                this.armR.rotation.x = s.la || 0;
+            }
         }
         if (this.currentRole !== s.role) {
             this.setRole(s.role);
@@ -349,7 +356,8 @@ export default class Player {
             z: this.group.position.z,
             ry: this.modelGroup.rotation.y,
             la: this.legL.rotation.x,
-            role: this.currentRole
+            role: this.currentRole,
+            moveTime: this.moveTime
         };
     }
 
