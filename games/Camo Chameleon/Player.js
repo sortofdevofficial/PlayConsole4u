@@ -1,9 +1,9 @@
 import * as THREE from 'three';
 
-const S = 0.2; 
+const S = 0.2;
 
 export default class Player {
-    constructor(scene, color = '#c8cdd4', isRemote = false) {
+    constructor(scene, color = '#38bdf8', isRemote = false) {
         this.scene = scene;
         this.isRemote = isRemote;
         this.group = new THREE.Group();
@@ -11,192 +11,277 @@ export default class Player {
         this.group.add(this.modelGroup);
 
         this.velocity = new THREE.Vector3();
-        this.direction = new THREE.Vector3();
         this.isGrounded = true;
         this.jumpsLeft = 2;
         this.frozen = false;
         this.moveTime = 0;
         this.particles = [];
 
-        this.radius = 0.08;   
-        this.height = 0.55;   
+        // Tight capsule for collision
+        this.radius = 0.07;
+        this.height  = 0.52;
+
         this.baseSkinColor = color;
         this.paintableMeshes = [];
         this.paintLayers = new Map();
 
-        // High fidelity procedural mesh generation configurations
-        const headGeo  = new THREE.SphereGeometry(0.52 * S, 24, 24);
-        const torsoGeo = new THREE.CapsuleGeometry(0.44 * S, 0.75 * S, 10, 20);
-        const limbGeo  = new THREE.CapsuleGeometry(0.16 * S, 0.55 * S, 8, 10); 
-        const jointGeo = new THREE.SphereGeometry(0.17 * S, 10, 10);
+        // ── Shared material (one per player, reused across all parts)
+        this.mat = new THREE.MeshStandardMaterial({ color, roughness: 0.55, metalness: 0.05 });
 
-        const characterMaterial = new THREE.MeshStandardMaterial({ 
-            color: this.baseSkinColor, 
-            roughness: 0.5, 
-            metalness: 0.1 
-        });
+        // ── Geometry — thick, overlapping so no gaps show
+        const hG  = new THREE.SphereGeometry(0.50*S, 20, 20);
+        const tG  = new THREE.CapsuleGeometry(0.42*S, 0.72*S, 8, 16);
+        const lG  = new THREE.CapsuleGeometry(0.16*S, 0.52*S, 6, 10);
+        const jG  = new THREE.SphereGeometry(0.20*S, 10, 10); // big joints = no gap
 
-        this.head = new THREE.Mesh(headGeo, characterMaterial);  
-        this.head.position.y = 2.1 * S; 
-        this.head.castShadow = true;
-        this.modelGroup.add(this.head);
-        
-        this.torso = new THREE.Mesh(torsoGeo, characterMaterial); 
-        this.torso.position.y = 1.3 * S;
-        this.torso.castShadow = true;
-        this.torso.receiveShadow = true;
-        this.modelGroup.add(this.torso);
+        const m = () => this.mat; // shorthand
 
-        // Procedural limbs skeleton bindings
-        this.armL = new THREE.Group();
-        const bL = new THREE.Mesh(limbGeo, characterMaterial);
-        bL.position.y = -0.275 * S;
-        this.armL.add(bL);
-        this.armL.position.set(-0.52 * S, 1.75 * S, 0);
-        this.modelGroup.add(this.armL);
+        // Head — sits snugly on top of torso
+        this.head = this._mesh(hG);
+        this.head.position.y = 1.98*S;
 
-        this.armR = new THREE.Group();
-        const bR = new THREE.Mesh(limbGeo, characterMaterial);
-        bR.position.y = -0.275 * S;
-        this.armR.add(bR);
-        this.armR.position.set(0.52 * S, 1.75 * S, 0);
-        this.modelGroup.add(this.armR);
+        // Torso
+        this.torso = this._mesh(tG);
+        this.torso.position.y = 1.22*S;
 
-        this.legL = new THREE.Group();
-        const lL = new THREE.Mesh(limbGeo, characterMaterial);
-        lL.position.y = -0.275 * S;
-        this.legL.add(lL);
-        this.legL.position.set(-0.25 * S, 0.7 * S, 0);
-        this.modelGroup.add(this.legL);
+        // Neck sphere — fills head/torso gap
+        this.neck = this._mesh(new THREE.SphereGeometry(0.22*S, 10, 10));
+        this.neck.position.y = 1.60*S;
 
-        this.legR = new THREE.Group();
-        const lR = new THREE.Mesh(limbGeo, characterMaterial);
-        lR.position.y = -0.275 * S;
-        this.legR.add(lR);
-        this.legR.position.set(0.25 * S, 0.7 * S, 0);
-        this.modelGroup.add(this.legR);
+        // Arms — pivot from shoulder joint
+        this.armL = new THREE.Group(); this.armL.position.set(-0.54*S, 1.68*S, 0);
+        this.shoulderL = this._mesh(jG); // shoulder joint fills gap
+        const upperArmL = this._mesh(lG); upperArmL.position.y = -0.28*S;
+        this.armL.add(this.shoulderL, upperArmL);
+
+        this.armR = new THREE.Group(); this.armR.position.set(0.54*S, 1.68*S, 0);
+        this.shoulderR = this._mesh(jG);
+        const upperArmR = this._mesh(lG); upperArmR.position.y = -0.28*S;
+        this.armR.add(this.shoulderR, upperArmR);
+
+        // Legs — pivot from hip joint
+        this.legL = new THREE.Group(); this.legL.position.set(-0.24*S, 0.82*S, 0);
+        this.hipL = this._mesh(jG); // hip joint fills gap
+        const thighL = this._mesh(lG); thighL.position.y = -0.28*S;
+        this.legL.add(this.hipL, thighL);
+
+        this.legR = new THREE.Group(); this.legR.position.set(0.24*S, 0.82*S, 0);
+        this.hipR = this._mesh(jG);
+        const thighR = this._mesh(lG); thighR.position.y = -0.28*S;
+        this.legR.add(this.hipR, thighR);
+
+        // Pelvis sphere — fills torso/leg gap
+        this.pelvis = this._mesh(new THREE.SphereGeometry(0.28*S, 10, 10));
+        this.pelvis.position.y = 0.88*S;
+
+        this.modelGroup.add(
+            this.head, this.neck, this.torso, this.pelvis,
+            this.armL, this.armR, this.legL, this.legR
+        );
+
+        // All meshes paintable (shared canvas per mesh)
+        [this.head, this.neck, this.torso, this.pelvis,
+         this.shoulderL, upperArmL, this.shoulderR, upperArmR,
+         this.hipL, thighL, this.hipR, thighR
+        ].forEach(p => this._makePaintable(p));
 
         this.scene.add(this.group);
+        this.nameSprite = null;
+        this.roleSprite = null;
+    }
+
+    _mesh(geo) {
+        const m = new THREE.Mesh(geo, this.mat.clone());
+        m.castShadow = true;
+        return m;
+    }
+
+    _makePaintable(mesh) {
+        const cv = document.createElement('canvas');
+        cv.width = 256; cv.height = 256;
+        const ctx = cv.getContext('2d');
+        ctx.fillStyle = this.baseSkinColor;
+        ctx.fillRect(0, 0, 256, 256);
+        const tex = new THREE.CanvasTexture(cv);
+        mesh.material = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.55, metalness: 0.05 });
+        mesh.castShadow = true;
+        this.paintLayers.set(mesh.uuid, { canvas: cv, ctx, texture: tex });
+        this.paintableMeshes.push(mesh);
+    }
+
+    setName(name) {
+        if (this.nameSprite) this.modelGroup.remove(this.nameSprite);
+        const cv = document.createElement('canvas'); cv.width = 256; cv.height = 52;
+        const ctx = cv.getContext('2d');
+        ctx.clearRect(0, 0, 256, 52);
+        ctx.fillStyle = 'rgba(0,0,0,0.55)';
+        ctx.beginPath(); ctx.roundRect(3,3,250,46,10); ctx.fill();
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 22px system-ui';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(name.slice(0,16), 128, 27);
+        const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), transparent: true, depthTest: false }));
+        sp.scale.set(0.72, 0.14, 1);
+        sp.position.y = this.height + 0.08;
+        this.modelGroup.add(sp); this.nameSprite = sp;
+    }
+
+    setRole(role) {
+        if (this.roleSprite) this.modelGroup.remove(this.roleSprite);
+        if (!role) { this.roleSprite = null; return; }
+        const cv = document.createElement('canvas'); cv.width = 220; cv.height = 44;
+        const ctx = cv.getContext('2d');
+        ctx.clearRect(0, 0, 220, 44);
+        ctx.fillStyle = role === 'hunter' ? 'rgba(239,68,68,0.8)' : 'rgba(59,130,246,0.8)';
+        ctx.beginPath(); ctx.roundRect(2,2,216,40,9); ctx.fill();
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 18px system-ui';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(role === 'hunter' ? '🔴 HUNTER' : '🔵 SEEKER', 110, 22);
+        const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), transparent: true, depthTest: false }));
+        sp.scale.set(0.62, 0.12, 1);
+        sp.position.y = this.height + 0.22;
+        this.modelGroup.add(sp); this.roleSprite = sp;
     }
 
     jump() {
-        if (this.frozen) return; // Prevent input action if frozen
-        if (this.isGrounded || this.jumpsLeft > 0) {
-            this.velocity.y = 4.8; 
-            this.isGrounded = false;
-            this.jumpsLeft--;
+        if (this.frozen || this.jumpsLeft <= 0) return;
+        this.velocity.y = this.jumpsLeft === 2 ? 5.2 : 3.6;
+        this.jumpsLeft--;
+        this.isGrounded = false;
+        this._dust();
+    }
+
+    toggleFreeze() { this.frozen = !this.frozen; }
+
+    _dust() {
+        const mat = new THREE.MeshBasicMaterial({ color: '#94a3b8', transparent: true, opacity: 0.7 });
+        for (let i = 0; i < 6; i++) {
+            const p = new THREE.Mesh(new THREE.SphereGeometry(0.015, 4, 4), mat.clone());
+            p.position.copy(this.group.position);
+            p.userData = { vx:(Math.random()-.5)*.5, vy:Math.random()*.4+.1, vz:(Math.random()-.5)*.5, life:1 };
+            this.scene.add(p); this.particles.push(p);
         }
     }
 
-    update(input, isSprinting, delta, colliders) {
-        // --- TICK PARTICLES UNCONDITIONALLY FOR GRAPHICS VISUAL FLUIDITY ---
-        this.updateParticles(delta);
+    resolveCollisions(pos, vel, colliders) {
+        const r = this.radius, h = this.height;
+        let grounded = false;
+        for (const box of colliders) {
+            const ex = { minX:box.minX-r,maxX:box.maxX+r, minY:box.minY,maxY:box.maxY+h, minZ:box.minZ-r,maxZ:box.maxZ+r };
+            if (pos.x<=ex.minX||pos.x>=ex.maxX||pos.y<=ex.minY||pos.y>=ex.maxY||pos.z<=ex.minZ||pos.z>=ex.maxZ) continue;
+            const ox=Math.min(ex.maxX-pos.x,pos.x-ex.minX);
+            const oy=Math.min(ex.maxY-pos.y,pos.y-ex.minY);
+            const oz=Math.min(ex.maxZ-pos.z,pos.z-ex.minZ);
+            if (oy<=ox&&oy<=oz) {
+                if (pos.y-ex.minY < ex.maxY-pos.y) { pos.y=box.minY-h-0.001; if(vel.y>0)vel.y=0; }
+                else { pos.y=box.maxY+0.001; if(vel.y<0){vel.y=0;grounded=true;} }
+            } else if (ox<=oz) {
+                pos.x = pos.x-ex.minX<ex.maxX-pos.x ? box.minX-r-0.001 : box.maxX+r+0.001;
+                vel.x*=0.05;
+            } else {
+                pos.z = pos.z-ex.minZ<ex.maxZ-pos.z ? box.minZ-r-0.001 : box.maxZ+r+0.001;
+                vel.z*=0.05;
+            }
+        }
+        return grounded;
+    }
 
-        // If frozen, we skip velocity calculation but preserve the scene rendering cycle context safely!
+    update(input, isSprinting, delta, colliders = []) {
+        // Particles always tick
+        for (let i=this.particles.length-1;i>=0;i--) {
+            const p=this.particles[i];
+            p.position.x+=p.userData.vx*delta; p.position.y+=p.userData.vy*delta; p.position.z+=p.userData.vz*delta;
+            p.scale.setScalar(Math.max(0,p.userData.life));
+            p.userData.life-=3*delta;
+            if(p.userData.life<=0){this.scene.remove(p);this.particles.splice(i,1);}
+        }
+
+        if (this.isRemote) return;
+
+        // While frozen, still apply gravity so they don't float
         if (this.frozen) {
-            this.velocity.set(0, Math.max(-15, this.velocity.y - 12 * delta), 0);
-            this.group.position.addScaledVector(this.velocity, delta);
-            this.resolveEnvironmentCollisions(colliders);
+            this.velocity.y -= 18*delta;
+            const fp = this.group.position.clone();
+            fp.y += this.velocity.y*delta;
+            if(fp.y<=0){fp.y=0;this.velocity.y=0;this.isGrounded=true;}
+            this.resolveCollisions(fp, this.velocity, colliders);
+            this.group.position.copy(fp);
             return;
         }
 
-        const currentMoveSpeed = isSprinting ? 5.5 : 3.2;
-
-        // Process blended keys and continuous mobile digital inputs
-        let moveX = 0;
-        let moveZ = 0;
-
-        if (input.jx !== undefined && (Math.abs(input.jx) > 0.05 || Math.abs(input.jz) > 0.05)) {
-            moveX = input.jx;
-            moveZ = input.jz;
+        // Movement direction
+        let mx = 0, mz = 0;
+        if (Math.abs(input.jx||0)>0.08 || Math.abs(input.jz||0)>0.08) {
+            mx = input.jx; mz = input.jz;
         } else {
-            if (input.w) moveZ = -1;
-            if (input.s) moveZ = 1;
-            if (input.a) moveX = -1;
-            if (input.d) moveX = 1;
-            
-            // Normalize digital layout vector values
-            const len = Math.sqrt(moveX * moveX + moveZ * moveZ);
-            if (len > 0) {
-                moveX /= len;
-                moveZ /= len;
-            }
+            if(input.w) mz=-1; if(input.s) mz=1;
+            if(input.a) mx=-1; if(input.d) mx=1;
+            const len=Math.sqrt(mx*mx+mz*mz); if(len>1){mx/=len;mz/=len;}
         }
 
-        this.direction.set(moveX, 0, moveZ);
+        const speed = isSprinting ? 6.5 : 3.8;
+        const friction = 10;
 
-        if (this.direction.lengthSq() > 0.01) {
-            const targetRotation = Math.atan2(moveX, moveZ);
-            // Smooth angular interpolations
-            let diff = targetRotation - this.modelGroup.rotation.y;
-            while (diff < -Math.PI) diff += Math.PI * 2;
-            while (diff > Math.PI) diff -= Math.PI * 2;
-            this.modelGroup.rotation.y += diff * 0.15;
+        this.velocity.x += mx*speed*delta*60*0.016;
+        this.velocity.z += mz*speed*delta*60*0.016;
+        this.velocity.x -= this.velocity.x*friction*delta;
+        this.velocity.z -= this.velocity.z*friction*delta;
+        // Cap speed
+        const hspd=Math.sqrt(this.velocity.x**2+this.velocity.z**2);
+        if(hspd>speed){this.velocity.x*=speed/hspd;this.velocity.z*=speed/hspd;}
+        this.velocity.y -= 20*delta;
 
-            this.moveTime += delta * currentMoveSpeed * 2.2;
-            this.legL.rotation.x = Math.sin(this.moveTime) * 0.6;
-            this.legR.rotation.x = -Math.sin(this.moveTime) * 0.6;
-            this.armL.rotation.x = -Math.sin(this.moveTime) * 0.4;
-            this.armR.rotation.x = Math.sin(this.moveTime) * 0.4;
-        } else {
-            // Lerp animations back into rest postures safely
-            this.legL.rotation.x *= 0.8;
-            this.legR.rotation.x *= 0.8;
-            this.armL.rotation.x *= 0.8;
-            this.armR.rotation.x *= 0.8;
+        // Sub-step (2x) prevents tunnelling at high speed
+        for(let step=0;step<2;step++){
+            const dt=delta/2;
+            const pos=this.group.position.clone();
+            pos.x+=this.velocity.x*dt; pos.y+=this.velocity.y*dt; pos.z+=this.velocity.z*dt;
+            if(pos.y<=0){pos.y=0;if(this.velocity.y<0){if(!this.isGrounded)this._dust();this.velocity.y=0;this.isGrounded=true;this.jumpsLeft=2;}}
+            const hit=this.resolveCollisions(pos,this.velocity,colliders);
+            if(hit){this.isGrounded=true;this.jumpsLeft=2;}
+            else if(pos.y>0.01) this.isGrounded=false;
+            const B=23; pos.x=Math.max(-B,Math.min(B,pos.x)); pos.z=Math.max(-B,Math.min(B,pos.z));
+            this.group.position.copy(pos);
         }
 
-        // Apply realistic gravity curves
-        this.velocity.x = this.direction.x * currentMoveSpeed;
-        this.velocity.z = this.direction.z * currentMoveSpeed;
-        this.velocity.y = Math.max(-16, this.velocity.y - 14 * delta);
-
-        this.group.position.addScaledVector(this.velocity, delta);
-        this.resolveEnvironmentCollisions(colliders);
-    }
-
-    resolveEnvironmentCollisions(colliders) {
-        if (!colliders) return;
-        this.isGrounded = false;
-        
-        // Solid grounding tracking matching landscape layouts
-        if (this.group.position.y <= 0) {
-            this.group.position.y = 0;
-            this.velocity.y = 0;
-            this.isGrounded = true;
-            this.jumpsLeft = 2;
+        // ── Animation
+        const spd=Math.sqrt(this.velocity.x**2+this.velocity.z**2);
+        if(spd>0.06){
+            const ta=Math.atan2(this.velocity.x,this.velocity.z);
+            let diff=ta-this.modelGroup.rotation.y;
+            diff=Math.atan2(Math.sin(diff),Math.cos(diff));
+            this.modelGroup.rotation.y+=diff*20*delta;
+            this.moveTime+=spd*delta*25;
+            const w=Math.sin(this.moveTime);
+            this.legL.rotation.x=w*0.65; this.legR.rotation.x=-w*0.65;
+            this.armL.rotation.x=-w*0.55; this.armR.rotation.x=w*0.55;
+            this.head.rotation.y=Math.sin(this.moveTime*0.5)*0.08;
+        } else {
+            const t=16*delta;
+            this.legL.rotation.x*=(1-t); this.legR.rotation.x*=(1-t);
+            this.armL.rotation.x*=(1-t); this.armR.rotation.x*=(1-t);
+            this.head.rotation.y*=(1-t);
         }
     }
 
-    updateParticles(delta) {
-        for (let i = this.particles.length - 1; i >= 0; i--) {
-            const p = this.particles[i];
-            p.position.addScaledVector(p.userData.velocity, delta);
-            p.userData.age += delta;
-            if (p.userData.age > p.userData.maxAge) {
-                this.scene.remove(p);
-                this.particles.splice(i, 1);
-            }
-        }
+    applyRemoteState(s) {
+        this.group.position.set(s.x,s.y,s.z);
+        this.modelGroup.rotation.y=s.ry;
+        this.legL.rotation.x=s.la||0; this.legR.rotation.x=-(s.la||0);
+        this.armL.rotation.x=-(s.la||0); this.armR.rotation.x=s.la||0;
+    }
+
+    getNetState() {
+        return { x:this.group.position.x,y:this.group.position.y,z:this.group.position.z,ry:this.modelGroup.rotation.y,la:this.legL.rotation.x };
     }
 
     executePaintMatrix(hitObject, uv, color, radius, tool) {
-        if (!hitObject || !uv) return;
-        // Purged bucket specific operations - exclusively implements safe procedural brush changes
-        const layer = this.paintLayers?.get(hitObject.uuid);
+        const layer = this.paintLayers.get(hitObject.uuid);
         if (!layer) return;
-
-        const ctx = layer.context;
-        if (!ctx) return;
-
-        const cx = uv.x * layer.width;
-        const cy = (1 - uv.y) * layer.height;
-
-        ctx.fillStyle = color || brushColor;
-        ctx.beginPath();
-        ctx.arc(cx, cy, radius || brushRadius, 0, Math.PI * 2);
-        ctx.fill();
-
-        if (layer.texture) layer.texture.needsUpdate = true;
+        const x=uv.x*layer.canvas.width, y=(1-uv.y)*layer.canvas.height;
+        if(tool==='bucket'){ layer.ctx.fillStyle=color; layer.ctx.fillRect(0,0,layer.canvas.width,layer.canvas.height); }
+        else { layer.ctx.fillStyle=color; layer.ctx.beginPath(); layer.ctx.arc(x,y,radius,0,Math.PI*2); layer.ctx.fill(); }
+        layer.texture.needsUpdate=true;
     }
+
+    destroy() { this.scene.remove(this.group); }
 }
