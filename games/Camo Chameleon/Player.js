@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+
 const S = 0.2; 
 
 export default class Player {
@@ -16,89 +17,77 @@ export default class Player {
         this.frozen = false;
         this.moveTime = 0;
         this.particles = [];
-        this.currentRole = null;
+        this.currentRole = 'hider'; // default to hider
 
-        // Bounding box capsule metrics
-        this.radius = 0.08;   
+        // Tightened bounding box for perfect wall sliding
+        this.radius = 0.07;   
         this.height = 0.55;   
 
         this.baseSkinColor = color;
         this.paintableMeshes = [];
         this.paintLayers = new Map();
 
-        // 📐 Thicker geometries to eliminate raw shape look
+        // Thicker geometries for a solid, non-generic look
         const headGeo  = new THREE.SphereGeometry(0.52 * S, 24, 24);
-        const torsoGeo = new THREE.CapsuleGeometry(0.44 * S, 0.75 * S, 10, 20); // Much thicker torso profile
-        const limbGeo  = new THREE.CapsuleGeometry(0.16 * S, 0.55 * S, 8, 10);  // Connected thicker limbs
+        const torsoGeo = new THREE.CapsuleGeometry(0.44 * S, 0.75 * S, 10, 20);
+        const limbGeo  = new THREE.CapsuleGeometry(0.16 * S, 0.55 * S, 8, 10); 
         const jointGeo = new THREE.SphereGeometry(0.17 * S, 10, 10);
 
         this.head  = new THREE.Mesh(headGeo);  
-        this.head.position.y  = 2.1 * S; // Moved closer down to seamlessly intersect torso
+        this.head.position.y  = 2.1 * S; 
         
         this.torso = new THREE.Mesh(torsoGeo); 
         this.torso.position.y = 1.3 * S;
 
-        // Perfectly attached Left Arm System (Aligned exactly to top capsule cap pivot)
         this.armL = new THREE.Group();
         const sL = new THREE.Mesh(jointGeo);
         const bL = new THREE.Mesh(limbGeo); 
-        bL.position.y = -0.275 * S; // Fixed pivot offset from -0.25 to -0.275
+        bL.position.y = -0.275 * S; 
         this.armL.add(sL, bL); 
         this.armL.position.set(-0.52 * S, 1.75 * S, 0);
 
-        // Perfectly attached Right Arm System
         this.armR = new THREE.Group();
         const sR = new THREE.Mesh(jointGeo);
         const bR = new THREE.Mesh(limbGeo); 
-        bR.position.y = -0.275 * S; // Fixed pivot offset from -0.25 to -0.275
+        bR.position.y = -0.275 * S; 
         this.armR.add(sR, bR); 
         this.armR.position.set(0.52 * S, 1.75 * S, 0);
 
-        // Left Leg System
         this.legL = new THREE.Group();
         const hL = new THREE.Mesh(jointGeo);
         const tL = new THREE.Mesh(limbGeo); 
-        tL.position.y = -0.275 * S; // Fixed pivot offset from -0.25 to -0.275
+        tL.position.y = -0.275 * S; 
         this.legL.add(hL, tL); 
         this.legL.position.set(-0.24 * S, 0.75 * S, 0);
 
-        // Right Leg System
         this.legR = new THREE.Group();
         const hR = new THREE.Mesh(jointGeo);
         const tR = new THREE.Mesh(limbGeo); 
-        tR.position.y = -0.275 * S; // Fixed pivot offset from -0.25 to -0.275
+        tR.position.y = -0.275 * S; 
         this.legR.add(hR, tR); 
         this.legR.position.set(0.24 * S, 0.75 * S, 0);
 
-        // Construct Blaster Gun attachment assembly for Hunters
-        this.gunGroup = new THREE.Group();
-        const barrel = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.06 * S, 0.06 * S, 0.5 * S, 8),
-            new THREE.MeshStandardMaterial({ color: '#334155', roughness: 0.5, metalness: 0.8 })
-        );
-        barrel.rotation.x = Math.PI / 2;
-        barrel.position.set(0, -0.5 * S, 0.25 * S);
-        const receiver = new THREE.Mesh(
-            new THREE.BoxGeometry(0.14 * S, 0.2 * S, 0.3 * S),
-            new THREE.MeshStandardMaterial({ color: '#1e293b', roughness: 0.4 })
-        );
-        receiver.position.set(0, -0.5 * S, 0);
-        this.gunGroup.add(barrel, receiver);
-        this.gunGroup.visible = false;
-        this.armR.add(this.gunGroup);
-
+        this.playerName = "Player";
         [this.head, this.torso, sL, bL, sR, bR, hL, tL, hR, tR].forEach(p => this.makePaintable(p));
         this.modelGroup.add(this.head, this.torso, this.armL, this.armR, this.legL, this.legR);
+        
+        // Enable Shadows
+        this.modelGroup.traverse((child) => {
+            if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+            }
+        });
+
         this.scene.add(this.group);
         this.nameLabel = null; 
-        this.roleLabel = null;
     }
 
     setName(name) {
+        this.playerName = name;
         if (this.nameLabel) this.modelGroup.remove(this.nameLabel);
         const cv = document.createElement('canvas'); cv.width = 256; cv.height = 48;
         const ctx = cv.getContext('2d');
-        ctx.clearRect(0, 0, 256, 48);
         ctx.fillStyle = 'rgba(15,23,42,0.85)'; this._rrect(ctx, 4, 4, 248, 40, 10); ctx.fill();
         ctx.fillStyle = '#fff'; ctx.font = 'bold 22px system-ui';
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -109,51 +98,23 @@ export default class Player {
         this.modelGroup.add(sp); this.nameLabel = sp;
     }
 
+    setNametagVisible(isVisible) {
+        if (this.nameLabel) {
+            this.nameLabel.visible = isVisible;
+        }
+    }
+
     _rrect(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r); ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h); ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r); ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y); ctx.closePath(); }
 
     setRole(role) {
         this.currentRole = role;
-        if (this.roleLabel) this.modelGroup.remove(this.roleLabel);
-        
-        if (role === 'spectator') { 
-            this.modelGroup.visible = false; 
-            this.roleLabel = null; 
-            return; 
-        } else { 
-            this.modelGroup.visible = true; 
-        }
-
-        // 📏 Dynamic Sizing Scalers & Weapon Loadouts per Role
-        if (role === 'hunter') {
-            this.modelGroup.scale.setScalar(1.5); // Bulkier, huge Hunter
-            this.gunGroup.visible = true;         // Arm with Gun
-            this.radius = 0.12;
-            this.height = 0.85;
-        } else if (role === 'seeker') {
-            this.modelGroup.scale.setScalar(0.75); // Tiny, nimble Seeker
-            this.gunGroup.visible = false;
-            this.radius = 0.06;
-            this.height = 0.42;
+        if (role === 'seeker') {
+            this.modelGroup.scale.setScalar(1.1);
+            this.radius = 0.08; this.height = 0.6;
         } else {
-            this.modelGroup.scale.setScalar(1.0);  // Base default state
-            this.gunGroup.visible = false;
-            this.radius = 0.08;
-            this.height = 0.55;
+            this.modelGroup.scale.setScalar(0.8);
+            this.radius = 0.06; this.height = 0.45;
         }
-
-        if (!role) { this.roleLabel = null; return; }
-        const cv = document.createElement('canvas'); cv.width = 200; cv.height = 40;
-        const ctx = cv.getContext('2d');
-        ctx.clearRect(0, 0, 200, 40);
-        ctx.fillStyle = role === 'hunter' ? 'rgba(239,68,68,0.9)' : 'rgba(59,130,246,0.9)';
-        this._rrect(ctx, 2, 2, 196, 36, 8); ctx.fill();
-        ctx.fillStyle = '#fff'; ctx.font = 'bold 18px system-ui';
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText(role === 'hunter' ? '🔴 HUNTER' : '🔵 SEEKER', 100, 20);
-        const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), transparent: true, depthTest: false }));
-        sp.scale.set(0.56, 0.11, 1);
-        sp.position.y = this.height + 0.5;
-        this.modelGroup.add(sp); this.roleLabel = sp;
     }
 
     makePaintable(mesh) {
@@ -161,9 +122,15 @@ export default class Player {
         const ctx = cv.getContext('2d');
         ctx.fillStyle = this.baseSkinColor; ctx.fillRect(0, 0, 256, 256);
         const tex = new THREE.CanvasTexture(cv);
-        mesh.material = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.5, metalness: 0.1 });
-        mesh.castShadow = true; mesh.receiveShadow = true;
-        this.paintLayers.set(mesh.uuid, { canvas: cv, ctx, texture: tex });
+        
+        // Upgraded Material for Graphics
+        mesh.material = new THREE.MeshStandardMaterial({ 
+            map: tex, 
+            roughness: 0.7, 
+            metalness: 0.1 
+        });
+        
+        this.paintLayers.set(mesh.uuid, { canvas: cv, ctx, texture: tex, mesh: mesh });
         this.paintableMeshes.push(mesh);
     }
 
@@ -172,19 +139,6 @@ export default class Player {
         this.velocity.y = this.jumpsLeft === 2 ? 5.5 : 4.0; 
         this.jumpsLeft--;
         this.isGrounded = false;
-        this._dust();
-    }
-
-    toggleFreeze() { this.frozen = !this.frozen; }
-
-    _dust() {
-        const mat = new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.6 });
-        for (let i = 0; i < 5; i++) {
-            const p = new THREE.Mesh(new THREE.SphereGeometry(0.02, 4, 4), mat.clone());
-            p.position.copy(this.group.position); p.position.y += 0.02;
-            p.userData = { vx: (Math.random() - .5) * 1.0, vy: Math.random() * 0.6, vz: (Math.random() - .5) * 1.0, life: 1.0 };
-            this.scene.add(p); this.particles.push(p);
-        }
     }
 
     resolveCollisions(pos, vel, colliders) {
@@ -195,20 +149,22 @@ export default class Player {
             if (pos.x <= ex.minX || pos.x >= ex.maxX) continue;
             if (pos.y <= ex.minY || pos.y >= ex.maxY) continue;
             if (pos.z <= ex.minZ || pos.z >= ex.maxZ) continue;
+            
             const ox = Math.min(ex.maxX - pos.x, pos.x - ex.minX);
             const oy = Math.min(ex.maxY - pos.y, pos.y - ex.minY);
             const oz = Math.min(ex.maxZ - pos.z, pos.z - ex.minZ);
+            
             if (oy < ox && oy < oz) {
                 if (pos.y - ex.minY < ex.maxY - pos.y) { pos.y = box.minY - h - 0.001; if (vel.y > 0) vel.y = 0; }
                 else { pos.y = box.maxY + 0.001; if (vel.y < 0) { vel.y = 0; grounded = true; } }
             } else if (ox < oz) {
                 if (pos.x - ex.minX < ex.maxX - pos.x) pos.x = box.minX - r - 0.001;
                 else pos.x = box.maxX + r + 0.001;
-                vel.x *= 0.01;
+                vel.x = 0; // Perfect wall stop
             } else {
                 if (pos.z - ex.minZ < ex.maxZ - pos.z) pos.z = box.minZ - r - 0.001;
                 else pos.z = box.maxZ + r + 0.001;
-                vel.z *= 0.01;
+                vel.z = 0; // Perfect wall stop
             }
         }
         return grounded;
@@ -217,29 +173,23 @@ export default class Player {
     update(keys, isSprinting, delta, colliders = []) {
         if (this.isRemote || this.frozen) return;
 
-        // 🕹️ Check if joystick has actual active value, otherwise drop back to keyboard mapping!
         const dx = Math.abs(keys.jx) > 0.01 ? keys.jx : (keys.d?1:0)-(keys.a?1:0);
         const dz = Math.abs(keys.jz) > 0.01 ? keys.jz : (keys.s?1:0)-(keys.w?1:0);
         this.direction.set(dx, 0, dz);
         
-        // Clamp to unit circle (diagonal keyboard shouldn't be faster)
         const dlen = this.direction.length();
         if (dlen > 1) this.direction.divideScalar(dlen);
 
-        const speed = isSprinting ? 7.0 : 4.2;
-        const accel = 55.0;
-        const friction = 12.0;
+        const speed = isSprinting ? 6.0 : 3.5;
+        const accel = 60.0;
+        const friction = 15.0;
 
         this.velocity.x += this.direction.x * speed * accel * delta;
         this.velocity.z += this.direction.z * speed * accel * delta;
-        
         this.velocity.x -= this.velocity.x * friction * delta;
         this.velocity.z -= this.velocity.z * friction * delta;
 
-        const hspd = Math.sqrt(this.velocity.x ** 2 + this.velocity.z ** 2);
-        if (hspd > speed) { const sc = speed / hspd; this.velocity.x *= sc; this.velocity.z *= sc; }
-
-        this.velocity.y -= 18 * delta;
+        this.velocity.y -= 18 * delta; // Gravity
 
         const STEPS = 3; const dt = delta / STEPS;
         const pos = this.group.position.clone();
@@ -249,14 +199,13 @@ export default class Player {
             pos.y += this.velocity.y * dt;
             pos.z += this.velocity.z * dt;
 
-            if (pos.y <= 0 && pos.x >= -25 && pos.x <= 25 && pos.z >= -25 && pos.z <= 25) {
+            // Map Floor Bounds
+            if (pos.y <= 0 && pos.x >= -35 && pos.x <= 35 && pos.z >= -35 && pos.z <= 35) {
                 pos.y = 0;
                 if (this.velocity.y < 0) {
-                    if (!this.isGrounded) this._dust();
                     this.velocity.y = 0; this.isGrounded = true; this.jumpsLeft = 2;
                 }
             }
-
             const hitBox = this.resolveCollisions(pos, this.velocity, colliders);
             if (hitBox) { this.isGrounded = true; this.jumpsLeft = 2; }
             if (pos.y > 0.01 && !hitBox) this.isGrounded = false;
@@ -264,60 +213,27 @@ export default class Player {
 
         this.group.position.copy(pos);
 
-        // 🤸 Dynamic Walk Animation Cycles
+        // Animation
         const spd = Math.sqrt(this.velocity.x ** 2 + this.velocity.z ** 2);
-        if (spd > 0.08) {
+        if (spd > 0.1) {
             const ta = Math.atan2(this.velocity.x, this.velocity.z);
             let diff = ta - this.modelGroup.rotation.y;
             diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-            this.modelGroup.rotation.y += diff * 25 * delta;
+            this.modelGroup.rotation.y += diff * 20 * delta;
             
-            this.moveTime += spd * delta * 2.2;
+            this.moveTime += spd * delta * 2.5;
             const w = Math.sin(this.moveTime);
 
-            if (this.currentRole === 'seeker') {
-                // 🏃 Hands stretching backward animation
-                this.armL.rotation.x = 1.5 + Math.sin(this.moveTime * 2) * 0.12; 
-                this.armR.rotation.x = 1.5 + Math.cos(this.moveTime * 2) * 0.12;
-                this.armL.rotation.z = -0.2;
-                this.armR.rotation.z = 0.2;
-                
-                this.legL.rotation.x = w * 0.7;  
-                this.legR.rotation.x = -w * 0.7;
-            } else {
-                // Hunter or Base Normal Running Animation
-                this.legL.rotation.x = w * 0.8;  
-                this.legR.rotation.x = -w * 0.8;
-                if (this.currentRole === 'hunter') {
-                    this.armR.rotation.x = -0.5; // Aim weapon forward
-                    this.armL.rotation.x = -w * 0.6;
-                } else {
-                    this.armL.rotation.x = -w * 0.7; 
-                    this.armR.rotation.x = w * 0.7;
-                }
-                this.armL.rotation.z = 0; this.armR.rotation.z = 0;
-            }
+            this.legL.rotation.x = w * 0.8;  
+            this.legR.rotation.x = -w * 0.8;
+            this.armL.rotation.x = -w * 0.7; 
+            this.armR.rotation.x = w * 0.7;
         } else {
-            const t = 20 * delta;
+            const t = 15 * delta;
             this.legL.rotation.x = THREE.MathUtils.lerp(this.legL.rotation.x, 0, t);
             this.legR.rotation.x = THREE.MathUtils.lerp(this.legR.rotation.x, 0, t);
             this.armL.rotation.x = THREE.MathUtils.lerp(this.armL.rotation.x, 0, t);
-            this.armL.rotation.z = THREE.MathUtils.lerp(this.armL.rotation.z, 0, t);
-            this.armR.rotation.z = THREE.MathUtils.lerp(this.armR.rotation.z, 0, t);
-            
-            if (this.currentRole === 'hunter') {
-                this.armR.rotation.x = THREE.MathUtils.lerp(this.armR.rotation.x, -0.4, t);
-            } else {
-                this.armR.rotation.x = THREE.MathUtils.lerp(this.armR.rotation.x, 0, t);
-            }
-        }
-
-        for (let i = this.particles.length - 1; i >= 0; i--) {
-            const p = this.particles[i];
-            p.position.x += p.userData.vx * delta; p.position.y += p.userData.vy * delta; p.position.z += p.userData.vz * delta;
-            p.scale.setScalar(Math.max(0, p.userData.life));
-            p.userData.life -= 4 * delta;
-            if (p.userData.life <= 0) { this.scene.remove(p); this.particles.splice(i, 1); }
+            this.armR.rotation.x = THREE.MathUtils.lerp(this.armR.rotation.x, 0, t);
         }
     }
 
@@ -326,47 +242,32 @@ export default class Player {
         this.modelGroup.rotation.y = s.ry;
         this.legL.rotation.x = s.la || 0;
         this.legR.rotation.x = -(s.la || 0);
-        
-        // 🌐 Replicate secondary arm rotations perfectly for multi-device harmony
-        if (s.role === 'seeker') {
-            this.armL.rotation.x = 1.5 + Math.sin((s.moveTime || Date.now() * 0.01) * 2) * 0.12;
-            this.armR.rotation.x = 1.5 + Math.cos((s.moveTime || Date.now() * 0.01) * 2) * 0.12;
-            this.armL.rotation.z = -0.2;
-            this.armR.rotation.z = 0.2;
-        } else {
-            this.armL.rotation.z = 0;
-            this.armR.rotation.z = 0;
-            if (s.role === 'hunter') {
-                this.armR.rotation.x = -0.5;
-                this.armL.rotation.x = -(s.la || 0);
-            } else {
-                this.armL.rotation.x = -(s.la || 0);
-                this.armR.rotation.x = s.la || 0;
-            }
-        }
+        this.armL.rotation.x = -(s.la || 0);
+        this.armR.rotation.x = s.la || 0;
         if (this.currentRole !== s.role) {
             this.setRole(s.role);
         }
     }
 
-    getNetState() {
-        return {
-            x: this.group.position.x,
-            y: this.group.position.y,
-            z: this.group.position.z,
-            ry: this.modelGroup.rotation.y,
-            la: this.legL.rotation.x,
-            role: this.currentRole,
-            moveTime: this.moveTime
-        };
-    }
-
     executePaintMatrix(hitObject, uv, color, radius, tool) {
         const layer = this.paintLayers.get(hitObject.uuid);
         if (!layer) return;
+
+        // Apply Metallic/Matte Material Adjustments
+        if (tool === 'metallic') {
+            layer.mesh.material.metalness = 0.9;
+            layer.mesh.material.roughness = 0.2;
+        } else if (tool === 'matte') {
+            layer.mesh.material.metalness = 0.0;
+            layer.mesh.material.roughness = 0.9;
+        }
+
         const x = uv.x * layer.canvas.width, y = (1 - uv.y) * layer.canvas.height;
-        if (tool === 'bucket') { layer.ctx.fillStyle = color; layer.ctx.fillRect(0, 0, layer.canvas.width, layer.canvas.height); }
-        else { layer.ctx.fillStyle = tool === 'eraser' ? this.baseSkinColor : color; layer.ctx.beginPath(); layer.ctx.arc(x, y, radius, 0, Math.PI * 2); layer.ctx.fill(); }
+        layer.ctx.fillStyle = tool === 'eraser' ? this.baseSkinColor : color;
+        layer.ctx.beginPath(); 
+        layer.ctx.arc(x, y, radius, 0, Math.PI * 2); 
+        layer.ctx.fill(); 
+        
         layer.texture.needsUpdate = true;
     }
 
