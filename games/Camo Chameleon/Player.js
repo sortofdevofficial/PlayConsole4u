@@ -169,7 +169,7 @@ export default class Player {
 
     jump() {
         if (this.frozen || this.jumpsLeft <= 0) return;
-        this.velocity.y = this.jumpsLeft === 2 ? 8.5 : 7.0; 
+        this.velocity.y = this.jumpsLeft === 2 ? 5.5 : 4.0; 
         this.jumpsLeft--;
         this.isGrounded = false;
         this._dust();
@@ -217,13 +217,18 @@ export default class Player {
     update(keys, isSprinting, delta, colliders = []) {
         if (this.isRemote || this.frozen) return;
 
-        this.direction.set((keys.d ? 1 : 0) - (keys.a ? 1 : 0), 0, (keys.s ? 1 : 0) - (keys.w ? 1 : 0));
-        if (this.direction.lengthSq() > 0) this.direction.normalize();
+        // Use analog joystick values if available (jx/jz), else binary keys
+        const dx = keys.jx !== undefined ? keys.jx : (keys.d?1:0)-(keys.a?1:0);
+        const dz = keys.jz !== undefined ? keys.jz : (keys.s?1:0)-(keys.w?1:0);
+        this.direction.set(dx, 0, dz);
+        // Clamp to unit circle (diagonal keyboard shouldn't be faster)
+        const dlen = this.direction.length();
+        if (dlen > 1) this.direction.divideScalar(dlen);
 
         // 🏎️ Smoothed Velocity Curve Parameters (Slowed down a little bit as requested)
-        const speed = isSprinting ? 20.0 : 13.0;   
-        const accel = 120.0;
-        const friction = 25.0;
+        const speed = isSprinting ? 7.0 : 4.2;
+        const accel = 55.0;
+        const friction = 12.0;
 
         this.velocity.x += this.direction.x * speed * accel * delta;
         this.velocity.z += this.direction.z * speed * accel * delta;
@@ -234,7 +239,7 @@ export default class Player {
         const hspd = Math.sqrt(this.velocity.x ** 2 + this.velocity.z ** 2);
         if (hspd > speed) { const sc = speed / hspd; this.velocity.x *= sc; this.velocity.z *= sc; }
 
-        this.velocity.y -= 28 * delta;
+        this.velocity.y -= 18 * delta;
 
         const STEPS = 3; const dt = delta / STEPS;
         const pos = this.group.position.clone();

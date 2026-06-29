@@ -58,24 +58,24 @@ function init() {
     raycaster = new THREE.Raycaster();
     mouse = new THREE.Vector2();
 
-    // ── Keys
+    // ── Keys — robust cross-device (code + key fallback)
+    const setKey = (e, val) => {
+        const c = e.code, k = e.key?.toLowerCase();
+        if (c==='KeyW'||k==='w'||c==='ArrowUp')    keys.w=val;
+        if (c==='KeyA'||k==='a'||c==='ArrowLeft')  keys.a=val;
+        if (c==='KeyS'||k==='s'||c==='ArrowDown')  keys.s=val;
+        if (c==='KeyD'||k==='d'||c==='ArrowRight') keys.d=val;
+        if (c==='ShiftLeft'||c==='ShiftRight'||k==='shift') keys.Shift=val;
+    };
     window.addEventListener('keydown', e => {
         if (!gameStarted) return;
-        if (e.code==='Space') { e.preventDefault(); player.jump(); }
-        if (e.code==='KeyF')  { player.toggleFreeze(); updateFreezeUI(); }
-        if (e.key==='w'||e.key==='W') keys.w=true;
-        if (e.key==='a'||e.key==='A') keys.a=true;
-        if (e.key==='s'||e.key==='S') keys.s=true;
-        if (e.key==='d'||e.key==='D') keys.d=true;
-        if (e.code==='ShiftLeft'||e.code==='ShiftRight') keys.Shift=true;
+        if (e.code==='Space') { e.preventDefault(); player.jump(); return; }
+        if (e.code==='KeyF')  { player.toggleFreeze(); updateFreezeUI(); return; }
+        setKey(e, true);
     });
-    window.addEventListener('keyup', e => {
-        if (e.key==='w'||e.key==='W') keys.w=false;
-        if (e.key==='a'||e.key==='A') keys.a=false;
-        if (e.key==='s'||e.key==='S') keys.s=false;
-        if (e.key==='d'||e.key==='D') keys.d=false;
-        if (e.code==='ShiftLeft'||e.code==='ShiftRight') keys.Shift=false;
-    });
+    window.addEventListener('keyup', e => { setKey(e, false); });
+    // Release all keys when window loses focus (prevents stuck keys)
+    window.addEventListener('blur', () => { keys.w=keys.a=keys.s=keys.d=keys.Shift=false; });
 
     // ── Pointer: left drag = paint, right drag = orbit
     window.addEventListener('pointerdown', e => {
@@ -412,10 +412,22 @@ function setupPresence() {
         Object.keys(conns).forEach(pid=>{ if(!live.has(pid)) removePeer(pid); });
     });
 
-    // Clean up PeerJS on tab close (RTDB onDisconnect handles its own cleanup)
-    window.addEventListener('pagehide', ()=>{
-        rtdbPresRef.remove().catch(()=>{});
-        peer?.destroy();
+    // Clean up on tab close/crash — RTDB onDisconnect handles server side,
+    // but we also do client-side cleanup so peers disconnect faster
+    const cleanupAll = () => {
+        // Remove RTDB presence node immediately (server onDisconnect is the fallback)
+        try { rtdbPresRef.remove(); } catch(e){}
+        // Close all PeerJS connections so remote peers get 'close' event instantly
+        Object.values(conns).forEach(c=>{ try{c.close();}catch(e){} });
+        try { peer.destroy(); } catch(e){}
+    };
+    window.addEventListener('beforeunload', cleanupAll);
+    window.addEventListener('pagehide',     cleanupAll); // iOS Safari
+    window.addEventListener('visibilitychange', ()=>{
+        if (document.visibilityState==='hidden') {
+            // On mobile, hidden often means killed — run cleanup defensively
+            try { rtdbPresRef.remove(); } catch(e){}
+        }
     });
 }
 
@@ -509,7 +521,11 @@ function setupMobile() {
             const dist=Math.sqrt(dx*dx+dy*dy), max=45;
             const ang=Math.atan2(dy,dx);
             knob.style.transform=`translate(calc(-50% + ${Math.cos(ang)*Math.min(dist,max)}px),calc(-50% + ${Math.sin(ang)*Math.min(dist,max)}px))`;
-            mob.x=dx/max; mob.z=dy/max;
+            // Normalize with dead-zone so tiny joystick wobble doesn't move
+            const rawX=dx/max, rawZ=dy/max;
+            const DEAD=0.15;
+            mob.x = Math.abs(rawX)>DEAD ? rawX : 0;
+            mob.z = Math.abs(rawZ)>DEAD ? rawZ : 0;
         }
     },{passive:true});
 
@@ -531,7 +547,15 @@ function animate() {
     const delta=Math.min(clock.getDelta(),0.05);
     if(!gameStarted){menuControls.update();renderer.render(scene,camera);return;}
 
-    const mk={w:keys.w||mob.z<-0.2,s:keys.s||mob.z>0.2,a:keys.a||mob.x<-0.2,d:keys.d||mob.x>0.2};
+    // Merge keyboard + joystick — joystick gives analog input via mob.x/z
+    const mk={
+        w: keys.w || mob.z < -0.15,
+        s: keys.s || mob.z >  0.15,
+        a: keys.a || mob.x < -0.15,
+        d: keys.d || mob.x >  0.15,
+        jx: mob.x, // pass analog values for proportional speed
+        jz: mob.z,
+    };
     player.update(mk,keys.Shift||mob.sprint,delta,environment.colliders);
     updateCamera();
     tickRound(delta);
