@@ -30,8 +30,7 @@ const ROUND_DURATION=60, TAG_DISTANCE=0.95, MIN_PLAYERS=2;
 let roundState='lobby', roundTimer=0, roundNumber=0;
 let taggedSeekers=new Set(), amIHost=false;
 
-// Presence ref — stored for cleanup
-let presenceRef = null;
+let rtdbPresRef = null; // RTDB presence ref
 
 init();
 animate();
@@ -373,7 +372,7 @@ function showHonorScreen() {
     setTimeout(()=>scr.style.display='none',6000);
 }
 
-// ── Multiplayer — presence in users/{uid}/presence/cc, NOT cc_lobby ──────────
+// ── Multiplayer — RTDB presence (onDisconnect auto-removes on crash/close) ───
 function initMultiplayer() {
     peer=new Peer(undefined,{host:'0.peerjs.com',port:443,secure:true,config:{iceServers:[{urls:'stun:stun.google.com:19302'}]}});
     peer.on('open', id=>{ myPeerId=id; setupPresence(); });
@@ -382,56 +381,41 @@ function initMultiplayer() {
 }
 
 function setupPresence() {
-    if(typeof firebase==='undefined') return;
-    const db=firebase.firestore();
+    if(typeof firebase==='undefined'||typeof firebase.database==='undefined') {
+        console.warn('[P2P] RTDB not available'); return;
+    }
+    const db = firebase.database();
+    // /cc_presence/{myPeerId} — ephemeral, never persisted to Firestore
+    rtdbPresRef = db.ref('cc_presence/' + myPeerId);
 
-    // Use users/{uid}/presence/cc — one doc per user, NOT a shared collection
-    // This means reads scale with number of players, not game events
-    presenceRef = db.collection('users').doc(fbUser.uid).collection('presence').doc('cc');
+    const presData = { peerId:myPeerId, name:myName, wins:myWins, uid:fbUser.uid, t:Date.now() };
 
-    const presData = { peerId:myPeerId, name:myName, wins:myWins, uid:fbUser.uid, active:true, t:Date.now() };
+    // onDisconnect fires on the SERVER when connection drops (crash, kill, network loss)
+    // This is the ONLY reliable way to clean up presence — Firestore has no equivalent
+    rtdbPresRef.onDisconnect().remove();
+    rtdbPresRef.set(presData);
 
-    // onDisconnect: Firebase RTDB equivalent for Firestore — delete doc when connection drops
-    // We use a Realtime DB trick: write to RTDB for onDisconnect, Firestore for discovery
-    // But since we only have Firestore, we set active:false on disconnect via beforeunload
-    presenceRef.set(presData);
-
-    // Heartbeat every 8s to prove we're alive
-    const heartbeat = setInterval(()=>{
-        if(!gameStarted) return;
-        presenceRef.update({ t:Date.now() }).catch(()=>{});
-    }, 8000);
-
-    // Cleanup on tab close — this fires synchronously before page unloads
-    const cleanup = () => {
-        presenceRef.update({ active:false, t:Date.now() }).catch(()=>{});
-        // Also destroy all PeerJS connections
-        Object.values(conns).forEach(c=>{ try{c.close();}catch(e){} });
-        peer?.destroy();
-        clearInterval(heartbeat);
-    };
-    window.addEventListener('beforeunload', cleanup);
-    window.addEventListener('pagehide', cleanup); // iOS Safari
-
-    // Watch ALL users' cc presence docs (query active==true, updated in last 20s)
-    // This is O(players) reads, much better than cc_lobby which was O(events)
-    const STALE_MS = 20000;
-    db.collectionGroup('presence').where('active','==',true).onSnapshot(snap=>{
+    // Watch /cc_presence for all players — O(players), fires only on join/leave
+    db.ref('cc_presence').on('value', snap => {
         const live = new Set();
-        snap.forEach(doc=>{
-            const d=doc.data();
-            if(doc.id!=='cc') return; // only cc presence
-            const pid=d.peerId;
-            if(!pid||pid===myPeerId) return;
-            if(Date.now()-d.t>STALE_MS) return; // stale — treat as gone
+        snap.forEach(child => {
+            const d = child.val();
+            const pid = d.peerId;
+            if (!pid || pid === myPeerId) return;
             live.add(pid);
-            if(!conns[pid]) {
-                const c=peer.connect(pid,{reliable:false,serialization:'json',metadata:{name:myName,wins:myWins,uid:fbUser.uid}});
+            if (!conns[pid]) {
+                const c = peer.connect(pid,{reliable:false,serialization:'json',metadata:{name:myName,wins:myWins,uid:fbUser.uid}});
                 c.on('open',()=>onConnectionReady(c,pid,d.name,d.wins,d.uid));
             }
         });
-        // Remove anyone not in live set
+        // Remove peers who left
         Object.keys(conns).forEach(pid=>{ if(!live.has(pid)) removePeer(pid); });
+    });
+
+    // Clean up PeerJS on tab close (RTDB onDisconnect handles its own cleanup)
+    window.addEventListener('pagehide', ()=>{
+        rtdbPresRef.remove().catch(()=>{});
+        peer?.destroy();
     });
 }
 

@@ -13,11 +13,13 @@ firebase.initializeApp({
   projectId:'playconsole4u-53a6a',
   storageBucket:'playconsole4u-53a6a.firebasestorage.app',
   messagingSenderId:'306379034842',
-  appId:'1:306379034842:web:1b891d0ef20cdacb0a55e3'
+  appId:'1:306379034842:web:1b891d0ef20cdacb0a55e3',
+  databaseURL:'https://playconsole4u-53a6a-default-rtdb.firebaseio.com'
 });
 
 const _a = firebase.auth();
 const _d = firebase.firestore();
+const _r = firebase.database(); // Realtime DB — presence only, never stored
 const VER = '3.2';
 
 // ── Cache ──────────────────────────────────────────────────────────────────────
@@ -269,6 +271,7 @@ async function getLeaderboard(lvl) {
 }
 
 window.FB = {
+  db: _r, // RTDB reference (for onDisconnect usage in main.js)
   signInGoogle, signOut, onAuthChange, currentUser,
   getProfile, saveProfile,
   getSubscription, activateLite, deactivateLite, isLiteActive,
