@@ -3,14 +3,18 @@ import * as THREE from 'three';
 const CONVEYOR_LENGTH = 2.4;
 const CONVEYOR_SPEED = 1.4;
 
-// Scratch vectors for advanceOnConveyor — runs once per item riding a belt, every
-// frame, so no fresh Vector3 per call.
+// Height at which items actually ride along the belt — a bit above the physical
+// belt mesh's top surface. THIS constant is the fix for the broken movement:
+// getEntryPoint/getExitPoint previously returned points at y=0 (the conveyor's
+// ground-level placement origin) while items actually rode at y≈0.3+, so the
+// "have I reached the exit" distance check could never pass — items sailed
+// straight through the end of every belt forever, never popping off or chaining.
+export const BELT_RIDE_HEIGHT = 0.42;
+
 const _advDir = new THREE.Vector3();
 const _advExit = new THREE.Vector3();
 const _advEntry = new THREE.Vector3();
 
-// Near-black scrolling texture gives the belt a sense of motion without any grey
-// or accent-colored geometry.
 function createBeltTexture() {
     const canvas = document.createElement('canvas');
     canvas.width = 256;
@@ -40,15 +44,9 @@ function createBeltTexture() {
 export function createConveyor() {
     const group = new THREE.Group();
 
-    // Everything structural (rails, legs, rollers) shares ONE plain-black material.
-    // The old version had a separate, visibly lighter grey material just for the
-    // rollers — that contrast IS what read as "grey endpieces". One dark material
-    // removes it entirely.
     const blackMat = new THREE.MeshStandardMaterial({ color: 0x151618, roughness: 0.55, metalness: 0.35 });
     const beltTexture = createBeltTexture();
     const beltMat = new THREE.MeshStandardMaterial({ map: beltTexture, color: 0x1a1c1e, roughness: 0.8, metalness: 0.1 });
-    // Tiny functional status light only — black/off unless actively feeding another
-    // conveyor, so it never reads as a design accent.
     const indicatorMat = new THREE.MeshStandardMaterial({ color: 0x0e0f10, roughness: 0.5, emissive: 0x2ecc71, emissiveIntensity: 0 });
 
     const railGeo = new THREE.BoxGeometry(CONVEYOR_LENGTH, 0.14, 0.05);
@@ -89,8 +87,6 @@ export function createConveyor() {
     });
 
     const state = { rollerSpin: 0, outputConveyor: null };
-    // Instance-owned scratch — safe even with multiple conveyors, since each has
-    // its own closure copy.
     const _ptOffset = new THREE.Vector3();
 
     group.userData = {
@@ -104,12 +100,14 @@ export function createConveyor() {
         length: CONVEYOR_LENGTH,
         speed: CONVEYOR_SPEED,
 
+        // FIX: now returns the point at BELT_RIDE_HEIGHT (where items actually
+        // travel), not the conveyor's ground-level placement origin.
         getEntryPoint(target) {
-            _ptOffset.set(-CONVEYOR_LENGTH / 2, 0, 0).applyQuaternion(group.quaternion);
+            _ptOffset.set(-CONVEYOR_LENGTH / 2, BELT_RIDE_HEIGHT, 0).applyQuaternion(group.quaternion);
             target.copy(group.position).add(_ptOffset);
         },
         getExitPoint(target) {
-            _ptOffset.set(CONVEYOR_LENGTH / 2, 0, 0).applyQuaternion(group.quaternion);
+            _ptOffset.set(CONVEYOR_LENGTH / 2, BELT_RIDE_HEIGHT, 0).applyQuaternion(group.quaternion);
             target.copy(group.position).add(_ptOffset);
         },
         setOutputConveyor(c) { state.outputConveyor = c; },
@@ -127,6 +125,10 @@ export function createConveyor() {
     return group;
 }
 
+// FIXED: entry/exit points are now at the height items actually ride at, so the
+// "reached the exit" check reliably fires, chaining hands off at consistent ride
+// height (no more snapping to ground on transfer), and items tossed off an
+// unlinked end now fly in the belt's actual facing direction, not a fixed +Z.
 export function advanceOnConveyor(drop, deltaTime) {
     const conveyor = drop.userData.onConveyor;
     if (!conveyor) return false;
@@ -143,7 +145,7 @@ export function advanceOnConveyor(drop, deltaTime) {
             drop.userData.onConveyor = next;
         } else {
             drop.userData.onConveyor = null;
-            drop.userData.velocity = new THREE.Vector3((Math.random() - 0.5) * 0.5, 0.5, 1.0);
+            drop.userData.velocity = new THREE.Vector3(_advDir.x * 1.2, 1.1, _advDir.z * 1.2);
         }
     }
     return true;

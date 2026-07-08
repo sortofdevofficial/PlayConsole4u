@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { BELT_RIDE_HEIGHT } from './conveyor.js';
 
 const MINE_INTERVAL_MS = 3000;
 const MINE_DAMAGE = 3;
@@ -23,8 +24,6 @@ export function createAutoMiner() {
     const holeVoidMat = new THREE.MeshStandardMaterial({ color: 0x08090a, roughness: 1.0, metalness: 0.0 });
     const chuteMat = new THREE.MeshStandardMaterial({ color: 0x2e3236, roughness: 0.5, metalness: 0.6, emissive: 0x2ecc71, emissiveIntensity: 0 });
 
-    // Four angled legs straddling the resource node — center stays open so the
-    // drill bit visibly plunges down toward whatever it's placed on top of.
     const legGeo = new THREE.CylinderGeometry(0.06, 0.09, 1.0, 6);
     const legPositions = [
         [0.55, 0.5, 0.55], [-0.55, 0.5, 0.55], [0.55, 0.5, -0.55], [-0.55, 0.5, -0.55]
@@ -47,13 +46,11 @@ export function createAutoMiner() {
     braceB.rotation.y = -Math.PI / 4;
     group.add(braceB);
 
-    // Top deck the drill mechanism sits on
     const deck = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.46, 0.14, 8), panelMat);
     deck.position.y = 1.05;
     deck.castShadow = true;
     group.add(deck);
 
-    // Control housing + status light
     const housing = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.34, 0.34), panelMat);
     housing.position.set(0.5, 1.05, 0);
     housing.castShadow = true;
@@ -62,8 +59,6 @@ export function createAutoMiner() {
     statusLight.position.set(0.5, 1.14, 0.18);
     group.add(statusLight);
 
-    // ===== Vertical drill assembly — spins and bobs to sell "actively drilling
-    // downward into the node beneath it" =====
     const drillRig = new THREE.Group();
     drillRig.position.set(0, 1.12, 0);
     group.add(drillRig);
@@ -86,11 +81,10 @@ export function createAutoMiner() {
     drillBit.castShadow = true;
     drillRig.add(drillBit);
 
-    // ===== VISIBLE DROP-HOLE — the actual output port. Same height a Conveyor's
-    // belt sits at, on the +X face, so lining a conveyor up against this side makes
-    // the hole and the belt visually meet. Faked via a dark disc + rim ring (no CSG
-    // boolean cut needed) but reads clearly as an opening. =====
-    const holeHeight = 0.32;
+    // Drop-hole aligned to BELT_RIDE_HEIGHT — the same constant a Conveyor uses for
+    // where items ride — so a conveyor placed against this side lines up both
+    // visually AND logically (their entry/output points now match exactly).
+    const holeHeight = BELT_RIDE_HEIGHT;
     const holeX = 0.62;
 
     const holeVoid = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.05, 12), holeVoidMat);
@@ -104,11 +98,9 @@ export function createAutoMiner() {
     holeRim.castShadow = true;
     group.add(holeRim);
 
-    // Small lip beneath the hole so dropped material visibly slides toward a
-    // conveyor rather than the hole looking purely decorative.
     const chute = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.05, 0.24), chuteMat);
     chute.rotation.x = -0.25;
-    chute.position.set(holeX + 0.14, holeHeight - 0.08, 0);
+    chute.position.set(holeX + 0.14, holeHeight - 0.06, 0);
     chute.castShadow = true;
     group.add(chute);
 
@@ -134,8 +126,9 @@ export function createAutoMiner() {
         health: 10,
         maxHealth: 10,
         dropName: 'Auto Miner',
-        // targetSpawnIndex is set directly at placement time (PlayerCombat.js),
-        // since placement now requires aiming at an actual resource node.
+        // targetSpawnIndex is set directly at placement time in PlayerCombat.js,
+        // since placement requires aiming at an actual resource node — the miner
+        // always has a real, guaranteed-valid target from the moment it exists.
 
         bindContext(interactablesGroup, dropsGroup) {
             state.interactablesGroup = interactablesGroup;
@@ -143,8 +136,6 @@ export function createAutoMiner() {
         },
         setOutputConveyor(conveyor) { state.linkedConveyor = conveyor; },
         getOutputConveyor() { return state.linkedConveyor; },
-        // World-space position of the drop-hole/chute — link lines and tossed
-        // drops both originate here, matching the visible geometry.
         getOutputPoint(target) { chute.getWorldPosition(target); },
 
         tick(time) {
@@ -200,8 +191,10 @@ export function createAutoMiner() {
                     let outVel = new THREE.Vector3();
                     let onConveyor = null;
                     if (state.linkedConveyor) {
+                        // FIX: getEntryPoint now returns the correct ride height
+                        // directly — the old +0.3 manual offset hack (papering
+                        // over the ground-level bug) is gone.
                         state.linkedConveyor.userData.getEntryPoint(dropGroup.position);
-                        dropGroup.position.y += 0.3;
                         onConveyor = state.linkedConveyor;
                     } else {
                         dropGroup.position.copy(holeWorldPos);

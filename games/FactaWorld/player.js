@@ -5,6 +5,7 @@ import { Inventory } from './inventory.js';
 import { initInputs } from './PlayerInput.js';
 import { updateMovement, updateAnimationAndCamera } from './PlayerMovement.js';
 import * as Combat from './PlayerCombat.js';
+import { createLinkConnector } from './linkVisuals.js';
 
 export class Player {
     constructor(scene, camera, domElement) {
@@ -59,12 +60,12 @@ export class Player {
 
         this.craftState = { active: false, timer: 0, duration: 0, resultName: '', resultCount: 0, furnaceRef: null, sparks: null };
 
-        // Link-system state
-        this.linkSource = null;
-        this.activeLinks = [];
-        this.linkAnimTime = 0;
-        this._pendingAutoMinerTarget = null;
-        this._pendingConveyorAutoLinkFrom = null;
+// Link-system state: active confirmed links (with visual connectors) and a
+// transient placement target. No more `linkSource` — manual right-click linking
+// is gone, everything links automatically at placement time now.
+this.activeLinks = [];
+this.linkAnimTime = 0;
+this._pendingAutoMinerTarget = null;
 
         const { group, parts } = buildCharacter();
         this.mesh = group;
@@ -89,8 +90,9 @@ export class Player {
         this.ghostMesh.traverse(c => {
             if (c.isMesh) { c.material = c.material.clone(); c.material.transparent = true; c.material.opacity = 0.55; c.castShadow = false; }
         });
-        this.ghostMesh.visible = false;
-        this.scene.add(this.ghostMesh);
+// Live amber preview line shown while holding a placeable, to indicate what it
+// will auto-link to before you commit to placing it.
+this.ghostLinkPreview = createLinkConnector(this.scene, 0xffd166, 0.6);
 
         initInputs(this);
         this.inventory.updateUI();
