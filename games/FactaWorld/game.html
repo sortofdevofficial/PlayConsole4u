@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FACTAWORLD</title>
+    <script>
+        document.addEventListener('contextmenu', (e) => e.preventDefault());
+    </script>
+    <style>
+        :root {
+            --bg-glass: rgba(15, 23, 42, 0.45);
+            --border-glass: rgba(255, 255, 255, 0.12);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: rgba(59, 130, 246, 0.6);
+            --danger: rgba(239, 68, 68, 0.6);
+        }
+
+        body, html { margin: 0; padding: 0; overflow: hidden; background-color: #87ceeb; width: 100%; height: 100%; font-family: 'Segoe UI', system-ui, sans-serif; user-select: none; }
+        #main-canvas { display: block; width: 100vw; height: 100vh; position: absolute; top:0; left:0; z-index: 1; }
+
+        #crosshair { position: absolute; top: 50%; left: 50%; width: 6px; height: 6px; background: rgba(255, 255, 255, 0.7); border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; z-index: 10; display: none; mix-blend-mode: difference; }
+
+        #ui-hints { position: absolute; top: 20px; left: 20px; background: var(--bg-glass); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid var(--border-glass); border-radius: 14px; padding: 16px; color: var(--text-main); font-size: 13px; pointer-events: none; z-index: 5; box-shadow: 0 8px 32px rgba(0,0,0,0.15); }
+        .highlight-key { color: white; background: rgba(255,255,255,0.15); padding: 2px 6px; border-radius: 4px; font-family: monospace; }
+
+        #coords-hud { position: absolute; top: 20px; right: 20px; background: var(--bg-glass); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid var(--border-glass); border-radius: 14px; padding: 10px 16px; color: var(--text-main); font-size: 12px; font-family: 'Consolas', 'Courier New', monospace; pointer-events: none; z-index: 5; display: flex; gap: 14px; box-shadow: 0 8px 32px rgba(0,0,0,0.15); }
+        #coords-hud span { color: #9fd8ff; letter-spacing: 0.5px; }
+
+        #target-ui { position: absolute; top: calc(50% + 30px); left: 50%; transform: translateX(-50%); text-align: center; pointer-events: none; opacity: 0; transition: opacity 0.2s; z-index: 5; }
+        #target-ui.show { opacity: 1; }
+        #target-name { color: var(--text-main); font-size: 12px; font-weight: 600; text-shadow: 0 2px 4px rgba(0,0,0,0.4); letter-spacing: 1px; white-space: nowrap; }
+        #health-bar-bg { width: 100px; height: 4px; background: rgba(0,0,0,0.4); border-radius: 2px; overflow: hidden; margin: 4px auto 0; }
+        #health-bar-fill { width: 100%; height: 100%; background: #4ade80; transition: width 0.1s; }
+
+        #active-item-title { position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%); text-align: center; color: white; font-weight: 600; font-size: 14px; text-shadow: 0 2px 4px rgba(0,0,0,0.6); pointer-events: none; z-index: 5; letter-spacing: 0.5px; height: 20px; }
+
+        #hotbar { position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; background: var(--bg-glass); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); padding: 8px; border-radius: 16px; pointer-events: none; border: 1px solid var(--border-glass); z-index: 5; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        .slot { width: 60px; height: 60px; background: rgba(255, 255, 255, 0.03); border: 1px solid transparent; border-radius: 12px; position: relative; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); overflow: hidden; }
+        .slot.active { border-color: rgba(255,255,255,0.4); background: rgba(255, 255, 255, 0.1); transform: translateY(-4px); }
+        .slot-num { position: absolute; top: 4px; left: 6px; font-size: 10px; color: var(--text-muted); font-weight: bold; z-index: 10; }
+        .slot-count { position: absolute; bottom: 4px; right: 6px; font-size: 12px; color: white; font-weight: bold; text-shadow: 0 1px 2px rgba(0,0,0,0.8); z-index: 10; }
+
+        .slot-icon { position: absolute; top: 2px; left: 2px; width: 56px; height: 56px; z-index: 2; pointer-events: none; display: none; object-fit: contain; }
+
+        .menu-container { position: absolute; top: 50%; left: 50%; background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); padding: 24px; border-radius: 20px; border: 1px solid var(--border-glass); text-align: center; display: flex; flex-direction: column; gap: 10px; min-width: 300px; z-index: 100;
+            opacity: 0; visibility: hidden; transform: translate(-50%, -48%) scale(0.96); transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
+        .menu-container.show { opacity: 1; visibility: visible; transform: translate(-50%, -50%) scale(1); }
+        .menu-container h2 { color: var(--text-main); margin: 0 0 10px 0; font-size: 16px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--border-glass); padding-bottom: 10px; }
+
+        .btn { background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-glass); color: var(--text-main); padding: 10px 16px; border-radius: 10px; cursor: pointer; font-weight: 500; transition: all 0.15s ease; display: flex; align-items: center; gap: 10px; font-size: 13px; }
+        .btn span:first-of-type { flex: 1; text-align: left; }
+        .btn:hover:not(:disabled) { background: var(--accent); border-color: rgba(255,255,255,0.2); transform: translateY(-1px); }
+        .btn:disabled { opacity: 0.25; cursor: not-allowed; }
+        .btn-close { background: rgba(255, 255, 255, 0.02); color: var(--text-muted); margin-top: 6px; justify-content: center; }
+        .btn-close:hover { background: var(--danger); color: white; }
+
+        .craft-preview { width: 36px; height: 36px; flex-shrink: 0; pointer-events: none; }
+
+        #fn-progress-bg { display: none; width: 100%; height: 10px; background: rgba(0,0,0,0.4); border-radius: 6px; overflow: hidden; margin-top: 4px; }
+        #fn-progress-fill { width: 0%; height: 100%; background: linear-gradient(90deg, #ff9d4d, #ffce6b); transition: width 0.05s linear; }
+        #fn-progress-label { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    </style>
+    <script type="importmap">{"imports": {"three": "https://unpkg.com/three@0.160.0/build/three.module.js"}}</script>
+</head>
+<body>
+    <canvas id="main-canvas"></canvas>
+    <div id="crosshair"></div>
+
+    <div id="ui-hints">
+        Left-Click: Mine / Build<br>
+        Right-Click: Interact / Link<br><br>
+        <span class="highlight-key">V</span> Toggle View Mode<br>
+        <span class="highlight-key">C</span> Crouch | <span class="highlight-key">Space</span> Jump<br>
+        <span class="highlight-key">E</span> Craft Menu<br>
+        <span class="highlight-key">Q</span> Drop Active Item<br>
+        <span class="highlight-key">R</span> / Scroll: Rotate Placement
+    </div>
+
+    <div id="coords-hud">
+        <span id="coord-x">X: 0.0</span>
+        <span id="coord-y">Y: 0.0</span>
+        <span id="coord-z">Z: 0.0</span>
+    </div>
+
+    <div id="target-ui">
+        <div id="target-name">Target</div>
+        <div id="health-bar-bg"><div id="health-bar-fill"></div></div>
+    </div>
+
+    <div id="active-item-title"></div>
+
+    <div id="hotbar">
+        <div class="slot active" id="slot-0"><span class="slot-num">1</span><span class="slot-count" id="count-0"></span></div>
+        <div class="slot" id="slot-1"><span class="slot-num">2</span><span class="slot-count" id="count-1"></span></div>
+        <div class="slot" id="slot-2"><span class="slot-num">3</span><span class="slot-count" id="count-2"></span></div>
+        <div class="slot" id="slot-3"><span class="slot-num">4</span><span class="slot-count" id="count-3"></span></div>
+        <div class="slot" id="slot-4"><span class="slot-num">5</span><span class="slot-count" id="count-4"></span></div>
+        <div class="slot" id="slot-5"><span class="slot-num">6</span><span class="slot-count" id="count-5"></span></div>
+        <div class="slot" id="slot-6"><span class="slot-num">7</span><span class="slot-count" id="count-6"></span></div>
+        <div class="slot" id="slot-7"><span class="slot-num">8</span><span class="slot-count" id="count-7"></span></div>
+        <div class="slot" id="slot-8"><span class="slot-num">9</span><span class="slot-count" id="count-8"></span></div>
+    </div>
+
+    <div id="quick-menu" class="menu-container">
+        <h2>Quick Craft</h2>
+        <button id="qc-stick" class="btn"><span>Craft Sticks</span> <span>2 Oak</span></button>
+        <button id="qc-bench" class="btn"><span>Craft Workbench</span> <span>5 Oak</span></button>
+        <button id="close-qc" class="btn btn-close">Close</button>
+    </div>
+
+    <div id="workbench-menu" class="menu-container">
+        <h2>Workbench</h2>
+        <button id="wb-stick" class="btn"><span>Craft Sticks</span> <span>2 Oak</span></button>
+        <button id="wb-bench" class="btn"><span>Craft Workbench</span> <span>5 Oak</span></button>
+        <button id="wb-pickaxe" class="btn"><span>Stone Pickaxe</span> <span>3 Stone, 2 Stick</span></button>
+        <button id="wb-axe" class="btn"><span>Stone Axe</span> <span>3 Stone, 2 Stick</span></button>
+        <button id="wb-furnace" class="btn"><span>Furnace</span> <span>8 Stone</span></button>
+        <button id="wb-autominer" class="btn"><span>Auto Miner</span> <span>4 Iron Plate, 2 Iron Gear, 3 Stick</span></button>
+        <button id="wb-conveyor" class="btn"><span>Conveyor Belt</span> <span>2 Iron Plate, 2 Stick</span></button>
+        <button id="close-wb" class="btn btn-close">Close</button>
+    </div>
+
+    <div id="furnace-menu" class="menu-container">
+        <h2>Furnace</h2>
+        <button id="fn-smelt" class="btn"><span>Smelt Iron Ingot</span> <span>1 Iron Ore + 1 Fuel</span></button>
+        <button id="fn-plate" class="btn"><span>Iron Plate</span> <span>1 Iron Ingot</span></button>
+        <button id="fn-gear" class="btn"><span>Iron Gear x2</span> <span>1 Iron Ingot</span></button>
+        <div id="fn-progress-bg"><div id="fn-progress-fill"></div></div>
+        <div id="fn-progress-label"></div>
+        <button id="close-fn" class="btn btn-close">Close</button>
+    </div>
+
+    <script type="module" src="main.js"></script>
+</body>
+</html>
