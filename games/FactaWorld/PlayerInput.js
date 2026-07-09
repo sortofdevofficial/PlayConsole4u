@@ -30,8 +30,6 @@ export function initInputs(player) {
     domElement.addEventListener('contextmenu', (e) => e.preventDefault());
 
     domElement.addEventListener('wheel', (e) => {
-        // FIX: was hardcoded to Workbench/Furnace only — Conveyor and Auto Miner
-        // couldn't be rotated at all. Now uses the shared PLACEABLE_ITEMS list.
         const activeName = player.inventory.getActiveItem().name;
         if (PLACEABLE_ITEMS.includes(activeName)) {
             player.placeRotation += (e.deltaY > 0 ? 1 : -1) * (Math.PI / 12);
@@ -66,7 +64,6 @@ export function initInputs(player) {
         if (e.code === 'KeyC' || e.code === 'ControlLeft') player.keys.crouch = true;
         if (e.code === 'KeyV') player.viewMode = player.viewMode === 0 ? 1 : 0;
 
-        // FIX: same bug as the wheel handler, same fix.
         const activeName = player.inventory.getActiveItem().name;
         if (e.code === 'KeyR' && PLACEABLE_ITEMS.includes(activeName)) {
             player.placeRotation += Math.PI / 4;

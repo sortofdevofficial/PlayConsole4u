@@ -92,6 +92,24 @@ document.getElementById('wb-conveyor').addEventListener('click', () => {
         player.updateCraftingButtons();
     }
 });
+document.getElementById('wb-conveyor-left').addEventListener('click', () => {
+    if (player.inventory.getCount('Iron Plate') >= 2 && player.inventory.getCount('Iron Gear') >= 1 && player.inventory.getCount('Stick') >= 2) {
+        player.inventory.consumeItem('Iron Plate', 2);
+        player.inventory.consumeItem('Iron Gear', 1);
+        player.inventory.consumeItem('Stick', 2);
+        player.inventory.addItem('Conveyor Left', 1);
+        player.updateCraftingButtons();
+    }
+});
+document.getElementById('wb-conveyor-right').addEventListener('click', () => {
+    if (player.inventory.getCount('Iron Plate') >= 2 && player.inventory.getCount('Iron Gear') >= 1 && player.inventory.getCount('Stick') >= 2) {
+        player.inventory.consumeItem('Iron Plate', 2);
+        player.inventory.consumeItem('Iron Gear', 1);
+        player.inventory.consumeItem('Stick', 2);
+        player.inventory.addItem('Conveyor Right', 1);
+        player.updateCraftingButtons();
+    }
+});
 
 document.getElementById('fn-smelt').addEventListener('click', () => { player.smeltIron(); });
 document.getElementById('fn-plate').addEventListener('click', () => { player.craftIronPlate(); });
@@ -107,28 +125,12 @@ initCraftPreviews([
     { buttonId: 'wb-furnace', itemName: 'Furnace' },
     { buttonId: 'wb-autominer', itemName: 'Auto Miner' },
     { buttonId: 'wb-conveyor', itemName: 'Conveyor' },
+    { buttonId: 'wb-conveyor-left', itemName: 'Conveyor Left' },
+    { buttonId: 'wb-conveyor-right', itemName: 'Conveyor Right' },
     { buttonId: 'fn-smelt', itemName: 'Iron Ingot' },
     { buttonId: 'fn-plate', itemName: 'Iron Plate' },
     { buttonId: 'fn-gear', itemName: 'Iron Gear' }
 ]);
-
-// Coordinate HUD — DOM refs cached ONCE, text only written when the rounded value
-// actually changes. Writing textContent every frame regardless of change is a real,
-// if small, source of layout/paint work; skipping no-op writes is free and adds up
-// over a long play session.
-const coordXEl = document.getElementById('coord-x');
-const coordYEl = document.getElementById('coord-y');
-const coordZEl = document.getElementById('coord-z');
-let lastCX = null, lastCY = null, lastCZ = null;
-
-function updateCoordsHud() {
-    const cx = Math.round(player.position.x * 10) / 10;
-    const cy = Math.round(player.position.y * 10) / 10;
-    const cz = Math.round(player.position.z * 10) / 10;
-    if (cx !== lastCX) { coordXEl.textContent = `X: ${cx.toFixed(1)}`; lastCX = cx; }
-    if (cy !== lastCY) { coordYEl.textContent = `Y: ${cy.toFixed(1)}`; lastCY = cy; }
-    if (cz !== lastCZ) { coordZEl.textContent = `Z: ${cz.toFixed(1)}`; lastCZ = cz; }
-}
 
 let lastTime = performance.now();
 function animate() {
@@ -140,7 +142,6 @@ function animate() {
     if (tick) tick(time, 6000);
 
     player.update(dt, grassPlatform, interactablesGroup, dropsGroup, markersGroup, platformWidth, platformLength);
-    updateCoordsHud();
 
     renderer.render(scene, camera);
     player.inventory.render3DSlots();

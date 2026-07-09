@@ -1,4 +1,4 @@
-export const PLACEABLE_ITEMS = ['Workbench', 'Furnace', 'Auto Miner', 'Conveyor'];
+export const PLACEABLE_ITEMS = ['Workbench', 'Furnace', 'Auto Miner', 'Conveyor', 'Conveyor Left', 'Conveyor Right'];
 
 export const PLACEMENT_OVERLAP_DISTANCE = {
     'Workbench': 1.3,
@@ -7,17 +7,20 @@ export const PLACEMENT_OVERLAP_DISTANCE = {
 };
 export const DEFAULT_OVERLAP_DISTANCE = 1.3;
 
-// How close two conveyors' exit/entry points need to be, during PLACEMENT, to snap
-// the new one into perfect end-to-end alignment with an existing one.
+// Assist radius ONLY for the placement ghost snapping cleanly onto an existing
+// conveyor's or Auto Miner's output port (so building a run is easy and lands
+// exactly on-port). This does NOT decide whether a link forms — it just helps
+// the ghost land precisely enough that the strict port-match check below
+// succeeds naturally instead of by luck.
 export const CONVEYOR_CHAIN_SNAP_RADIUS = 1.2;
 
-// How close an output point (Auto Miner chute / Conveyor exit) needs to be to an
-// entry point (Conveyor entry) for the smart auto-linking system to connect them
-// automatically at placement time — no manual right-click linking needed.
-export const MACHINE_LINK_RADIUS = 2.0;
-
-// Hard safety cap: a link is NEVER created if its two endpoints end up farther
-// apart than this, regardless of how it was proposed. This is what actually
-// prevents "linking from too far away" — enforced at the one place links are
-// created (completeLink), not just relied upon by the auto-link heuristics.
-export const MAX_LINK_DISTANCE = 2.5;
+// ===== PORT-MATCHING TOLERANCES — this is the actual linking logic now =====
+// A link forms ONLY when a source's output port and a target's entry port are
+// physically touching (this tight) AND facing the same direction (this
+// aligned). This replaces "find some conveyor within a radius" entirely —
+// proximity is no longer sufficient on its own. Only a true physically-
+// adjacent, correctly-oriented connection counts, matching how real belt
+// systems in Factorio/Satisfactory detect connections: is something literally
+// touching my output, facing into it — not "is something nearby."
+export const PORT_MATCH_DISTANCE = 0.22;
+export const PORT_MATCH_MIN_DOT = 0.94; // ~20 degrees of tolerance

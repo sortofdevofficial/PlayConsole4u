@@ -15,10 +15,6 @@ function createStoneChunkModel() {
     return new THREE.Mesh(new THREE.DodecahedronGeometry(0.32), new THREE.MeshStandardMaterial({ color: 0x888c8d, roughness: 0.8, flatShading: true }));
 }
 
-// Every item name the game knows about maps to its own real model here — used for
-// hotbar icons AND craft button previews, so a button always shows what it actually
-// produces (a Stick button shows a stick, a Pickaxe button shows a pickaxe), not just
-// a generic chunk of whatever raw material it costs.
 function buildItemModel(name) {
     if (name === 'Stone Pickaxe') return createPickaxe();
     if (name === 'Stone Axe') return createAxe();
@@ -28,7 +24,12 @@ function buildItemModel(name) {
     if (name === 'Workbench') { const m = createWorkbench(); m.scale.set(0.4, 0.4, 0.4); return m; }
     if (name === 'Furnace') { const m = createFurnace(); m.scale.set(0.28, 0.28, 0.28); return m; }
     if (name === 'Auto Miner') { const m = createAutoMiner(); m.scale.set(0.28, 0.28, 0.28); return m; }
-    if (name === 'Conveyor') { const m = createConveyor(); m.scale.set(0.4, 0.4, 0.4); return m; }
+    // FIX: these three were never wired into buildItemModel before — the
+    // hotbar icon and craft-preview for Conveyor items silently returned
+    // nothing and just never showed an icon.
+    if (name === 'Conveyor') { const m = createConveyor('straight'); m.scale.set(0.4, 0.4, 0.4); return m; }
+    if (name === 'Conveyor Left') { const m = createConveyor('left'); m.scale.set(0.35, 0.35, 0.35); return m; }
+    if (name === 'Conveyor Right') { const m = createConveyor('right'); m.scale.set(0.35, 0.35, 0.35); return m; }
     if (name === 'Iron Ore') return createIronOreItem();
     if (name === 'Iron Ingot') return createIronIngot();
     if (name === 'Iron Plate') return createIronPlate();
@@ -36,9 +37,6 @@ function buildItemModel(name) {
     return null;
 }
 
-// One shared offscreen renderer for EVERY snapshot in the game (hotbar icons AND craft
-// button previews). Keeping this as a single reusable context — rather than one live
-// WebGL context per slot/button — is what avoids "too many WebGL contexts" crashes.
 let sharedRenderer = null;
 let sharedScene = null;
 let sharedCamera = null;
@@ -195,13 +193,9 @@ export class Inventory {
         }
     }
 
-    render3DSlots() {} // no-op, kept for backward compatibility with main.js's animate loop
+    render3DSlots() {}
 }
 
-// Injects a static 3D-rendered preview of the ACTUAL CRAFTED ITEM into a crafting button —
-// e.g. the Stick button shows a stick, the Pickaxe button shows a pickaxe, not the raw
-// material it costs. Pass the output item's name (same names used everywhere else in
-// the inventory system), not a material name.
 export function initCraftPreviews(buttonConfigs) {
     buttonConfigs.forEach(({ buttonId, itemName }) => {
         const btn = document.getElementById(buttonId);

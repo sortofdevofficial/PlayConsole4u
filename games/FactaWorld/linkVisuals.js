@@ -3,9 +3,6 @@ import * as THREE from 'three';
 const FLOW_DOT_COUNT = 3;
 const FLOW_SPEED = 0.5;
 
-// A glowing line + flowing dots between two points. Used for both CONFIRMED links
-// (green) and a live PREVIEW while placing (amber) so the player can see what will
-// connect before they even commit to placing it.
 export function createLinkConnector(scene, color = 0x2ecc71, opacity = 0.55) {
     const lineMat = new THREE.LineBasicMaterial({ color, transparent: true, opacity });
     const lineGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);

@@ -18,6 +18,8 @@ export class Player {
         // Test items
         this.inventory.addItem('Auto Miner', 10);
         this.inventory.addItem('Conveyor', 10);
+        this.inventory.addItem('Conveyor Left', 5);
+        this.inventory.addItem('Conveyor Right', 5);
         this.inventory.addItem('Stone Pickaxe', 1);
 
         this.position = new THREE.Vector3(0, 2, 0);
@@ -60,12 +62,10 @@ export class Player {
 
         this.craftState = { active: false, timer: 0, duration: 0, resultName: '', resultCount: 0, furnaceRef: null, sparks: null };
 
-// Link-system state: active confirmed links (with visual connectors) and a
-// transient placement target. No more `linkSource` — manual right-click linking
-// is gone, everything links automatically at placement time now.
-this.activeLinks = [];
-this.linkAnimTime = 0;
-this._pendingAutoMinerTarget = null;
+        // Link-system state
+        this.activeLinks = [];
+        this.linkAnimTime = 0;
+        this._pendingAutoMinerTarget = null;
 
         const { group, parts } = buildCharacter();
         this.mesh = group;
@@ -90,9 +90,14 @@ this._pendingAutoMinerTarget = null;
         this.ghostMesh.traverse(c => {
             if (c.isMesh) { c.material = c.material.clone(); c.material.transparent = true; c.material.opacity = 0.55; c.castShadow = false; }
         });
-// Live amber preview line shown while holding a placeable, to indicate what it
-// will auto-link to before you commit to placing it.
-this.ghostLinkPreview = createLinkConnector(this.scene, 0xffd166, 0.6);
+        this.ghostMesh.visible = false;
+        this.scene.add(this.ghostMesh);
+
+        // Live amber preview lines shown while holding a placeable — "in" for
+        // something feeding into the ghost, "out" for the ghost feeding
+        // something ahead. Both can show at once when bridging a gap.
+        this.ghostLinkPreviewIn = createLinkConnector(this.scene, 0xffd166, 0.6);
+        this.ghostLinkPreviewOut = createLinkConnector(this.scene, 0xffd166, 0.6);
 
         initInputs(this);
         this.inventory.updateUI();
@@ -118,6 +123,11 @@ this.ghostLinkPreview = createLinkConnector(this.scene, 0xffd166, 0.6);
 
         const conveyorBtn = document.getElementById('wb-conveyor');
         if (conveyorBtn) conveyorBtn.disabled = (plateCount < 2 || stickCount < 2);
+
+        const conveyorLeftBtn = document.getElementById('wb-conveyor-left');
+        if (conveyorLeftBtn) conveyorLeftBtn.disabled = (plateCount < 2 || gearCount < 1 || stickCount < 2);
+        const conveyorRightBtn = document.getElementById('wb-conveyor-right');
+        if (conveyorRightBtn) conveyorRightBtn.disabled = (plateCount < 2 || gearCount < 1 || stickCount < 2);
     }
 
     updateFurnaceButtons() {

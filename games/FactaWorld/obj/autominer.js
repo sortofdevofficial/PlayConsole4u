@@ -25,9 +25,7 @@ export function createAutoMiner() {
     const chuteMat = new THREE.MeshStandardMaterial({ color: 0x2e3236, roughness: 0.5, metalness: 0.6, emissive: 0x2ecc71, emissiveIntensity: 0 });
 
     const legGeo = new THREE.CylinderGeometry(0.06, 0.09, 1.0, 6);
-    const legPositions = [
-        [0.55, 0.5, 0.55], [-0.55, 0.5, 0.55], [0.55, 0.5, -0.55], [-0.55, 0.5, -0.55]
-    ];
+    const legPositions = [[0.55, 0.5, 0.55], [-0.55, 0.5, 0.55], [0.55, 0.5, -0.55], [-0.55, 0.5, -0.55]];
     legPositions.forEach(([x, y, z]) => {
         const leg = new THREE.Mesh(legGeo, frameMat);
         leg.position.set(x, y, z);
@@ -81,9 +79,8 @@ export function createAutoMiner() {
     drillBit.castShadow = true;
     drillRig.add(drillBit);
 
-    // Drop-hole aligned to BELT_RIDE_HEIGHT — the same constant a Conveyor uses for
-    // where items ride — so a conveyor placed against this side lines up both
-    // visually AND logically (their entry/output points now match exactly).
+    // Drop-hole aligned to BELT_RIDE_HEIGHT — the same constant a Conveyor
+    // uses — so a linked conveyor's entry point matches this exactly.
     const holeHeight = BELT_RIDE_HEIGHT;
     const holeX = 0.62;
 
@@ -109,13 +106,8 @@ export function createAutoMiner() {
     group.add(light);
 
     const state = {
-        lastMineTime: 0,
-        bobTime: 0,
-        spin: 0,
-        pulseTime: 0,
-        interactablesGroup: null,
-        dropsGroup: null,
-        linkedConveyor: null
+        lastMineTime: 0, bobTime: 0, spin: 0, pulseTime: 0,
+        interactablesGroup: null, dropsGroup: null, linkedConveyor: null
     };
 
     group.userData = {
@@ -126,9 +118,6 @@ export function createAutoMiner() {
         health: 10,
         maxHealth: 10,
         dropName: 'Auto Miner',
-        // targetSpawnIndex is set directly at placement time in PlayerCombat.js,
-        // since placement requires aiming at an actual resource node — the miner
-        // always has a real, guaranteed-valid target from the moment it exists.
 
         bindContext(interactablesGroup, dropsGroup) {
             state.interactablesGroup = interactablesGroup;
@@ -137,6 +126,9 @@ export function createAutoMiner() {
         setOutputConveyor(conveyor) { state.linkedConveyor = conveyor; },
         getOutputConveyor() { return state.linkedConveyor; },
         getOutputPoint(target) { chute.getWorldPosition(target); },
+        // NEW: needed for the alignment check that (along with tighter
+        // radius) fixes the long-range linking bug — chute faces local +X.
+        getOutputDirection(target) { target.set(1, 0, 0).applyQuaternion(group.quaternion); },
 
         tick(time) {
             state.spin += 0.18;
@@ -191,9 +183,6 @@ export function createAutoMiner() {
                     let outVel = new THREE.Vector3();
                     let onConveyor = null;
                     if (state.linkedConveyor) {
-                        // FIX: getEntryPoint now returns the correct ride height
-                        // directly — the old +0.3 manual offset hack (papering
-                        // over the ground-level bug) is gone.
                         state.linkedConveyor.userData.getEntryPoint(dropGroup.position);
                         onConveyor = state.linkedConveyor;
                     } else {
@@ -201,7 +190,7 @@ export function createAutoMiner() {
                         outVel.set(0.6 + Math.random() * 0.4, 1.5, (Math.random() - 0.5) * 0.6);
                     }
 
-                    dropGroup.userData = { name: dropName, seed: Math.random() * 50, velocity: outVel, cooldown: 0.6, onConveyor };
+                    dropGroup.userData = { name: dropName, seed: Math.random() * 50, velocity: outVel, cooldown: 0.6, onConveyor, beltDistance: 0 };
                     state.dropsGroup.add(dropGroup);
                 }
             }

@@ -7,18 +7,19 @@ import { createFurnace } from './obj/furnace.js';
 import { createIronOreItem, createIronIngot, createIronPlate, createIronGear } from './obj/iron.js';
 import { createAutoMiner } from './obj/autominer.js';
 import { createConveyor, advanceOnConveyor } from './obj/conveyor.js';
-import { createLinkConnector } from './linkVisuals.js';
 import {
-    PLACEMENT_OVERLAP_DISTANCE, DEFAULT_OVERLAP_DISTANCE,
-    CONVEYOR_CHAIN_SNAP_RADIUS, MACHINE_LINK_RADIUS, MAX_LINK_DISTANCE
-} from './placeables.js';
+    rescanAllLinks, cleanupLinksForNode, detachDropsFromConveyor,
+    tickLinkVisuals as _tickLinkVisuals, updateGhostLinkPreview
+} from './linkSystem.js';
+import { PLACEMENT_OVERLAP_DISTANCE, DEFAULT_OVERLAP_DISTANCE, CONVEYOR_CHAIN_SNAP_RADIUS } from './placeables.js';
+
+const CONVEYOR_ITEM_VARIANTS = { 'Conveyor': 'straight', 'Conveyor Left': 'left', 'Conveyor Right': 'right' };
+function isConveyorItem(name) { return !!CONVEYOR_ITEM_VARIANTS[name]; }
 
 const _groundPoint = new THREE.Vector3();
-const _snapExit = new THREE.Vector3();
 const _finalPos = new THREE.Vector3();
-const _forwardScratch = new THREE.Vector3();
-const _yAxis = new THREE.Vector3(0, 1, 0);
-const _linkScanPoint = new THREE.Vector3();
+const _snapP = new THREE.Vector3();
+const _snapD = new THREE.Vector3();
 
 export function updateHeldModel(player, itemName) {
     if (player.currentHeldItemName === itemName) return;
@@ -37,7 +38,7 @@ export function updateHeldModel(player, itemName) {
     else if (itemName === 'Workbench') { mesh = createWorkbench(); mesh.scale.set(0.3, 0.3, 0.3); }
     else if (itemName === 'Furnace') { mesh = createFurnace(); mesh.scale.set(0.22, 0.22, 0.22); }
     else if (itemName === 'Auto Miner') { mesh = createAutoMiner(); mesh.scale.set(0.2, 0.2, 0.2); }
-    else if (itemName === 'Conveyor') { mesh = createConveyor(); mesh.scale.set(0.3, 0.3, 0.3); }
+    else if (isConveyorItem(itemName)) { mesh = createConveyor(CONVEYOR_ITEM_VARIANTS[itemName]); mesh.scale.set(0.3, 0.3, 0.3); }
     else if (itemName === 'Iron Ore') mesh = createIronOreItem();
     else if (itemName === 'Iron Ingot') mesh = createIronIngot();
     else if (itemName === 'Iron Plate') mesh = createIronPlate();
@@ -46,140 +47,6 @@ export function updateHeldModel(player, itemName) {
     if (mesh) player.heldItemContainer.add(mesh);
 }
 
-// ===== LINK MANAGEMENT =====
-// completeLink is the ONLY place a link is ever created — this is what makes the
-// distance guard actually reliable: no matter which auto-link heuristic proposed a
-// connection, it passes through here and gets rejected if the endpoints somehow end
-// up farther apart than MAX_LINK_DISTANCE, or if it would create a 2-node cycle.
-function completeLink(player, source, target) {
-    const fromPoint = new THREE.Vector3();
-    if (source.userData.getOutputPoint) source.userData.getOutputPoint(fromPoint);
-    else if (source.userData.getExitPoint) source.userData.getExitPoint(fromPoint);
-
-    const toPoint = new THREE.Vector3();
-    target.userData.getEntryPoint(toPoint);
-
-    if (fromPoint.distanceTo(toPoint) > MAX_LINK_DISTANCE) return false;
-
-    const wouldCycle = player.activeLinks.some(l => l.source === target && l.target === source);
-    if (wouldCycle) return false;
-
-    removeLinkFrom(player, source);
-    source.userData.setOutputConveyor(target);
-
-    const connector = createLinkConnector(player.scene, 0x2ecc71, 0.55);
-    connector.setEndpoints(fromPoint, toPoint);
-    connector.setVisible(true);
-
-    player.activeLinks.push({ source, target, connector });
-    return true;
-}
-
-function removeLinkFrom(player, source) {
-    for (let i = player.activeLinks.length - 1; i >= 0; i--) {
-        if (player.activeLinks[i].source === source) {
-            player.activeLinks[i].connector.dispose();
-            player.activeLinks.splice(i, 1);
-        }
-    }
-}
-
-// Cleans up any link touching a destroyed machine — critically, if the destroyed
-// node was a TARGET (a conveyor being fed into), this also nulls the surviving
-// SOURCE's output reference. Without this, a source would keep trying to feed a
-// dead, off-scene object forever, and items would vanish into an invisible
-// "black hole" conveyor that no longer exists anywhere.
-function cleanupLinksForNode(player, node) {
-    for (let i = player.activeLinks.length - 1; i >= 0; i--) {
-        const link = player.activeLinks[i];
-        if (link.source === node || link.target === node) {
-            if (link.target === node && link.source.userData.setOutputConveyor) {
-                link.source.userData.setOutputConveyor(null);
-            }
-            link.connector.dispose();
-            player.activeLinks.splice(i, 1);
-        }
-    }
-}
-
-// If a Conveyor is destroyed while an item is mid-transit on it, that item's
-// userData.onConveyor still points at the (now removed-from-scene) conveyor
-// object — its methods still technically work since JS doesn't garbage-collect it
-// while referenced, so the item would keep "riding" an invisible belt forever.
-// This detaches any such items and lets them fall normally instead.
-function detachDropsFromConveyor(player, conveyor) {
-    if (!player.dropsGroup) return;
-    for (const drop of player.dropsGroup.children) {
-        if (drop.userData.onConveyor === conveyor) {
-            drop.userData.onConveyor = null;
-            drop.userData.velocity = new THREE.Vector3((Math.random() - 0.5) * 1.0, 1.0, (Math.random() - 0.5) * 1.0);
-        }
-    }
-}
-
-export function tickLinkVisuals(player, time) {
-    for (const link of player.activeLinks) link.connector.tick(time);
-    if (player.ghostLinkPreview) player.ghostLinkPreview.tick(time);
-}
-
-// ===== AUTO-LINK CANDIDATE SEARCH (scratch-vector, no per-iteration allocation) =====
-function findLinkableConveyorForOutput(player, outputPoint, excludeConveyor) {
-    let best = null, bestDist = Infinity;
-    for (const child of player.interactables.children) {
-        if (!child.userData.isConveyor || child === excludeConveyor) continue;
-        child.userData.getEntryPoint(_linkScanPoint);
-        const d = _linkScanPoint.distanceTo(outputPoint);
-        if (d <= MACHINE_LINK_RADIUS && d < bestDist) { bestDist = d; best = child; }
-    }
-    return best;
-}
-
-function findLinkableSourceForEntry(player, entryPoint, excludeSelf) {
-    let best = null, bestDist = Infinity;
-    for (const child of player.interactables.children) {
-        if (child === excludeSelf) continue;
-        const isSource = child.userData.isAutoMiner || child.userData.isConveyor;
-        if (!isSource) continue;
-        if (!child.userData.getOutputPoint && !child.userData.getExitPoint) continue;
-        // Never silently steal an already-linked source's output — auto-linking
-        // only ever proposes NEW connections, it never overrides an existing one.
-        if (player.activeLinks.some(l => l.source === child)) continue;
-
-        if (child.userData.getOutputPoint) child.userData.getOutputPoint(_linkScanPoint);
-        else child.userData.getExitPoint(_linkScanPoint);
-
-        const d = _linkScanPoint.distanceTo(entryPoint);
-        if (d <= MACHINE_LINK_RADIUS && d < bestDist) { bestDist = d; best = child; }
-    }
-    return best;
-}
-
-// Called right after a Conveyor is placed: links anything nearby feeding INTO it
-// (a miner or another conveyor), and separately links it OUT to any existing
-// conveyor's entry it now sits in front of (extending a chain forward).
-function tryAutoLinkConveyor(player, builtConveyor) {
-    const entryPoint = new THREE.Vector3();
-    builtConveyor.userData.getEntryPoint(entryPoint);
-    const feeder = findLinkableSourceForEntry(player, entryPoint, builtConveyor);
-    if (feeder) completeLink(player, feeder, builtConveyor);
-
-    const exitPoint = new THREE.Vector3();
-    builtConveyor.userData.getExitPoint(exitPoint);
-    const forwardTarget = findLinkableConveyorForOutput(player, exitPoint, builtConveyor);
-    if (forwardTarget) completeLink(player, builtConveyor, forwardTarget);
-}
-
-// Called right after an Auto Miner is placed: links its output to any nearby
-// Conveyor's entry.
-function tryAutoLinkAutoMiner(player, builtMiner) {
-    const outPoint = new THREE.Vector3();
-    builtMiner.userData.getOutputPoint(outPoint);
-    const target = findLinkableConveyorForOutput(player, outPoint, null);
-    if (target) completeLink(player, builtMiner, target);
-}
-
-// Right-click is back to just being "interact" (open Furnace/Workbench menus) —
-// the manual link-selection mode is gone entirely. Linking is 100% automatic now.
 export function handleSecondaryAction(player) {
     if (!player.hoverTarget) return;
     const obj = player.hoverTarget;
@@ -222,21 +89,25 @@ function placeAutoMiner(player) {
     player.inventory.consumeItem('Auto Miner', 1);
     player._pendingAutoMinerTarget = null;
 
-    tryAutoLinkAutoMiner(player, built);
+    // New connections can only ever be CREATED by a fresh placement (positions
+    // of existing machines never move), so a full rescan here is exactly what's
+    // needed to catch this new piece touching anything real.
+    rescanAllLinks(player);
 }
 
-function placeConveyor(player) {
+function placeConveyor(player, itemName) {
     if (!player.ghostMesh.visible || !player.ghostValid) return;
+    const variant = CONVEYOR_ITEM_VARIANTS[itemName];
 
-    const built = createConveyor();
+    const built = createConveyor(variant);
     built.position.copy(player.ghostMesh.position);
     built.rotation.copy(player.ghostMesh.rotation);
     built.userData.isInteractable = true;
 
     player.interactables.add(built);
-    player.inventory.consumeItem('Conveyor', 1);
+    player.inventory.consumeItem(itemName, 1);
 
-    tryAutoLinkConveyor(player, built);
+    rescanAllLinks(player);
 }
 
 function placeGenericStructure(player, itemName) {
@@ -257,7 +128,7 @@ export function handlePrimaryAction(player) {
     const activeItem = player.inventory.getActiveItem();
 
     if (activeItem.name === 'Auto Miner') { placeAutoMiner(player); return; }
-    if (activeItem.name === 'Conveyor') { placeConveyor(player); return; }
+    if (isConveyorItem(activeItem.name)) { placeConveyor(player, activeItem.name); return; }
     if ((activeItem.name === 'Workbench' || activeItem.name === 'Furnace') && player.ghostMesh.visible) {
         placeGenericStructure(player, activeItem.name);
         return;
@@ -317,7 +188,7 @@ export function spawnDrop(player, name, position, velocity = new THREE.Vector3()
     else if (name === 'Workbench') mesh = createWorkbench();
     else if (name === 'Furnace') { mesh = createFurnace(); mesh.scale.set(0.5, 0.5, 0.5); }
     else if (name === 'Auto Miner') { mesh = createAutoMiner(); mesh.scale.set(0.5, 0.5, 0.5); }
-    else if (name === 'Conveyor') { mesh = createConveyor(); mesh.scale.set(0.5, 0.5, 0.5); }
+    else if (isConveyorItem(name)) { mesh = createConveyor(CONVEYOR_ITEM_VARIANTS[name]); mesh.scale.set(0.5, 0.5, 0.5); }
     else if (name === 'Stone Pickaxe') mesh = createPickaxe();
     else if (name === 'Stone Axe') mesh = createAxe();
 
@@ -336,6 +207,8 @@ export function tickConveyorDrops(player, deltaTime) {
         if (drop.userData.onConveyor) advanceOnConveyor(drop, deltaTime);
     }
 }
+
+export function tickLinkVisuals(player, time) { _tickLinkVisuals(player, time); }
 
 function computeGroundPoint(player, groundMesh, target) {
     if (groundMesh) {
@@ -393,24 +266,33 @@ function updateAutoMinerGhost(player, hits) {
     const tint = player.ghostValid ? 0x7CFC9A : 0xff6b6b;
     player.ghostMesh.traverse(c => { if (c.isMesh) c.material.color.setHex(tint); });
 
-    updateGhostLinkPreview(player, 'Auto Miner');
+    if (player.ghostValid) updateGhostLinkPreview(player, player.ghostMesh, false);
 }
 
-function updateConveyorGhost(player, groundMesh) {
+// Snapping now considers BOTH existing Conveyors' exits AND Auto Miners'
+// output chutes as valid "snap sources" — hovering near either lands the ghost
+// exactly on that port, guaranteeing the strict port-match succeeds on
+// placement instead of depending on pixel-perfect manual alignment.
+function updateConveyorGhost(player, groundMesh, itemName) {
     computeGroundPoint(player, groundMesh, _groundPoint);
+    const variant = CONVEYOR_ITEM_VARIANTS[itemName];
 
-    let snapConveyor = null;
+    let snapSource = null;
     for (const child of player.interactables.children) {
-        if (!child.userData.isConveyor) continue;
-        child.userData.getExitPoint(_snapExit);
-        if (_snapExit.distanceTo(_groundPoint) < CONVEYOR_CHAIN_SNAP_RADIUS) { snapConveyor = child; break; }
+        const isConv = child.userData.isConveyor;
+        const isMiner = child.userData.isAutoMiner;
+        if (!isConv && !isMiner) continue;
+
+        if (isConv) { child.userData.getExitPoint(_snapP); child.userData.getExitDirection(_snapD); }
+        else { child.userData.getOutputPoint(_snapP); child.userData.getOutputDirection(_snapD); }
+
+        if (_snapP.distanceTo(_groundPoint) < CONVEYOR_CHAIN_SNAP_RADIUS) { snapSource = child; break; }
     }
 
     let finalRotY;
-    if (snapConveyor) {
-        finalRotY = snapConveyor.rotation.y;
-        _forwardScratch.set(1, 0, 0).applyAxisAngle(_yAxis, finalRotY);
-        _finalPos.copy(_snapExit).addScaledVector(_forwardScratch, snapConveyor.userData.length / 2);
+    if (snapSource) {
+        finalRotY = Math.atan2(-_snapD.z, _snapD.x);
+        _finalPos.copy(_snapP);
         _finalPos.y = 0;
     } else {
         _finalPos.copy(_groundPoint);
@@ -419,10 +301,10 @@ function updateConveyorGhost(player, groundMesh) {
         finalRotY = player.placeRotation;
     }
 
-    if (player.currentGhostType !== 'Conveyor') {
-        player.currentGhostType = 'Conveyor';
+    if (player.currentGhostType !== itemName) {
+        player.currentGhostType = itemName;
         player.scene.remove(player.ghostMesh);
-        player.ghostMesh = createConveyor();
+        player.ghostMesh = createConveyor(variant);
         player.ghostMesh.traverse(c => {
             if (c.isMesh) { c.material = c.material.clone(); c.material.transparent = true; c.material.opacity = 0.55; c.castShadow = false; }
         });
@@ -436,7 +318,7 @@ function updateConveyorGhost(player, groundMesh) {
     const overlapDist = PLACEMENT_OVERLAP_DISTANCE['Conveyor'] || DEFAULT_OVERLAP_DISTANCE;
     let overlapping = false;
     for (const child of player.interactables.children) {
-        if (child === snapConveyor) continue;
+        if (child === snapSource) continue;
         if (child.position.distanceTo(_finalPos) < overlapDist) { overlapping = true; break; }
     }
     player.ghostValid = !overlapping;
@@ -444,7 +326,7 @@ function updateConveyorGhost(player, groundMesh) {
     const tint = player.ghostValid ? 0x7CFC9A : 0xff6b6b;
     player.ghostMesh.traverse(c => { if (c.isMesh) c.material.color.setHex(tint); });
 
-    updateGhostLinkPreview(player, 'Conveyor');
+    if (player.ghostValid) updateGhostLinkPreview(player, player.ghostMesh, true);
 }
 
 function updateGenericGhost(player, groundMesh, itemName) {
@@ -476,62 +358,13 @@ function updateGenericGhost(player, groundMesh, itemName) {
     player.ghostMesh.traverse(c => { if (c.isMesh) c.material.color.setHex(tint); });
 }
 
-// Shows a live amber preview line, BEFORE placement, of what the ghost would
-// auto-link to if placed right now — reuses the ghost's own real getEntryPoint/
-// getExitPoint/getOutputPoint methods (it's a real Conveyor/AutoMiner instance,
-// just tinted transparent), so the preview is always exactly consistent with what
-// actually happens on placement.
-function updateGhostLinkPreview(player, itemType) {
-    if (!player.ghostValid) { player.ghostLinkPreview.setVisible(false); return; }
-    const ghost = player.ghostMesh;
-    let shown = false;
-
-    if (itemType === 'Conveyor' && ghost.userData.getEntryPoint) {
-        const entryPoint = new THREE.Vector3();
-        ghost.userData.getEntryPoint(entryPoint);
-        const feeder = findLinkableSourceForEntry(player, entryPoint, null);
-        if (feeder) {
-            const fromP = new THREE.Vector3();
-            if (feeder.userData.getOutputPoint) feeder.userData.getOutputPoint(fromP);
-            else feeder.userData.getExitPoint(fromP);
-            player.ghostLinkPreview.setEndpoints(fromP, entryPoint);
-            player.ghostLinkPreview.setVisible(true);
-            shown = true;
-        }
-        if (!shown) {
-            const exitPoint = new THREE.Vector3();
-            ghost.userData.getExitPoint(exitPoint);
-            const target = findLinkableConveyorForOutput(player, exitPoint, null);
-            if (target) {
-                const toP = new THREE.Vector3();
-                target.userData.getEntryPoint(toP);
-                player.ghostLinkPreview.setEndpoints(exitPoint, toP);
-                player.ghostLinkPreview.setVisible(true);
-                shown = true;
-            }
-        }
-    } else if (itemType === 'Auto Miner' && ghost.userData.getOutputPoint) {
-        const outputPoint = new THREE.Vector3();
-        ghost.userData.getOutputPoint(outputPoint);
-        const target = findLinkableConveyorForOutput(player, outputPoint, null);
-        if (target) {
-            const toP = new THREE.Vector3();
-            target.userData.getEntryPoint(toP);
-            player.ghostLinkPreview.setEndpoints(outputPoint, toP);
-            player.ghostLinkPreview.setVisible(true);
-            shown = true;
-        }
-    }
-
-    if (!shown) player.ghostLinkPreview.setVisible(false);
-}
-
 export function updateHoverUI(player, groundMesh) {
     player.camera.getWorldDirection(player.raycaster.ray.direction);
     player.raycaster.ray.origin.copy(player.camera.position);
     player.hoverTarget = null;
     player.ghostMesh.visible = false;
-    player.ghostLinkPreview.setVisible(false);
+    if (player.ghostLinkPreviewIn) player.ghostLinkPreviewIn.setVisible(false);
+    if (player.ghostLinkPreviewOut) player.ghostLinkPreviewOut.setVisible(false);
     player._pendingAutoMinerTarget = null;
 
     const hits = player.raycaster.intersectObjects(player.interactables.children, true);
@@ -557,7 +390,7 @@ export function updateHoverUI(player, groundMesh) {
 
     const activeItem = player.inventory.getActiveItem();
     if (activeItem.name === 'Auto Miner') { updateAutoMinerGhost(player, hits); return; }
-    if (activeItem.name === 'Conveyor') { updateConveyorGhost(player, groundMesh); return; }
+    if (isConveyorItem(activeItem.name)) { updateConveyorGhost(player, groundMesh, activeItem.name); return; }
     if (activeItem.name === 'Workbench' || activeItem.name === 'Furnace') { updateGenericGhost(player, groundMesh, activeItem.name); }
 }
 
