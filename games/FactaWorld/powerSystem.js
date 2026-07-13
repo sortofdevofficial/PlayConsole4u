@@ -1,15 +1,13 @@
 import * as THREE from 'three';
-import { createLinkConnector } from './linkVisuals.js';
+import { createLinkConnector } from './linkVisuals_2.js';
 import { POWER_LINK_DISTANCE } from './placeables.js';
 
-// Setup utility selector for flashing visual system notifications
 function showDistanceWarning() {
     const notifyHud = document.getElementById('notification-hud');
     if (notifyHud) {
         notifyHud.textContent = "Object too far to connect!";
         notifyHud.classList.add('show');
         
-        // Clear active timeouts to avoid glitchy overlapping animations
         clearTimeout(notifyHud.timeoutRef);
         notifyHud.timeoutRef = setTimeout(() => {
             notifyHud.classList.remove('show');
@@ -17,13 +15,10 @@ function showDistanceWarning() {
     }
 }
 
-// Disabled automatic scanning so links are purely player-driven via right-click
 export function rescanPowerLinks(player) {
     if (!player.powerLinks) player.powerLinks = [];
-    // Kept alive as a safe stub for external file compatibility
 }
 
-// Establishes a manual power line between a clicked panel and miner
 export function createManualPowerLink(player, nodeA, nodeB) {
     if (!player.powerLinks) player.powerLinks = [];
 
@@ -35,21 +30,18 @@ export function createManualPowerLink(player, nodeA, nodeB) {
     if (nodeB.userData.isSolarPanel) panel = nodeB;
     if (nodeB.userData.isAutoMiner) miner = nodeB;
 
-    // Validation: Require one solar panel and one miner
     if (!panel || !miner) {
         console.warn("Invalid Link: You must connect a Solar Panel and an Auto Miner.");
         return false;
     }
 
-    // Extended Distance Constraints: Allows double the standard configuration limit
     const maximumAllowedDistance = POWER_LINK_DISTANCE * 2.0;
     if (panel.position.distanceTo(miner.position) > maximumAllowedDistance) {
         console.warn("Invalid Link: These machines are too far apart to wire.");
-        showDistanceWarning(); // Fire UI feedback notification element
+        showDistanceWarning(); 
         return false;
     }
 
-    // Validation: Check duplicate links
     const alreadyLinked = player.powerLinks.some(l => 
         (l.a === panel && l.b === miner) || (l.a === miner && l.b === panel)
     );
@@ -58,7 +50,6 @@ export function createManualPowerLink(player, nodeA, nodeB) {
         return false;
     }
 
-    // Generate physical blue cable mesh
     const connector = createLinkConnector(player.scene, 0x3498db, 0.4);
     const pOffset = panel.position.clone().add(new THREE.Vector3(0, 1.2, 0));
     const mOffset = miner.position.clone().add(new THREE.Vector3(0, 0.8, 0));
@@ -68,7 +59,6 @@ export function createManualPowerLink(player, nodeA, nodeB) {
 
     player.powerLinks.push({ a: panel, b: miner, connector });
     
-    // Immediately calculate state changes across the grid
     tickPowerGrid(player);
     return true;
 }

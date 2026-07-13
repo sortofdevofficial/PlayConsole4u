@@ -5,7 +5,6 @@ import { initCraftPreviews } from './inventory.js';
 import { tickPowerVisuals, createManualPowerLink } from './powerSystem.js';
 import { rescanAllLinks } from './linkSystem.js';
 
-// Core structural instantiation object mappings
 import { createWorkbench } from './obj/Workbench.js';
 import { createFurnace } from './obj/furnace.js';
 import { createAutoMiner } from './obj/autominer.js';
@@ -54,7 +53,6 @@ scene.add(dirLight);
 const { grassPlatform, interactablesGroup, dropsGroup, markersGroup, platformWidth, platformLength, tick } = buildWorld(scene);
 const player = new Player(scene, camera, renderer.domElement);
 
-// Global operational variables managing throttled server interactions
 let activeUserUid = null;
 let saveDebounceTimer = null;
 let lastDatabaseSaveTime = 0;
@@ -219,7 +217,6 @@ async function loadUserCloudSave(uid) {
     player.updateCraftingButtons();
 }
 
-// Authentication status change interceptor
 if (window.FB && typeof window.FB.onAuthChange === 'function') {
     window.FB.onAuthChange((authenticatedUser) => {
         if (authenticatedUser) {
@@ -230,11 +227,9 @@ if (window.FB && typeof window.FB.onAuthChange === 'function') {
     });
 }
 
-// Global automated backup loop executing background saves every 20 seconds
 setInterval(triggerThrottledSave, 20000);
 window.addEventListener('beforeunload', () => { if (activeUserUid) executeDatabaseWrite(); });
 
-// User Input Element Interaction Binding Wrappers
 document.getElementById('qc-stick').addEventListener('click', () => {
     if (player.inventory.consumeItem('Oak', 2)) { player.inventory.addItem('Stick', 4); player.updateCraftingButtons(); triggerThrottledSave(); }
 });
@@ -353,7 +348,6 @@ function animate() {
 
     if (tick) tick(time, 2500);
 
-    // Track state modifications from structural layout placements to flag saves
     const previousInteractableCount = player.interactables ? player.interactables.children.length : 0;
     
     player.update(dt, grassPlatform, interactablesGroup, dropsGroup, markersGroup, platformWidth, platformLength);

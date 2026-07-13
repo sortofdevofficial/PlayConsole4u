@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { createLinkConnector } from './linkVisuals.js';
+import { createLinkConnector } from './linkVisuals_2.js';
 import { PORT_MATCH_DISTANCE, PORT_MATCH_MIN_DOT } from './placeables.js';
 
 const _srcP = new THREE.Vector3();
@@ -36,9 +36,8 @@ function getInputPort(node, outP, outD, sourceNode) {
 }
 
 function portsMatch(srcP, srcD, tgtP, tgtD) {
-    // FIX: Increased snapping distance to 0.85 to smoothly account for rapid placements and slopes
     const allowedDistance = 0.85; 
-    const effectiveDot = 0.20; // Forgiving angle tracking
+    const effectiveDot = 0.20; 
     
     if (srcP.distanceTo(tgtP) > allowedDistance) return false;
     if (srcD.dot(tgtD) < effectiveDot) return false;
@@ -92,7 +91,6 @@ function completeLink(player, source, target) {
 }
 
 export function rescanAllLinks(player) {
-    // FIX: Fallback safety refresh to guarantee matrices are computed across the pool
     if (player.interactables) {
         player.interactables.updateMatrixWorld(true);
     }
@@ -121,8 +119,8 @@ export function cleanupLinksForNode(player, node) {
                     if (node.userData.setOutputConveyor) node.userData.setOutputConveyor(null);
                 }
                 if (link.target === node) {
-                    if (link.source.userData.removeOutputConveyor) {
-                        link.source.userData.removeOutputConveyor(node);
+                    if (link.source.removeOutputConveyor) {
+                        link.source.removeOutputConveyor(node);
                     }
                 }
             }
