@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { createLinkConnector } from './linkVisuals_2.js';
+import { createLinkConnector } from './linkVisuals.js';
 import { POWER_LINK_DISTANCE } from './placeables.js';
 
 function showDistanceWarning() {
