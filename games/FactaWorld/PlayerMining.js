@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { createWorkbench } from './obj/Workbench.js';
-import { createPickaxe } from './obj/Pickaxe.js';
-import { createAxe } from './obj/Axe.js';
+import { createPickaxe } from './obj/pickaxe.js'; // Fixed to lowercase
+import { createAxe } from './obj/axe.js';         // Fixed to lowercase
 import { createStick } from './obj/sticks.js';
 import { createFurnace } from './obj/furnace.js';
 import { createIronOreItem, createIronIngot, createIronPlate, createIronGear } from './obj/iron.js';
