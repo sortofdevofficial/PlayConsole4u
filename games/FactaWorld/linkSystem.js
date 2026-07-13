@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { createLinkConnector } from './linkVisuals_2.js';
+import { createLinkConnector } from './linkVisuals.js';
 import { PORT_MATCH_DISTANCE, PORT_MATCH_MIN_DOT } from './placeables.js';
 
 const _srcP = new THREE.Vector3();
