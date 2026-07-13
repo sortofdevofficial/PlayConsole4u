@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { createPickaxe } from './obj/Pickaxe.js';
-import { createAxe } from './obj/Axe.js';
+import { createPickaxe } from './obj/pickaxe.js'; // Fixed to lowercase
+import { createAxe } from './obj/axe.js';         // Fixed to lowercase
 import { createStick } from './obj/sticks.js';
 import { createWorkbench } from './obj/Workbench.js';
 import { createFurnace } from './obj/furnace.js';
@@ -27,9 +27,6 @@ function buildItemModel(name) {
     if (name === 'Workbench') { const m = createWorkbench(); m.scale.set(0.4, 0.4, 0.4); return m; }
     if (name === 'Furnace') { const m = createFurnace(); m.scale.set(0.28, 0.28, 0.28); return m; }
     if (name === 'Auto Miner') { const m = createAutoMiner(); m.scale.set(0.28, 0.28, 0.28); return m; }
-    // FIX: these three were never wired into buildItemModel before — the
-    // hotbar icon and craft-preview for Conveyor items silently returned
-    // nothing and just never showed an icon.
     if (name === 'Conveyor') { const m = createConveyor('straight'); m.scale.set(0.4, 0.4, 0.4); return m; }
     if (name === 'Conveyor Left') { const m = createConveyor('left'); m.scale.set(0.35, 0.35, 0.35); return m; }
     if (name === 'Conveyor Right') { const m = createConveyor('right'); m.scale.set(0.35, 0.35, 0.35); return m; }
@@ -38,10 +35,10 @@ function buildItemModel(name) {
     if (name === 'Iron Plate') return createIronPlate();
     if (name === 'Iron Gear') return createIronGear();
     if (name === 'Quartz') return createQuartzItem();
-if (name === 'Silicon') return createSiliconItem();
-if (name === 'Sand') return createSandItem();
-if (name === 'Glass') return createGlassItem();
-if (name === 'Solar Panel') { const m = createSolarPanel(); m.scale.set(0.3, 0.3, 0.3); return m; }
+    if (name === 'Silicon') return createSiliconItem();
+    if (name === 'Sand') return createSandItem();
+    if (name === 'Glass') return createGlassItem();
+    if (name === 'Solar Panel') { const m = createSolarPanel(); m.scale.set(0.3, 0.3, 0.3); return m; }
     return null;
 }
 

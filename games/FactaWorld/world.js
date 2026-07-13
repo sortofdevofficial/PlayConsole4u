@@ -1,11 +1,10 @@
 import * as THREE from 'three';
-import { createStone } from './obj/Stone.js';
+import { createStone } from './obj/stone.js'; // Fixed to lowercase
 import { createTree } from './obj/oak.js';
 import { createIronOre } from './obj/iron.js';
 import { createQuartzOre } from './obj/quartz.js';
 import { createSandNode } from './obj/sand.js';
 
-// Global elevation function for terrain deformation and physics tracking
 export function getElevation(x, z) {
     return (Math.sin(x * 0.05) * Math.cos(z * 0.05) * 4.0) + 
            (Math.sin(x * 0.15 + 2) * Math.sin(z * 0.15) * 1.5);
@@ -15,7 +14,6 @@ export function buildWorld(scene) {
     const platformWidth = 100;
     const platformLength = 100;
 
-    // Create the high-density vertex grid for smooth hills
     const planeGeo = new THREE.PlaneGeometry(platformWidth, platformLength, 70, 70);
     const pos = planeGeo.attributes.position;
     for (let i = 0; i < pos.count; i++) {
@@ -49,9 +47,7 @@ export function buildWorld(scene) {
 
     const activeSpawns = [];
 
-    // Exact, hardcoded coordinates for all resource points across the map
     const exactResourceCoordinates = [
-        // --- SAND NODES (Low Valleys) ---
         { type: 'sand', x: -42.0, z: -38.0 },
         { type: 'sand', x: -40.5, z: -35.0 },
         { type: 'sand', x: -38.0, z: -41.0 },
@@ -59,9 +55,8 @@ export function buildWorld(scene) {
         { type: 'sand', x: 41.0,  z: 39.0 },
         { type: 'sand', x: 38.5,  z: 43.0 },
         { type: 'sand', x: 44.0,  z: 36.5 },
-        { type: 'sand', x: 12.0,  z: 45.0 }, // Exact coordinate example requested
+        { type: 'sand', x: 12.0,  z: 45.0 },
         
-        // --- TREES (Plains & Gentle Slopes) ---
         { type: 'tree', x: -15.0, z: -10.0 },
         { type: 'tree', x: -12.5, z: -5.0 },
         { type: 'tree', x: -8.0,  z: -12.0 },
@@ -69,7 +64,7 @@ export function buildWorld(scene) {
         { type: 'tree', x: 5.0,   z: -22.0 },
         { type: 'tree', x: 14.0,  z: -15.0 },
         { type: 'tree', x: 22.0,  z: -8.0 },
-        { type: 'tree', x: 1.0,   z: 0.0 },   // Exact coordinate example requested
+        { type: 'tree', x: 1.0,   z: 0.0 },
         { type: 'tree', x: -5.0,  z: 15.0 },
         { type: 'tree', x: -18.0, z: 8.0 },
         { type: 'tree', x: 8.0,   z: 20.0 },
@@ -79,7 +74,6 @@ export function buildWorld(scene) {
         { type: 'tree', x: -32.0, z: -15.0 },
         { type: 'tree', x: 30.0,  z: -20.0 },
 
-        // --- IRON ORE (Mid-level terrain) ---
         { type: 'iron', x: -20.0, z: -2.0 },
         { type: 'iron', x: -22.5, z: 3.0 },
         { type: 'iron', x: 10.0,  z: -5.0 },
@@ -88,7 +82,6 @@ export function buildWorld(scene) {
         { type: 'iron', x: 6.0,   z: 32.0 },
         { type: 'iron', x: -12.0, z: 28.0 },
 
-        // --- STONE NODES (Elevated Slopes & Low Ridges) ---
         { type: 'stone', x: -30.0, z: 25.0 },
         { type: 'stone', x: -26.5, z: 31.0 },
         { type: 'stone', x: -34.0, z: 18.0 },
@@ -98,7 +91,6 @@ export function buildWorld(scene) {
         { type: 'stone', x: -5.0,  z: 42.0 },
         { type: 'stone', x: 5.0,   z: 42.0 },
 
-        // --- QUARTZ ORE (High Mountain Peaks) ---
         { type: 'quartz', x: -35.0, z: 35.0 },
         { type: 'quartz', x: -38.0, z: 32.0 },
         { type: 'quartz', x: 40.0,  z: -40.0 },
@@ -158,7 +150,6 @@ export function buildWorld(scene) {
         return instance;
     }
 
-    // Initialize all hardcoded coordinate entities accurately aligned to the terrain height
     exactResourceCoordinates.forEach((coord) => {
         const computedY = getElevation(coord.x, coord.z);
         spawnResource(coord.type, coord.x, computedY, coord.z, true, null);
