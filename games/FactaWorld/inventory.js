@@ -7,6 +7,9 @@ import { createFurnace } from './obj/furnace.js';
 import { createIronOreItem, createIronIngot, createIronPlate, createIronGear } from './obj/iron.js';
 import { createAutoMiner } from './obj/autominer.js';
 import { createConveyor } from './obj/conveyor.js';
+import { createQuartzItem, createSiliconItem } from './obj/quartz.js';
+import { createSandItem, createGlassItem } from './obj/sand.js';
+import { createSolarPanel } from './obj/solarpanel.js';
 
 function createOakLogModel() {
     return new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.65, 6), new THREE.MeshStandardMaterial({ color: 0x6d4c41, roughness: 0.85, flatShading: true }));
@@ -34,6 +37,11 @@ function buildItemModel(name) {
     if (name === 'Iron Ingot') return createIronIngot();
     if (name === 'Iron Plate') return createIronPlate();
     if (name === 'Iron Gear') return createIronGear();
+    if (name === 'Quartz') return createQuartzItem();
+if (name === 'Silicon') return createSiliconItem();
+if (name === 'Sand') return createSandItem();
+if (name === 'Glass') return createGlassItem();
+if (name === 'Solar Panel') { const m = createSolarPanel(); m.scale.set(0.3, 0.3, 0.3); return m; }
     return null;
 }
 

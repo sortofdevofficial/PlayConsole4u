@@ -1,4 +1,4 @@
-// firebase.js v3.2 - Ultra-Fast Optimistic Caching Edition
+// firebase.js v3.3 - Ultra-Fast Optimistic Caching Edition + Factaworld Sync
 // users/{uid}                     → { n, e, ph }
 // users/{uid}/G/CP/L/{VER}        → CubePlatformer times
 // users/{uid}/G/FS                → { w, l, k, h, s }  
@@ -6,6 +6,7 @@
 // users/{uid}/G/CC/Likes/{likerUid} → { by, t }  (who liked and when)
 // users/{uid}/presence/cc           → { peerId, name, wins, uid, active, t }  (live presence)
 // users/{uid}/subscription        → { active, FTL, plan, start, next, activatedBy }
+// users/{uid}/G/FW                → { i, b, l, t } (Factaworld Inventory, Builds, Wires, Time)
 
 firebase.initializeApp({
   apiKey:'AIzaSyCZPK5A0UQSFB2D_zNj3wjZ5-Tbyb1VYn8',
@@ -20,7 +21,7 @@ firebase.initializeApp({
 const _a = firebase.auth();
 const _d = firebase.firestore();
 const _r = firebase.database(); // Realtime DB — presence only, never stored
-const VER = '3.2';
+const VER = '3.3';
 
 // ── Cache ──────────────────────────────────────────────────────────────────────
 const _c = {};
@@ -34,6 +35,7 @@ const lRef  = uid => uRef(uid).collection('G').doc('CP').collection('L').doc('1'
 const fsRef = uid => uRef(uid).collection('G').doc('FS');
 const ccRef = uid => uRef(uid).collection('G').doc('CC');
 const subRef= uid => uRef(uid).collection('subscription').doc('info');
+const fwRef = uid => uRef(uid).collection('G').doc('FW');
 
 // ── Auth ───────────────────────────────────────────────────────────────────────
 const signInGoogle = () => _a.signInWithPopup(new firebase.auth.GoogleAuthProvider());
@@ -270,6 +272,32 @@ async function getLeaderboard(lvl) {
   }catch(e){console.error('[FB] getLeaderboard:',e.message);return[];}
 }
 
+// ── Factaworld Game Sync Storage (G/FW) ───────────────────────────────────────
+async function saveFWData(uid, data) {
+  const key = 'fw_' + uid;
+  cS(key, data, 30000);
+  try {
+    await fwRef(uid).set(data);
+    return true;
+  } catch (e) {
+    console.error('[FB] saveFWData:', e.message);
+    return false;
+  }
+}
+
+async function getFWData(uid) {
+  const h = cG('fw_' + uid); if (h) return h;
+  try {
+    const s = await fwRef(uid).get();
+    const v = s.exists ? s.data() : null;
+    if (v) cS('fw_' + uid, v, 30000);
+    return v;
+  } catch (e) {
+    console.error('[FB] getFWData:', e.message);
+    return null;
+  }
+}
+
 window.FB = {
   db: _r, // RTDB reference (for onDisconnect usage in main.js)
   signInGoogle, signOut, onAuthChange, currentUser,
@@ -278,6 +306,6 @@ window.FB = {
   saveLevelTime, getMyTimes, unlockLevel,
   recordMatch, getMatchStats,
   recordRound, getStats, likePlayer,
-  getLeaderboard, VER
+  getLeaderboard, saveFWData, getFWData, VER
 };
 console.log('[FB] ready v'+VER);

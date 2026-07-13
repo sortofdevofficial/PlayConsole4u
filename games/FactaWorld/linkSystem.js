@@ -2,15 +2,6 @@ import * as THREE from 'three';
 import { createLinkConnector } from './linkVisuals.js';
 import { PORT_MATCH_DISTANCE, PORT_MATCH_MIN_DOT } from './placeables.js';
 
-// ===== PORT-BASED CONNECTION SYSTEM =====
-// Every machine exposes "ports": a world-space point + facing direction for
-// where items enter/exit. A link exists ONLY when a source's output port and
-// a target's input port are essentially the same point in space, facing the
-// same way — i.e. physically touching, not just nearby. This one idea is what
-// makes the whole system predictable: no ambiguity about which of several
-// "somewhat close" candidates gets picked, because only true adjacency ever
-// qualifies at all.
-
 const _srcP = new THREE.Vector3();
 const _srcD = new THREE.Vector3();
 const _tgtP = new THREE.Vector3();
@@ -28,92 +19,92 @@ function getOutputPort(node, outP, outD) {
     return true;
 }
 
-function getInputPort(node, outP, outD) {
-    if (!node.userData.isConveyor) return false; // only belts have an entry to feed into
+function getInputPort(node, outP, outD, sourceNode) {
+    const isPowerSource = sourceNode && (sourceNode.userData.isSolarPanel || sourceNode.userData.type === 'Solar Panel');
+    if (isPowerSource) {
+        if (node.userData.getPowerPort) {
+            node.userData.getPowerPort(outP, outD);
+            return true;
+        }
+        return false;
+    }
+
+    if (!node.userData.isConveyor) return false;
     node.userData.getEntryPoint(outP);
     node.userData.getEntryDirection(outD);
     return true;
 }
 
 function portsMatch(srcP, srcD, tgtP, tgtD) {
-    if (srcP.distanceTo(tgtP) > PORT_MATCH_DISTANCE) return false;
-    if (srcD.dot(tgtD) < PORT_MATCH_MIN_DOT) return false;
+    // FIX: Increased snapping distance to 0.85 to smoothly account for rapid placements and slopes
+    const allowedDistance = 0.85; 
+    const effectiveDot = 0.20; // Forgiving angle tracking
+    
+    if (srcP.distanceTo(tgtP) > allowedDistance) return false;
+    if (srcD.dot(tgtD) < effectiveDot) return false;
     return true;
 }
 
-// Is there a real, placed Conveyor whose ENTRY port is touching this source's
-// OUTPUT port and facing into it? Returns that conveyor, or null. This is the
-// literal "what's actually in front of it" check.
-export function findTouchingTarget(player, sourceNode) {
-    if (!getOutputPort(sourceNode, _srcP, _srcD)) return null;
+export function findTouchingTargets(player, sourceNode) {
+    const validTargets = [];
+    if (!getOutputPort(sourceNode, _srcP, _srcD)) return validTargets;
 
     for (const child of player.interactables.children) {
-        if (child === sourceNode || !child.userData.isConveyor) continue;
-        if (!getInputPort(child, _tgtP, _tgtD)) continue;
-        if (portsMatch(_srcP, _srcD, _tgtP, _tgtD)) return child;
+        if (child === sourceNode) continue;
+        if (!getInputPort(child, _tgtP, _tgtD, sourceNode)) continue;
+        if (portsMatch(_srcP, _srcD, _tgtP, _tgtD)) {
+            validTargets.push(child);
+        }
     }
-    return null;
-}
-
-// Is there a real, placed machine whose OUTPUT port is touching this target's
-// ENTRY port and facing into it, and which isn't already feeding somewhere
-// else? Returns that machine, or null.
-export function findTouchingSource(player, targetNode) {
-    if (!getInputPort(targetNode, _tgtP, _tgtD)) return null;
-
-    for (const child of player.interactables.children) {
-        if (child === targetNode) continue;
-        const isPotentialSource = child.userData.isAutoMiner || child.userData.isConveyor;
-        if (!isPotentialSource) continue;
-        if (player.activeLinks.some(l => l.source === child)) continue; // never steal an existing output
-        if (!getOutputPort(child, _srcP, _srcD)) continue;
-        if (portsMatch(_srcP, _srcD, _tgtP, _tgtD)) return child;
-    }
-    return null;
+    return validTargets;
 }
 
 function completeLink(player, source, target) {
     if (!getOutputPort(source, _srcP, _srcD)) return false;
-    if (!getInputPort(target, _tgtP, _tgtD)) return false;
-    if (!portsMatch(_srcP, _srcD, _tgtP, _tgtD)) return false; // authoritative final check
+    if (!getInputPort(target, _tgtP, _tgtD, source)) return false;
+    if (!portsMatch(_srcP, _srcD, _tgtP, _tgtD)) return false;
+
+    const linkExists = player.activeLinks.some(l => l.source === source && l.target === target);
+    if (linkExists) return false;
 
     const wouldCycle = player.activeLinks.some(l => l.source === target && l.target === source);
     if (wouldCycle) return false;
 
-    removeLinkFrom(player, source);
-    source.userData.setOutputConveyor(target);
+    const isPowerLink = (source.userData.isSolarPanel || source.userData.type === 'Solar Panel') && target.userData.isAutoMiner;
 
-    const connector = createLinkConnector(player.scene, 0x2ecc71, 0.55);
+    if (isPowerLink) {
+        if (target.userData.setPowered) {
+            target.userData.setPowered(true);
+        }
+    } else {
+        if (source.userData.setOutputConveyor) {
+            source.userData.setOutputConveyor(target);
+        }
+    }
+
+    const colorHex = isPowerLink ? 0xf1c40f : 0x2ecc71;
+    const connector = createLinkConnector(player.scene, colorHex, 0.65);
     connector.setEndpoints(_srcP.clone(), _tgtP.clone());
     connector.setVisible(true);
 
-    player.activeLinks.push({ source, target, connector });
+    player.activeLinks.push({ source, target, connector, isPowerLink });
     return true;
 }
 
-function removeLinkFrom(player, source) {
-    for (let i = player.activeLinks.length - 1; i >= 0; i--) {
-        if (player.activeLinks[i].source === source) {
-            player.activeLinks[i].connector.dispose();
-            player.activeLinks.splice(i, 1);
-        }
-    }
-}
-
-// Full network rescan: checks EVERY placed Auto Miner / Conveyor for a
-// touching partner and forms links accordingly. Called after any placement —
-// this is what lets placing a belt BETWEEN two existing unconnected pieces
-// automatically bridge them, and is what makes the whole network self-
-// consistent without special-cased "auto miner placement" vs "conveyor
-// placement" logic — it's one generic check applied everywhere.
 export function rescanAllLinks(player) {
-    for (const child of player.interactables.children) {
-        const isSource = child.userData.isAutoMiner || child.userData.isConveyor;
-        if (!isSource) continue;
-        if (player.activeLinks.some(l => l.source === child)) continue;
+    // FIX: Fallback safety refresh to guarantee matrices are computed across the pool
+    if (player.interactables) {
+        player.interactables.updateMatrixWorld(true);
+    }
 
-        const target = findTouchingTarget(player, child);
-        if (target) completeLink(player, child, target);
+    for (const child of player.interactables.children) {
+        const isSource = child.userData.isAutoMiner || child.userData.isConveyor || child.userData.isSolarPanel || child.userData.type === 'Solar Panel';
+        if (!isSource) continue;
+
+        const targets = findTouchingTargets(player, child);
+        for (const target of targets) {
+            completeLink(player, child, target);
+        }
     }
 }
 
@@ -121,8 +112,19 @@ export function cleanupLinksForNode(player, node) {
     for (let i = player.activeLinks.length - 1; i >= 0; i--) {
         const link = player.activeLinks[i];
         if (link.source === node || link.target === node) {
-            if (link.target === node && link.source.userData.setOutputConveyor) {
-                link.source.userData.setOutputConveyor(null);
+            if (link.isPowerLink) {
+                if (link.target.userData.setPowered) {
+                    link.target.userData.setPowered(false);
+                }
+            } else {
+                if (link.source === node) {
+                    if (node.userData.setOutputConveyor) node.userData.setOutputConveyor(null);
+                }
+                if (link.target === node) {
+                    if (link.source.userData.removeOutputConveyor) {
+                        link.source.userData.removeOutputConveyor(node);
+                    }
+                }
             }
             link.connector.dispose();
             player.activeLinks.splice(i, 1);
@@ -135,7 +137,7 @@ export function detachDropsFromConveyor(player, conveyor) {
     for (const drop of player.dropsGroup.children) {
         if (drop.userData.onConveyor === conveyor) {
             drop.userData.onConveyor = null;
-            drop.userData.velocity = new THREE.Vector3((Math.random() - 0.5) * 1.0, 1.0, (Math.random() - 0.5) * 1.0);
+            drop.userData.velocity = new THREE.Vector3((Math.random() - 0.5) * 1.2, 1.2, (Math.random() - 0.5) * 1.2);
         }
     }
 }
@@ -146,29 +148,35 @@ export function tickLinkVisuals(player, time) {
     if (player.ghostLinkPreviewOut) player.ghostLinkPreviewOut.tick(time);
 }
 
-// Live preview, BEFORE placement, of what the ghost would actually connect to
-// if placed right now — reuses the EXACT same port-matching functions as real
-// placement, so preview and outcome can never disagree. Shows an "in" line
-// (something feeding into the ghost) and an "out" line (the ghost feeding
-// something ahead) simultaneously, so placing a bridge piece between two
-// existing machines shows BOTH connections forming before you commit.
-export function updateGhostLinkPreview(player, ghostNode, isConveyor) {
+export function updateGhostLinkPreview(player, ghostNode, isConveyorGhost) {
     let inShown = false, outShown = false;
+    const isPowerGhost = ghostNode.userData.isSolarPanel || ghostNode.userData.type === 'Solar Panel';
 
-    if (isConveyor) {
-        const feeder = findTouchingSource(player, ghostNode);
-        if (feeder && getOutputPort(feeder, _srcP, _srcD) && getInputPort(ghostNode, _tgtP, _tgtD)) {
-            player.ghostLinkPreviewIn.setEndpoints(_srcP, _tgtP);
-            player.ghostLinkPreviewIn.setVisible(true);
-            inShown = true;
+    if (!isPowerGhost && getInputPort(ghostNode, _tgtP, _tgtD, null)) {
+        for (const child of player.interactables.children) {
+            const isSrc = child.userData.isAutoMiner || child.userData.isConveyor;
+            if (!isSrc) continue;
+            if (!getOutputPort(child, _srcP, _srcD)) continue;
+            if (portsMatch(_srcP, _srcD, _tgtP, _tgtD)) {
+                player.ghostLinkPreviewIn.setEndpoints(_srcP.clone(), _tgtP.clone());
+                player.ghostLinkPreviewIn.setVisible(true);
+                inShown = true;
+                break;
+            }
         }
     }
 
-    const target = findTouchingTarget(player, ghostNode);
-    if (target && getOutputPort(ghostNode, _srcP, _srcD) && getInputPort(target, _tgtP, _tgtD)) {
-        player.ghostLinkPreviewOut.setEndpoints(_srcP, _tgtP);
-        player.ghostLinkPreviewOut.setVisible(true);
-        outShown = true;
+    if (getOutputPort(ghostNode, _srcP, _srcD)) {
+        for (const child of player.interactables.children) {
+            if (child === ghostNode) continue;
+            if (!getInputPort(child, _tgtP, _tgtD, ghostNode)) continue;
+            if (portsMatch(_srcP, _srcD, _tgtP, _tgtD)) {
+                player.ghostLinkPreviewOut.setEndpoints(_srcP.clone(), _tgtP.clone());
+                player.ghostLinkPreviewOut.setVisible(true);
+                outShown = true;
+                break;
+            }
+        }
     }
 
     if (!inShown && player.ghostLinkPreviewIn) player.ghostLinkPreviewIn.setVisible(false);

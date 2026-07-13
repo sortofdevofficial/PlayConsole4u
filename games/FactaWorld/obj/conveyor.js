@@ -1,208 +1,134 @@
 import * as THREE from 'three';
 
-// Height at which items actually ride along the belt. THIS constant existing as
-// a single source of truth, used by BOTH the path math below AND the Auto
-// Miner's drop-hole placement, is what fixes the teleport bug: previously
-// entry/exit points were computed at ground level while items rode higher up,
-// so the "reached the exit" check could never fire correctly.
-export const BELT_RIDE_HEIGHT = 0.42;
-
-const CONVEYOR_LENGTH = 2.4;   // straight belt length
-const CURVE_RADIUS = 1.6;      // curve arc radius
-const CURVE_SEGMENTS = 6;      // sample/tile count for curves (math AND visuals)
-const CONVEYOR_SPEED = 1.4;    // shared travel speed, all variants
-
-const _advDir = new THREE.Vector3();
-const _tmpPos = new THREE.Vector3();
-const _tmpDir = new THREE.Vector3();
-const _rollAxis = new THREE.Vector3();
-const _up = new THREE.Vector3(0, 1, 0);
-const ITEM_ROLL_RADIUS = 0.18;
+const CONVEYOR_LENGTH = 1.0;
+export const CONVEYOR_HALF_LENGTH = CONVEYOR_LENGTH / 2;
+const CURVE_RADIUS = 0.5; 
+const CURVE_SEGMENTS = 12; 
+const CONVEYOR_SPEED = 1.4;
+export const BELT_RIDE_HEIGHT = 0.35;
 
 function createBeltTexture() {
     const canvas = document.createElement('canvas');
-    canvas.width = 256;
-    canvas.height = 64;
+    canvas.width = 128; canvas.height = 64;
     const ctx = canvas.getContext('2d');
-
     ctx.fillStyle = '#0b0c0d';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    ctx.strokeStyle = '#1c1e20';
-    ctx.lineWidth = 9;
+    ctx.strokeStyle = '#222529';
+    ctx.lineWidth = 12;
     ctx.lineCap = 'round';
-    for (let x = -canvas.height; x < canvas.width + canvas.height; x += 26) {
+    for (let x = -canvas.height; x < canvas.width + canvas.height; x += 24) {
         ctx.beginPath();
         ctx.moveTo(x, canvas.height);
         ctx.lineTo(x + canvas.height, 0);
         ctx.stroke();
     }
-
     const texture = new THREE.CanvasTexture(canvas);
     texture.wrapS = THREE.RepeatWrapping;
     texture.wrapT = THREE.ClampToEdgeWrapping;
-    texture.repeat.set(3, 1);
+    texture.repeat.set(2, 1);
     return texture;
 }
 
-// Builds the local-space travel path for a variant: sample points from entry
-// (index 0) to exit (last index), each with a unit tangent direction, plus the
-// cumulative arc-length at each sample. This ONE array is the single source of
-// truth for BOTH the linking system's entry/exit points/directions AND the
-// smooth per-frame item movement below — there's no second copy of "where the
-// belt goes" that could drift out of sync with "where items actually travel."
-function buildPath(variant) {
+function buildPath(type) {
     const h = BELT_RIDE_HEIGHT;
+    const halfLen = CONVEYOR_HALF_LENGTH;
+    const isCurve = (type === 'left' || type === 'right');
 
-    if (variant === 'left' || variant === 'right') {
-        // sign = +1 curves toward +Z ("left"), -1 curves toward -Z ("right").
-        const sign = variant === 'left' ? 1 : -1;
-        const points = [];
-        const cumLength = [];
-        for (let i = 0; i <= CURVE_SEGMENTS; i++) {
-            const theta = (i / CURVE_SEGMENTS) * (Math.PI / 2);
-            const x = CURVE_RADIUS * Math.sin(theta);
-            const z = sign * CURVE_RADIUS * (1 - Math.cos(theta));
-            const dx = Math.cos(theta);
-            const dz = sign * Math.sin(theta);
-            points.push({ p: new THREE.Vector3(x, h, z), dir: new THREE.Vector3(dx, 0, dz).normalize() });
-            cumLength.push(CURVE_RADIUS * theta);
-        }
-        return { points, cumLength, totalLength: CURVE_RADIUS * (Math.PI / 2) };
+    if (!isCurve) {
+        return {
+            points: [
+                { p: new THREE.Vector3(-halfLen, h, 0), dir: new THREE.Vector3(1, 0, 0) },
+                { p: new THREE.Vector3(halfLen, h, 0), dir: new THREE.Vector3(1, 0, 0) }
+            ],
+            cum: [0, CONVEYOR_LENGTH],
+            totalLength: CONVEYOR_LENGTH
+        };
     }
 
-    return {
-        points: [
-            { p: new THREE.Vector3(0, h, 0), dir: new THREE.Vector3(1, 0, 0) },
-            { p: new THREE.Vector3(CONVEYOR_LENGTH, h, 0), dir: new THREE.Vector3(1, 0, 0) }
-        ],
-        cumLength: [0, CONVEYOR_LENGTH],
-        totalLength: CONVEYOR_LENGTH
-    };
+    const sign = type === 'left' ? -1 : 1;
+    const points = [];
+    const cum = [];
+    
+    for (let i = 0; i <= CURVE_SEGMENTS; i++) {
+        const t = i / CURVE_SEGMENTS;
+        const theta = t * (Math.PI / 2);
+        
+        const x = -halfLen + CURVE_RADIUS * Math.sin(theta);
+        const z = sign * halfLen - sign * CURVE_RADIUS * Math.cos(theta);
+        
+        const dx = Math.cos(theta);
+        const dz = sign * Math.sin(theta);
+        
+        points.push({ p: new THREE.Vector3(x, h, z), dir: new THREE.Vector3(dx, 0, dz).normalize() });
+        cum.push(CURVE_RADIUS * theta);
+    }
+    
+    return { points, cum, totalLength: CURVE_RADIUS * (Math.PI / 2) };
 }
 
-export function createConveyor(variant = 'straight') {
+export function createConveyor(type = 'straight') {
     const group = new THREE.Group();
-    const path = buildPath(variant);
+    const isCurve = (type === 'left' || type === 'right');
+    const path = buildPath(type);
 
-    const blackMat = new THREE.MeshStandardMaterial({ color: 0x151618, roughness: 0.55, metalness: 0.35 });
+    const metalMat = new THREE.MeshStandardMaterial({ color: 0x2c3035, roughness: 0.6, metalness: 0.5 });
     const beltTexture = createBeltTexture();
-    const beltMat = new THREE.MeshStandardMaterial({ map: beltTexture, color: 0x1a1c1e, roughness: 0.8, metalness: 0.1 });
+    const beltMat = new THREE.MeshStandardMaterial({ map: beltTexture, color: 0x1a1c1e, roughness: 0.9, metalness: 0.1 });
     const indicatorMat = new THREE.MeshStandardMaterial({ color: 0x0e0f10, roughness: 0.5, emissive: 0x2ecc71, emissiveIntensity: 0 });
+    const rollerMat = new THREE.MeshStandardMaterial({ color: 0x55585c, roughness: 0.35, metalness: 0.6 });
 
-    let rollerL = null, rollerR = null;
+    const rollers = [];
 
-    if (variant === 'straight') {
-        const L = CONVEYOR_LENGTH;
+    for (let i = 0; i < path.points.length - 1; i++) {
+        const a = path.points[i].p, b = path.points[i + 1].p;
+        const dx = b.x - a.x, dz = b.z - a.z;
+        const segLen = Math.sqrt(dx * dx + dz * dz);
+        if (segLen < 0.0001) continue;
+        const midX = (a.x + b.x) / 2, midZ = (a.z + b.z) / 2;
+        const rotY = Math.atan2(-dz, dx);
 
-        const railGeo = new THREE.BoxGeometry(L, 0.14, 0.05);
-        const railFront = new THREE.Mesh(railGeo, blackMat);
-        railFront.position.set(L / 2, 0.4, 0.3);
-        railFront.castShadow = true;
-        group.add(railFront);
-        const railBack = railFront.clone();
-        railBack.position.z = -0.3;
-        group.add(railBack);
+        const frame = new THREE.Mesh(new THREE.BoxGeometry(segLen + 0.02, 0.15, 0.5), metalMat);
+        frame.position.set(midX, 0.2, midZ);
+        frame.rotation.y = rotY;
+        frame.castShadow = true;
+        group.add(frame);
 
-        const belt = new THREE.Mesh(new THREE.BoxGeometry(L, 0.05, 0.5), beltMat);
-        belt.position.set(L / 2, 0.32, 0);
+        const belt = new THREE.Mesh(new THREE.BoxGeometry(segLen + 0.02, 0.05, 0.4), beltMat);
+        belt.position.set(midX, 0.28, midZ);
+        belt.rotation.y = rotY;
         belt.receiveShadow = true;
         group.add(belt);
-
-        // Small raised curb lips at both ends — items read as "on" the belt
-        // rather than floating over a bare plank. New detail this pass.
-        const lipGeo = new THREE.BoxGeometry(0.04, 0.04, 0.5);
-        const lipEntry = new THREE.Mesh(lipGeo, blackMat);
-        lipEntry.position.set(0.02, 0.36, 0);
-        group.add(lipEntry);
-        const lipExit = lipEntry.clone();
-        lipExit.position.x = L - 0.02;
-        group.add(lipExit);
-
-        rollerL = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.46, 10), blackMat);
-        rollerL.rotation.z = Math.PI / 2;
-        rollerL.position.set(0, 0.32, 0);
-        rollerL.castShadow = true;
-        group.add(rollerL);
-        rollerR = rollerL.clone();
-        rollerR.position.x = L;
-        group.add(rollerR);
-
-        const outputIndicator = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.05, 0.26), indicatorMat);
-        outputIndicator.position.set(L - 0.15, 0.5, 0);
-        group.add(outputIndicator);
-
-        const legGeo = new THREE.BoxGeometry(0.1, 0.32, 0.1);
-        [[0.18, 0.16, 0.2], [0.18, 0.16, -0.2], [L - 0.18, 0.16, 0.2], [L - 0.18, 0.16, -0.2]].forEach(pos => {
-            const leg = new THREE.Mesh(legGeo, blackMat);
-            leg.position.set(...pos);
-            leg.castShadow = true;
-            group.add(leg);
-        });
-    } else {
-        // Curved: a run of short black belt tiles + paired rails following the
-        // arc, plus legs at alternating sample points. Deliberately uses only
-        // simple Y-axis rotation math (no quaternion alignment tricks) so the
-        // geometry can't end up subtly twisted.
-        const pts = path.points;
-        for (let i = 0; i < pts.length - 1; i++) {
-            const a = pts[i].p, b = pts[i + 1].p;
-            const dx = b.x - a.x, dz = b.z - a.z;
-            const segLen = Math.sqrt(dx * dx + dz * dz);
-            const midX = (a.x + b.x) / 2, midZ = (a.z + b.z) / 2;
-            const rotY = Math.atan2(-dz, dx);
-
-            const tile = new THREE.Mesh(new THREE.BoxGeometry(segLen * 1.05, 0.05, 0.5), beltMat);
-            tile.position.set(midX, 0.32, midZ);
-            tile.rotation.y = rotY;
-            tile.receiveShadow = true;
-            group.add(tile);
-
-            const ndx = dx / segLen, ndz = dz / segLen;
-            const perpX = -ndz, perpZ = ndx;
-
-            const rail = new THREE.Mesh(new THREE.BoxGeometry(segLen * 1.05, 0.14, 0.05), blackMat);
-            rail.position.set(midX + perpX * 0.3, 0.4, midZ + perpZ * 0.3);
-            rail.rotation.y = rotY;
-            rail.castShadow = true;
-            group.add(rail);
-            const railOther = rail.clone();
-            railOther.position.set(midX - perpX * 0.3, 0.4, midZ - perpZ * 0.3);
-            group.add(railOther);
-
-            if (i % 2 === 0) {
-                const leg = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.32, 0.1), blackMat);
-                leg.position.set(a.x, 0.16, a.z);
-                leg.castShadow = true;
-                group.add(leg);
-            }
-        }
-
-        const lastPt = pts[pts.length - 1].p;
-        const finalLeg = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.32, 0.1), blackMat);
-        finalLeg.position.set(lastPt.x, 0.16, lastPt.z);
-        finalLeg.castShadow = true;
-        group.add(finalLeg);
-
-        const exitDir = pts[pts.length - 1].dir;
-        const outputIndicator = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.05, 0.26), indicatorMat);
-        outputIndicator.position.set(lastPt.x - exitDir.x * 0.15, 0.5, lastPt.z - exitDir.z * 0.15);
-        outputIndicator.rotation.y = Math.atan2(-exitDir.z, exitDir.x);
-        group.add(outputIndicator);
     }
 
-    const state = { rollerSpin: 0, outputConveyor: null };
-    const _ptOut = new THREE.Vector3();
+    if (!isCurve) {
+        const rollerGeo = new THREE.CylinderGeometry(0.1, 0.1, 0.42, 8);
+        const rL = new THREE.Mesh(rollerGeo, rollerMat);
+        rL.rotation.z = Math.PI / 2;
+        rL.position.set(-CONVEYOR_HALF_LENGTH, 0.28, 0);
+        group.add(rL);
+        rollers.push(rL);
+        const rR = rL.clone();
+        rR.position.x = CONVEYOR_HALF_LENGTH;
+        group.add(rR);
+        rollers.push(rR);
+    }
 
-    // The single shared movement function: given a distance traveled along the
-    // path (0 = entry, totalLength = exit), returns world-space position AND
-    // direction. Both the linking system's getEntryPoint/getExitPoint AND the
-    // per-frame item-movement code below call this — one function, one path,
-    // no way for the two to disagree.
+    const lastPt = path.points[path.points.length - 1].p;
+    const lastDir = path.points[path.points.length - 1].dir;
+    const outInd = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.06, 0.3), indicatorMat);
+    outInd.position.set(lastPt.x - lastDir.x * 0.1, 0.34, lastPt.z - lastDir.z * 0.1);
+    outInd.rotation.y = Math.atan2(-lastDir.z, lastDir.x);
+    group.add(outInd);
+
+    const state = { outputConveyors: [], currentOutputIndex: 0, rollerSpin: 0 };
+    const _ptOut = new THREE.Vector3();
+    const _dirOut = new THREE.Vector3();
+    const _scratchPos = new THREE.Vector3();
+    const _scratchDir = new THREE.Vector3();
+
     function getPointAtDistance(distance, outPos, outDir) {
         const d = Math.max(0, Math.min(path.totalLength, distance));
-        const pts = path.points, cum = path.cumLength;
-
+        const pts = path.points, cum = path.cum;
         let idx = cum.length - 2;
         for (let i = 0; i < cum.length - 1; i++) {
             if (d <= cum[i + 1]) { idx = i; break; }
@@ -211,14 +137,14 @@ export function createConveyor(variant = 'straight') {
         const t = segLen > 0 ? (d - cum[idx]) / segLen : 0;
 
         _ptOut.lerpVectors(pts[idx].p, pts[idx + 1].p, t);
-        outPos.copy(_ptOut).applyQuaternion(group.quaternion).add(group.position);
+        if (outPos) outPos.copy(_ptOut).applyMatrix4(group.matrixWorld);
 
-        outDir.copy(pts[idx].dir).lerp(pts[idx + 1].dir, t);
-        if (outDir.lengthSq() > 0.0001) outDir.normalize();
-        outDir.applyQuaternion(group.quaternion);
+        _dirOut.copy(pts[idx].dir).lerp(pts[idx + 1].dir, t);
+        if (_dirOut.lengthSq() > 0.0001) _dirOut.normalize();
+        if (outDir) outDir.copy(_dirOut).applyQuaternion(group.quaternion);
     }
 
-    const typeName = variant === 'straight' ? 'Conveyor' : (variant === 'left' ? 'Conveyor Left' : 'Conveyor Right');
+    const typeName = isCurve ? (type === 'left' ? 'Conveyor Left' : 'Conveyor Right') : 'Conveyor';
 
     group.userData = {
         isInteractable: true,
@@ -229,76 +155,171 @@ export function createConveyor(variant = 'straight') {
         maxHealth: 5,
         dropName: typeName,
         length: path.totalLength,
-        pathLength: path.totalLength,
         speed: CONVEYOR_SPEED,
-        variant,
+        variant: type,
 
         getPointAtDistance,
-        getEntryPoint(target) { getPointAtDistance(0, target, _tmpDir); },
-        getExitPoint(target) { getPointAtDistance(path.totalLength, target, _tmpDir); },
-        getEntryDirection(target) { getPointAtDistance(0, _tmpPos, target); },
-        getExitDirection(target) { getPointAtDistance(path.totalLength, _tmpPos, target); },
+        getEntryPoint(target) { getPointAtDistance(0, target, _scratchDir); },
+        getExitPoint(target) { getPointAtDistance(path.totalLength, target, _scratchDir); },
+        getEntryDirection(target) { getPointAtDistance(0, _scratchPos, target); },
+        getExitDirection(target) { getPointAtDistance(path.totalLength, _scratchPos, target); },
 
-        setOutputConveyor(c) { state.outputConveyor = c; },
-        getOutputConveyor() { return state.outputConveyor; },
+        setOutputConveyor(c) {
+            if (!c) { state.outputConveyors = []; return; }
+            if (!state.outputConveyors.includes(c)) state.outputConveyors.push(c);
+        },
+        clearOutputConveyors() {
+            state.outputConveyors = [];
+        },
+        getOutputConveyors() { return state.outputConveyors; },
+        getOutputConveyor() {
+            if (state.outputConveyors.length === 0) return null;
+            state.outputConveyors = state.outputConveyors.filter(c => c.parent !== null);
+            if (state.outputConveyors.length === 0) return null;
+
+            const next = state.outputConveyors[state.currentOutputIndex % state.outputConveyors.length];
+            state.currentOutputIndex++;
+            return next;
+        },
 
         tick(time) {
-            if (rollerL) {
-                state.rollerSpin += 0.15;
-                rollerL.rotation.x = state.rollerSpin;
-                rollerR.rotation.x = state.rollerSpin;
-            }
+            state.rollerSpin += 0.15;
+            rollers.forEach(r => { r.rotation.x = state.rollerSpin; });
             beltTexture.offset.x = (time * 0.0004 * CONVEYOR_SPEED) % 1;
-            indicatorMat.emissiveIntensity = state.outputConveyor ? (0.4 + Math.sin(time * 0.002) * 0.2) : 0;
+            indicatorMat.emissiveIntensity = state.outputConveyors.length > 0 ? (0.5 + Math.sin(time * 0.003) * 0.3) : 0;
         }
     };
 
     return group;
 }
 
-// FIXED movement: entry/exit points now sit at the height items actually ride
-// at (via BELT_RIDE_HEIGHT), so "reached the exit" reliably fires. When it
-// does, if there's a next conveyor, the item's LEFTOVER travel distance for
-// this frame carries straight over onto it — no snap-to-entry-point regardless
-// of overshoot. That carryover is the actual teleport fix: motion stays
-// continuous and at a constant rate straight through the seam.
+const _advPos = new THREE.Vector3();
+const _advDir = new THREE.Vector3();
+
 export function advanceOnConveyor(drop, deltaTime) {
     const conveyor = drop.userData.onConveyor;
-    if (!conveyor) return false;
+    if (!conveyor || !conveyor.parent) {
+        drop.userData.onConveyor = null;
+        return false;
+    }
 
     if (drop.userData.beltDistance === undefined) drop.userData.beltDistance = 0;
-    drop.userData.beltDistance += conveyor.userData.speed * deltaTime;
+    
+    const targetDistance = drop.userData.beltDistance + conveyor.userData.speed * deltaTime;
+    const pathLen = conveyor.userData.length;
 
-    const pathLen = conveyor.userData.pathLength;
-    if (drop.userData.beltDistance >= pathLen) {
-        const overflow = drop.userData.beltDistance - pathLen;
-        const next = conveyor.userData.getOutputConveyor ? conveyor.userData.getOutputConveyor() : null;
-
-        if (next && next.userData.isConveyor) {
+    if (targetDistance >= pathLen) {
+        const next = conveyor.userData.getOutputConveyor();
+        
+        if (next && next.userData.isConveyor && next.parent) {
+            const overflow = targetDistance - pathLen;
             drop.userData.onConveyor = next;
             drop.userData.beltDistance = overflow;
         } else {
-            conveyor.userData.getPointAtDistance(pathLen, _tmpPos, _tmpDir);
-            drop.position.copy(_tmpPos);
+            // FIX: Momentum Physics! Fling the resource forward off the belt[cite: 12]
             drop.userData.onConveyor = null;
-            drop.userData.beltDistance = 0;
-            drop.userData.velocity = new THREE.Vector3(_tmpDir.x * 1.2, 1.0, _tmpDir.z * 1.2);
-            return true;
+            drop.userData.beltDistance = undefined;
+
+            const exitDir = new THREE.Vector3();
+            if (conveyor.userData.getExitDirection) {
+                conveyor.userData.getExitDirection(exitDir);
+            } else {
+                exitDir.set(1, 0, 0).applyQuaternion(conveyor.quaternion);
+            }
+
+            const pushSpeed = conveyor.userData.speed || 1.4;
+            drop.userData.velocity = new THREE.Vector3()
+                .copy(exitDir)
+                .multiplyScalar(pushSpeed)
+                .add(new THREE.Vector3(0, 1.8, 0)); // Arc slightly upwards
+
+            // Cooldown so it doesn't instantly stick back to the same belt
+            drop.userData.conveyorCooldown = 0.4;
+            return false;
         }
+    } else {
+        drop.userData.beltDistance = targetDistance;
     }
 
     const active = drop.userData.onConveyor;
-    active.userData.getPointAtDistance(drop.userData.beltDistance, _tmpPos, _tmpDir);
-    drop.position.copy(_tmpPos);
-
-    // "Roll" instead of slide: spin the item around the axis perpendicular to
-    // its current travel direction, at a rate proportional to distance moved.
-    _rollAxis.crossVectors(_up, _tmpDir);
-    if (_rollAxis.lengthSq() > 0.0001) {
-        _rollAxis.normalize();
-        const angle = drop.userData.beltDistance / ITEM_ROLL_RADIUS;
-        drop.quaternion.setFromAxisAngle(_rollAxis, angle);
+    if (active) {
+        active.userData.getPointAtDistance(drop.userData.beltDistance, _advPos, _advDir);
+        drop.position.copy(_advPos);
+        
+        if (drop.userData.beltDistance < pathLen) {
+            drop.rotation.y += deltaTime * 2;
+        }
     }
 
     return true;
+}
+
+const _pA = new THREE.Vector3();
+const _pB = new THREE.Vector3();
+
+export function rebuildFactoryConnections(interactablesGroup) {
+    if (!interactablesGroup) return;
+
+    interactablesGroup.updateMatrixWorld(true);
+
+    const allObjects = [];
+    interactablesGroup.traverse((child) => {
+        if (child.userData && (child.userData.isConveyor || child.userData.isAutoMiner)) {
+            allObjects.push(child);
+        }
+    });
+
+    for (const obj of allObjects) {
+        if (obj.userData.clearOutputConveyors) {
+            obj.userData.clearOutputConveyors();
+        }
+    }
+
+    const MAX_SNAP_RANGE = 2.0; 
+
+    for (const sourceObj of allObjects) {
+        if (sourceObj.userData.isAutoMiner && sourceObj.userData.getOutputPoint) {
+            sourceObj.userData.getOutputPoint(_pA);
+
+            let bestDest = null;
+            let minDistance = MAX_SNAP_RANGE;
+
+            for (const destObj of allObjects) {
+                if (!destObj.userData.isConveyor || !destObj.userData.getEntryPoint) continue;
+                destObj.userData.getEntryPoint(_pB);
+
+                const dist = _pA.distanceTo(_pB);
+                if (dist < minDistance) {
+                    minDistance = dist;
+                    bestDest = destObj;
+                }
+            }
+
+            if (bestDest && sourceObj.userData.setOutputConveyor) {
+                sourceObj.userData.setOutputConveyor(bestDest);
+            }
+        }
+
+        if (sourceObj.userData.isConveyor && sourceObj.userData.getExitPoint) {
+            sourceObj.userData.getExitPoint(_pA);
+
+            let bestDest = null;
+            let minDistance = MAX_SNAP_RANGE;
+
+            for (const destObj of allObjects) {
+                if (sourceObj === destObj || !destObj.userData.isConveyor || !destObj.userData.getEntryPoint) continue;
+                destObj.userData.getEntryPoint(_pB);
+
+                const dist = _pA.distanceTo(_pB);
+                if (dist < minDistance) {
+                    minDistance = dist;
+                    bestDest = destObj;
+                }
+            }
+
+            if (bestDest && sourceObj.userData.setOutputConveyor) {
+                sourceObj.userData.setOutputConveyor(bestDest);
+            }
+        }
+    }
 }

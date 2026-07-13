@@ -1,10 +1,6 @@
 import * as THREE from 'three';
+import { getElevation } from './world.js';
 
-// PlayerMovement's two functions run unconditionally every single frame regardless
-// of player state — the hottest path in the game. The old version allocated 8-12
-// new Vector3/Euler objects per frame here alone (hundreds/sec), which is a classic
-// source of GC-driven frame hitches. Everything reusable is now a module-level
-// scratch object, reset with .set()/.copy() instead of `new` every call.
 const _fwd = new THREE.Vector3();
 const _right = new THREE.Vector3();
 const _inputDir = new THREE.Vector3();
@@ -21,8 +17,18 @@ const _finalCamPos = new THREE.Vector3();
 
 export function updateMovement(player, deltaTime, platformWidth = 80, platformLength = 80) {
     player.isCrouching = player.keys.crouch && player.isGrounded;
+    // Safety fallbacks applied to physics variables
+    const crouchSpd = player.crouchSpeed || 4.0;
+    const walkSpd = player.walkSpeed || 10.0;
+    const accel = player.acceleration || 60.0;
+    const decel = player.deceleration || 60.0;
+    const airCtrl = player.airControl || 0.3;
+    const grav = player.gravity || 32.0;
+    const jmpForce = player.jumpForce || 12.0;
+
+    player.crouchAmount = player.crouchAmount || 0;
     player.crouchAmount += ((player.isCrouching ? 1 : 0) - player.crouchAmount) * Math.min(1, 12 * deltaTime);
-    const currentMaxSpeed = player.isCrouching ? player.crouchSpeed : player.walkSpeed;
+    const currentMaxSpeed = player.isCrouching ? crouchSpd : walkSpd;
 
     _fwd.set(0, 0, -1).applyAxisAngle(_upAxis, player.yaw);
     _right.set(1, 0, 0).applyAxisAngle(_upAxis, player.yaw);
@@ -35,15 +41,21 @@ export function updateMovement(player, deltaTime, platformWidth = 80, platformLe
     const isMoving = _inputDir.lengthSq() > 0;
     if (isMoving) _inputDir.normalize();
 
-    const control = player.isGrounded ? 1.0 : player.airControl;
-    const rate = (isMoving ? player.acceleration : player.deceleration) * control;
+    const control = player.isGrounded ? 1.0 : airCtrl;
+    const rate = (isMoving ? accel : decel) * control;
     const targetVX = _inputDir.x * currentMaxSpeed;
     const targetVZ = _inputDir.z * currentMaxSpeed;
+    
+    // Ensure velocity starts as numbers
+    if (isNaN(player.velocity.x)) player.velocity.x = 0;
+    if (isNaN(player.velocity.y)) player.velocity.y = 0;
+    if (isNaN(player.velocity.z)) player.velocity.z = 0;
+
     player.velocity.x += (targetVX - player.velocity.x) * Math.min(1, rate * deltaTime);
     player.velocity.z += (targetVZ - player.velocity.z) * Math.min(1, rate * deltaTime);
 
     if (player.velocity.y < 0) player.fallSpeed = player.velocity.y;
-    player.velocity.y -= player.gravity * deltaTime;
+    player.velocity.y -= grav * deltaTime;
 
     player.mesh.position.copy(player.position);
     player.position.addScaledVector(player.velocity, deltaTime);
@@ -53,37 +65,42 @@ export function updateMovement(player, deltaTime, platformWidth = 80, platformLe
     const overPlatform = (player.position.x >= -halfW && player.position.x <= halfW &&
                            player.position.z >= -halfL && player.position.z <= halfL);
 
+    // Track dynamic coordinate terrain heights to match hills perfectly
+    const groundHeight = overPlatform ? getElevation(player.position.x, player.position.z) : -15;
     const wasGrounded = player.isGrounded;
-    if (overPlatform && player.position.y <= 0) {
-        if (!wasGrounded) player.landingSquash = Math.min(1, Math.abs(player.fallSpeed) / 20);
-        player.position.y = 0; player.velocity.y = 0; player.isGrounded = true;
+
+    if (overPlatform && player.position.y <= groundHeight) {
+        if (!wasGrounded) player.landingSquash = Math.min(1, Math.abs(player.fallSpeed || 0) / 20);
+        player.position.y = groundHeight; 
+        player.velocity.y = 0; 
+        player.isGrounded = true;
     } else {
         player.isGrounded = false;
     }
 
-    if (wasGrounded && !player.isGrounded) player.coyoteTimer = player.coyoteTime;
+    if (wasGrounded && !player.isGrounded) player.coyoteTimer = player.coyoteTime || 0.15;
     else if (player.coyoteTimer > 0) player.coyoteTimer -= deltaTime;
 
-    if (player.keys.jump) player.jumpBufferTimer = player.jumpBuffer;
+    if (player.keys.jump) player.jumpBufferTimer = player.jumpBuffer || 0.15;
     if (player.jumpBufferTimer > 0) player.jumpBufferTimer -= deltaTime;
 
     const canJump = (player.isGrounded || player.coyoteTimer > 0) && !player.isCrouching;
     if (player.jumpBufferTimer > 0 && canJump) {
-        player.velocity.y = player.jumpForce;
+        player.velocity.y = jmpForce;
         player.isGrounded = false;
         player.coyoteTimer = 0;
         player.jumpBufferTimer = 0;
     }
 
+    player.landingSquash = player.landingSquash || 0;
     player.landingSquash += (0 - player.landingSquash) * Math.min(1, 14 * deltaTime);
 
-    if (player.position.y < -15) {
-        player.position.set(0, 2, 0);
+    // Reset safely relative to the dynamic topology map origin height if the player drops into voids
+    if (player.position.y < -35) {
+        player.position.set(0, getElevation(0, 0) + 2, 0);
         player.velocity.set(0, 0, 0);
     }
 
-    // Returns the shared scratch object — safe because updateAnimationAndCamera runs
-    // synchronously right after, within the same frame, before anything can mutate it.
     return _inputDir;
 }
 
@@ -94,11 +111,11 @@ export function updateAnimationAndCamera(player, deltaTime, inputDir) {
     const armBase = player.crouchAmount * 0.2;
     const ease = Math.min(1, 12 * deltaTime);
     const isMoving = inputDir.lengthSq() > 0;
+    const walkSpd = player.walkSpeed || 10.0;
 
-    // Was `new THREE.Vector2(...).length()` — a fresh Vector2 every frame for a
-    // 2D magnitude that's just as cheap via Math.sqrt directly.
     const vx = player.velocity.x, vz = player.velocity.z;
-    const speedRatio = Math.sqrt(vx * vx + vz * vz) / player.walkSpeed;
+    const speedRatio = Math.sqrt(vx * vx + vz * vz) / walkSpd;
+    player.currentSpeedFactor = player.currentSpeedFactor || 0;
     player.currentSpeedFactor += (Math.min(speedRatio, 1) - player.currentSpeedFactor) * ease;
 
     const squashY = 1 - player.landingSquash * 0.15;
@@ -133,11 +150,12 @@ export function updateAnimationAndCamera(player, deltaTime, inputDir) {
         rArm.shoulder.rotation.set(0.5, -0.15, 0);
         rArm.lowerArm.rotation.set(0.35, 0, 0);
 
-        player.applySwingPose(rArm, true);
+        if (player.applySwingPose) player.applySwingPose(rArm, true);
 
         player.mesh.rotation.y = player.yaw;
 
         let bobY = 0, bobX = 0;
+        player.bobTime = player.bobTime || 0;
         if (isMoving && player.isGrounded) {
             player.bobTime += deltaTime * (player.isCrouching ? 6 : 9) * Math.max(0.3, player.currentSpeedFactor);
             bobY = Math.abs(Math.sin(player.bobTime)) * 0.05 * player.currentSpeedFactor;
@@ -168,6 +186,7 @@ export function updateAnimationAndCamera(player, deltaTime, inputDir) {
             player.mesh.rotation.y += diff * 10 * deltaTime;
         }
 
+        player.animTime = player.animTime || 0;
         if (player.currentSpeedFactor > 0.05 && player.isGrounded) {
             player.animTime += deltaTime * 12;
             const t = player.animTime;
@@ -181,7 +200,7 @@ export function updateAnimationAndCamera(player, deltaTime, inputDir) {
             rLeg.hipJoint.rotation.x += (tuck - rLeg.hipJoint.rotation.x) * ease;
         }
 
-        player.applySwingPose(rArm, false);
+        if (player.applySwingPose) player.applySwingPose(rArm, false);
 
         _euler.set(player.pitch, player.yaw, 0, 'YXZ');
         _offsetDir.set(0, 0, 1).applyEuler(_euler);
@@ -194,10 +213,7 @@ export function updateAnimationAndCamera(player, deltaTime, inputDir) {
         player.camera.lookAt(_lookDir);
     }
 
-    // Cutscene dolly during timed crafting. (Also removed a redundant double
-    // camera.lookAt() call the old version had — the first call's result was
-    // immediately discarded by the second, pure wasted work.)
-    const cs = player.craftState;
+    const cs = player.craftState || { active: false };
     if (cs.active && cs.furnaceRef) {
         const t = Math.min(1, cs.timer / cs.duration);
         let cutIn;
