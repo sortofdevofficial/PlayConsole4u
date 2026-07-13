@@ -10,6 +10,7 @@ import { createConveyor } from './obj/conveyor.js';
 import { createQuartzItem, createSiliconItem } from './obj/quartz.js';
 import { createSandItem, createGlassItem } from './obj/sand.js';
 import { createSolarPanel } from './obj/solarpanel.js';
+import { nameToId, idToName } from './itemIds.js';
 
 function createOakLogModel() {
     return new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.65, 6), new THREE.MeshStandardMaterial({ color: 0x6d4c41, roughness: 0.85, flatShading: true }));
@@ -91,9 +92,7 @@ function renderMeshToImage(mesh) {
 
 export class Inventory {
     constructor() {
-        // Genuinely empty at first load — no starter items. Firebase load
-        // (below) fills this in from saved data for returning players; new
-        // players start with nothing and must gather/craft everything.
+        // Genuinely empty at first load -- no starter items.
         this.slots = Array(9).fill(null).map(() => ({ name: null, count: 0 }));
         this.activeSlot = 0;
 
@@ -123,15 +122,24 @@ export class Inventory {
             if (snap.exists) {
                 const data = snap.data();
 
-                if (data.i && Array.isArray(data.i)) {
-                    this.slots = data.i.map(s => {
-                        if (Array.isArray(s) && s.length === 2) return { name: s[0], count: s[1] };
-                        return { name: null, count: 0 };
-                    });
-                    while (this.slots.length < 9) this.slots.push({ name: null, count: 0 });
+                // "i" is now a flat { "<itemId>": count } map, e.g. {"1": 9}
+                // meaning 9x Oak (id 1). Each key becomes one hotbar slot, in
+                // whatever order Object.entries returns them (insertion order
+                // for string-numeric keys in a plain object, which is stable
+                // enough here since slot ORDER isn't meaningfully game-facing
+                // -- only which item is in the currently active slot matters,
+                // and that's restored separately via "a").
+                if (data.i && typeof data.i === 'object') {
+                    const restored = [];
+                    for (const [idStr, count] of Object.entries(data.i)) {
+                        const name = idToName(Number(idStr));
+                        if (name && count > 0) restored.push({ name, count });
+                    }
+                    while (restored.length < 9) restored.push({ name: null, count: 0 });
+                    this.slots = restored.slice(0, 9);
                 }
 
-                if (data.a !== undefined) this.activeSlot = data.a;
+                if (data.a !== undefined) this.activeSlot = Math.min(data.a, this.slots.length - 1);
 
                 this.updateUI();
             }
@@ -140,17 +148,14 @@ export class Inventory {
         }
     }
 
-    // Debounced save — fires 500ms after the last change (was 1500ms; part of
-    // "saving is trash" was this being sluggish, and buildings never being
-    // saved at all — see buildingsSync.js for that half).
+    // Debounced save -- fires 500ms after the last change.
     save() {
         if (!this.uid) return;
         if (this.saveTimer) clearTimeout(this.saveTimer);
         this.saveTimer = setTimeout(() => this._flush(), 500);
     }
 
-    // Immediate, bypasses the debounce — used on page unload so a pending
-    // save doesn't get lost when the tab closes.
+    // Immediate, bypasses the debounce -- used on page unload.
     saveNow() {
         if (this.saveTimer) clearTimeout(this.saveTimer);
         this._flush();
@@ -159,9 +164,21 @@ export class Inventory {
     async _flush() {
         if (!this.uid) return;
         try {
-            const shortSlots = this.slots.map(s => s.name ? [s.name, s.count] : 0);
+            // Build the compact { "<itemId>": count } map. Items with no
+            // registered ID (shouldn't happen for anything craftable/minable,
+            // but guards against a future item added to the game without
+            // being added to itemIds.js) are simply skipped rather than
+            // corrupting the save.
+            const idMap = {};
+            for (const slot of this.slots) {
+                if (!slot.name) continue;
+                const id = nameToId(slot.name);
+                if (id === undefined) continue;
+                idMap[id] = slot.count;
+            }
+
             const docRef = firebase.firestore().doc(`users/${this.uid}/G/FW`);
-            await docRef.set({ i: shortSlots, a: this.activeSlot }, { merge: true });
+            await docRef.set({ i: idMap, a: this.activeSlot }, { merge: true });
         } catch (e) {
             console.error("Firebase Inventory Save Error:", e);
         }
