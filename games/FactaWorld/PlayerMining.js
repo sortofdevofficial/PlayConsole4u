@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { createWorkbench } from './obj/Workbench.js';
-import { createPickaxe } from './obj/pickaxe.js'; // Fixed to lowercase
-import { createAxe } from './obj/axe.js';         // Fixed to lowercase
+import { createPickaxe } from './obj/pickaxe.js';
+import { createAxe } from './obj/axe.js';
 import { createStick } from './obj/sticks.js';
 import { createFurnace } from './obj/furnace.js';
 import { createIronOreItem, createIronIngot, createIronPlate, createIronGear } from './obj/iron.js';
@@ -12,6 +12,7 @@ import { createConveyor } from './obj/conveyor.js';
 import { createSolarPanel } from './obj/solarpanel.js';
 import { cleanupLinksForNode, detachDropsFromConveyor } from './linkSystem.js';
 import { cleanupPowerLinksForNode } from './powerSystem.js';
+import { scheduleBuildingSave } from './buildingsSync.js';
 
 const CONVEYOR_ITEM_VARIANTS = { 'Conveyor': 'straight', 'Conveyor Left': 'left', 'Conveyor Right': 'right' };
 export function isConveyorItem(name) { return !!CONVEYOR_ITEM_VARIANTS[name]; }
@@ -48,6 +49,10 @@ export function updateHeldModel(player, itemName) {
 }
 
 export function handleSecondaryAction(player) {
+    // No longer wired to right-click directly (see PlayerPlacement.js's
+    // handleRightClick, which now owns furnace/workbench-opening AND manual
+    // power linking). Left in place, still correct, in case anything calls
+    // it directly.
     if (!player.hoverTarget) return;
     const obj = player.hoverTarget;
 
@@ -93,6 +98,8 @@ export function mineOrHitTarget(player) {
 
     if (obj.userData.health <= 0) {
         const dropPos = obj.userData.basePos.clone().add(new THREE.Vector3(0, 1, 0));
+        const isStructure = obj.userData.isAutoMiner || obj.userData.isConveyor || obj.userData.isSolarPanel || obj.userData.isStation || obj.userData.isFurnace;
+
         if (obj.userData.isAutoMiner || obj.userData.isConveyor) cleanupLinksForNode(player, obj);
         if (obj.userData.isConveyor) detachDropsFromConveyor(player, obj);
         if (obj.userData.isAutoMiner || obj.userData.isSolarPanel) cleanupPowerLinksForNode(player, obj);
@@ -105,6 +112,10 @@ export function mineOrHitTarget(player) {
         for (let i = 0; i < dropCount; i++) {
             player.spawnDrop(obj.userData.dropName, dropPos, new THREE.Vector3((Math.random() - 0.5) * 3, 5, (Math.random() - 0.5) * 3));
         }
+
+        // A structure was just destroyed — reflect that in Firestore promptly
+        // instead of waiting for the periodic safety-net save.
+        if (isStructure) scheduleBuildingSave(player);
     }
 }
 

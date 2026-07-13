@@ -16,14 +16,12 @@ export class Player {
         this.baseFov = camera.fov;
         this.inventory = new Inventory();
 
-        this.inventory.addItem('Auto Miner', 10);
-        this.inventory.addItem('Conveyor', 20);
-        this.inventory.addItem('Conveyor Left', 10);
-        this.inventory.addItem('Conveyor Right', 10);
-        this.inventory.addItem('Solar Panel', 10);
-        this.inventory.addItem('Stone Pickaxe', 1);
+        // No starter items. Firebase auth (wired in main.js) sets this.uid
+        // and triggers loading previously-saved buildings once resolved;
+        // Inventory loads its own saved slots independently.
+        this.uid = null;
 
-        this.position = new THREE.Vector3(0, 2, 0);
+        this.position = new THREE.Vector3(0, 5, 0);
         this.velocity = new THREE.Vector3();
         this.yaw = 0;
         this.pitch = -0.1;
@@ -63,8 +61,8 @@ export class Player {
         this.currentGhostType = 'Workbench';
         this.craftState = { active: false, timer: 0, duration: 0 };
 
-        this.activeLinks = [];
-        this.powerLinks = [];
+        this.activeLinks = []; // unified: item-flow links AND power links, see linkSystem.js
+        this.linkSelection = null; // pending manual power-link source, see PlayerPlacement.js's handleRightClick
         this.linkAnimTime = 0;
         this.powerTickAccum = 0;
 
@@ -87,9 +85,6 @@ export class Player {
         this.workbenchMenu = document.getElementById('workbench-menu');
         this.furnaceMenu = document.getElementById('furnace-menu');
 
-        // FIX: this was never created at all previously -- updateHoverUI runs
-        // every single frame and touches player.ghostMesh.visible unconditionally,
-        // so its absence crashed the render loop before the very first frame.
         this.ghostMesh = createWorkbench();
         this.ghostMesh.traverse(c => {
             if (c.isMesh) { c.material = c.material.clone(); c.material.transparent = true; c.material.opacity = 0.55; c.castShadow = false; }

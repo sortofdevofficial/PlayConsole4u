@@ -91,17 +91,17 @@ function renderMeshToImage(mesh) {
 
 export class Inventory {
     constructor() {
-        // STRICTLY EMPTY: Player gets absolutely NO items at start.
+        // Genuinely empty at first load — no starter items. Firebase load
+        // (below) fills this in from saved data for returning players; new
+        // players start with nothing and must gather/craft everything.
         this.slots = Array(9).fill(null).map(() => ({ name: null, count: 0 }));
         this.activeSlot = 0;
-        
-        // Setup internal properties for Firebase Sync
+
         this.uid = null;
         this.saveTimer = null;
 
         this.init3DSlots();
 
-        // Listen for Auth and LOAD the inventory automatically
         if (typeof firebase !== 'undefined') {
             firebase.auth().onAuthStateChanged(user => {
                 if (user) {
@@ -114,70 +114,57 @@ export class Inventory {
         }
     }
 
-    // --- FIREBASE SYNC: LOAD ---
     async load() {
         if (!this.uid) return;
         try {
-            // Target path: users/{uid}/G/FW
             const docRef = firebase.firestore().doc(`users/${this.uid}/G/FW`);
             const snap = await docRef.get();
-            
+
             if (snap.exists) {
                 const data = snap.data();
-                
-                // Decode shortform inventory ("i" array)
+
                 if (data.i && Array.isArray(data.i)) {
                     this.slots = data.i.map(s => {
-                        // If it's a shortform tuple like ["Oak", 5]
-                        if (Array.isArray(s) && s.length === 2) {
-                            return { name: s[0], count: s[1] };
-                        }
-                        // Otherwise it's empty (0)
+                        if (Array.isArray(s) && s.length === 2) return { name: s[0], count: s[1] };
                         return { name: null, count: 0 };
                     });
-                    
-                    // Pad array to ensure exactly 9 slots exist
-                    while (this.slots.length < 9) {
-                        this.slots.push({ name: null, count: 0 });
-                    }
+                    while (this.slots.length < 9) this.slots.push({ name: null, count: 0 });
                 }
-                
-                // Load active slot shortform ("a")
-                if (data.a !== undefined) {
-                    this.activeSlot = data.a;
-                }
-                
-                // Force UI to display the newly loaded inventory
-                this.updateUI(); 
+
+                if (data.a !== undefined) this.activeSlot = data.a;
+
+                this.updateUI();
             }
         } catch (e) {
             console.error("Firebase Inventory Load Error:", e);
         }
     }
 
-    // --- FIREBASE SYNC: SAVE (Debounced + Merge + Shortforms) ---
+    // Debounced save — fires 500ms after the last change (was 1500ms; part of
+    // "saving is trash" was this being sluggish, and buildings never being
+    // saved at all — see buildingsSync.js for that half).
     save() {
         if (!this.uid) return;
-        
-        // Wait 1.5s after the last inventory change so we don't spam the database
         if (this.saveTimer) clearTimeout(this.saveTimer);
-        
-        this.saveTimer = setTimeout(async () => {
-            try {
-                // Create highly compressed shortform array: ["Oak", 5] or 0 for empty slots
-                const shortSlots = this.slots.map(s => s.name ? [s.name, s.count] : 0);
+        this.saveTimer = setTimeout(() => this._flush(), 500);
+    }
 
-                // Merge exactly into users/{uid}/G/FW so we don't overwrite builds/wires
-                const docRef = firebase.firestore().doc(`users/${this.uid}/G/FW`);
-                await docRef.set({
-                    i: shortSlots,
-                    a: this.activeSlot
-                }, { merge: true });
-                
-            } catch (e) {
-                console.error("Firebase Inventory Save Error:", e);
-            }
-        }, 1500); 
+    // Immediate, bypasses the debounce — used on page unload so a pending
+    // save doesn't get lost when the tab closes.
+    saveNow() {
+        if (this.saveTimer) clearTimeout(this.saveTimer);
+        this._flush();
+    }
+
+    async _flush() {
+        if (!this.uid) return;
+        try {
+            const shortSlots = this.slots.map(s => s.name ? [s.name, s.count] : 0);
+            const docRef = firebase.firestore().doc(`users/${this.uid}/G/FW`);
+            await docRef.set({ i: shortSlots, a: this.activeSlot }, { merge: true });
+        } catch (e) {
+            console.error("Firebase Inventory Save Error:", e);
+        }
     }
 
     init3DSlots() {
@@ -192,19 +179,19 @@ export class Inventory {
 
     addItem(name, count) {
         for (let slot of this.slots) {
-            if (slot.name === name) { 
-                slot.count += count; 
-                this.updateUI(); 
-                this.save(); // Trigger Firebase Sync
-                return true; 
+            if (slot.name === name) {
+                slot.count += count;
+                this.updateUI();
+                this.save();
+                return true;
             }
         }
         for (let i = 0; i < this.slots.length; i++) {
-            if (this.slots[i].name === null) { 
-                this.slots[i] = { name, count }; 
-                this.updateUI(); 
-                this.save(); // Trigger Firebase Sync
-                return true; 
+            if (this.slots[i].name === null) {
+                this.slots[i] = { name, count };
+                this.updateUI();
+                this.save();
+                return true;
             }
         }
         return false;
@@ -216,7 +203,7 @@ export class Inventory {
                 slot.count -= count;
                 if (slot.count <= 0) { slot.name = null; slot.count = 0; }
                 this.updateUI();
-                this.save(); // Trigger Firebase Sync
+                this.save();
                 return true;
             }
         }
@@ -242,7 +229,7 @@ export class Inventory {
             this.activeSlot = index;
             document.getElementById(`slot-${this.activeSlot}`).classList.add('active');
             this.updateUI();
-            this.save(); // Trigger Firebase Sync
+            this.save();
         }
     }
 
@@ -253,7 +240,7 @@ export class Inventory {
             slot.count--;
             if (slot.count <= 0) { slot.name = null; slot.count = 0; }
             this.updateUI();
-            this.save(); // Trigger Firebase Sync
+            this.save();
             return name;
         }
         return null;

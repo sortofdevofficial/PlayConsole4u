@@ -2,12 +2,12 @@ import * as THREE from 'three';
 import { createWorkbench } from './obj/Workbench.js';
 import { createFurnace } from './obj/furnace.js';
 import { createAutoMiner } from './obj/autominer.js';
-import { createConveyor, advanceOnConveyor, CONVEYOR_HALF_LENGTH } from './obj/conveyor.js';
-import { rescanAllLinks, updateGhostLinkPreview } from './linkSystem.js';
+import { createConveyor, advanceOnConveyor } from './obj/conveyor.js';
+import { createSolarPanel } from './obj/solarpanel.js';
+import { rescanAllLinks, updateGhostLinkPreview, completeManualPowerLink } from './linkSystem.js';
+import { scheduleBuildingSave } from './buildingsSync.js';
 import { PLACEMENT_OVERLAP_DISTANCE, DEFAULT_OVERLAP_DISTANCE, CONVEYOR_CHAIN_SNAP_RADIUS } from './placeables.js';
 import { isConveyorItem } from './PlayerMining.js';
-import { rescanPowerLinks, createManualPowerLink } from './powerSystem.js';
-import { createSolarPanel } from './obj/solarpanel.js';
 import { getElevation } from './world.js';
 
 const CONVEYOR_ITEM_VARIANTS = { 'Conveyor': 'straight', 'Conveyor Left': 'left', 'Conveyor Right': 'right' };
@@ -16,8 +16,6 @@ const _groundPoint = new THREE.Vector3();
 const _finalPos = new THREE.Vector3();
 const _snapP = new THREE.Vector3();
 const _snapD = new THREE.Vector3();
-const _forwardScratch = new THREE.Vector3();
-const _yAxis = new THREE.Vector3(0, 1, 0);
 
 function buildPlaceable(name) {
     if (name === 'Furnace') return createFurnace();
@@ -27,7 +25,7 @@ function buildPlaceable(name) {
 
 function placeableUserData(name) {
     if (name === 'Furnace') return { isInteractable: true, isStation: true, isFurnace: true, type: 'Furnace', health: 8, maxHealth: 8, dropName: 'Furnace' };
-    if (name === 'Solar Panel') return null; 
+    if (name === 'Solar Panel') return null; // keeps its real factory userData (power methods) -- never overwritten
     return { isInteractable: true, isStation: true, type: 'Workbench', health: 6, maxHealth: 6, dropName: 'Workbench' };
 }
 
@@ -42,13 +40,11 @@ function placeAutoMiner(player) {
     if (built.userData.bindContext) built.userData.bindContext(player.interactables, player.dropsGroup);
 
     player.interactables.add(built);
-    player.interactables.updateMatrixWorld(true);
-
     player.inventory.consumeItem('Auto Miner', 1);
     player._pendingAutoMinerTarget = null;
 
     rescanAllLinks(player);
-    rescanPowerLinks(player);
+    scheduleBuildingSave(player);
 }
 
 function placeConveyor(player, itemName) {
@@ -60,11 +56,10 @@ function placeConveyor(player, itemName) {
     built.rotation.copy(player.ghostMesh.rotation);
 
     player.interactables.add(built);
-    player.interactables.updateMatrixWorld(true);
-
     player.inventory.consumeItem(itemName, 1);
 
     rescanAllLinks(player);
+    scheduleBuildingSave(player);
 }
 
 function placeGenericStructure(player, itemName) {
@@ -78,146 +73,27 @@ function placeGenericStructure(player, itemName) {
     else built.userData.isInteractable = true;
 
     player.interactables.add(built);
-    player.interactables.updateMatrixWorld(true);
-
     player.inventory.consumeItem(itemName, 1);
 
-    if (itemName === 'Solar Panel') rescanPowerLinks(player);
+    scheduleBuildingSave(player);
 }
 
 export function tryPlaceActiveItem(player) {
     const activeItem = player.inventory.getActiveItem();
-    if (!player.ghostValid || !player.ghostMesh.visible) return false;
 
     if (activeItem.name === 'Auto Miner') { placeAutoMiner(player); return true; }
     if (isConveyorItem(activeItem.name)) { placeConveyor(player, activeItem.name); return true; }
-    if (activeItem.name === 'Workbench' || activeItem.name === 'Furnace' || activeItem.name === 'Solar Panel') {
+    if ((activeItem.name === 'Workbench' || activeItem.name === 'Furnace' || activeItem.name === 'Solar Panel') && player.ghostMesh.visible) {
         placeGenericStructure(player, activeItem.name);
         return true;
     }
     return false;
 }
 
-export function handleRightClick(player) {
-    player.camera.getWorldDirection(player.raycaster.ray.direction);
-    player.raycaster.ray.origin.copy(player.camera.position);
-
-    const hits = player.raycaster.intersectObjects(player.interactables.children, true);
-
-    if (hits.length > 0 && hits[0].point.distanceTo(player.position) < 7.0) {
-        let obj = hits[0].object;
-        
-        while (obj.parent && obj.parent !== player.interactables && !obj.userData.isInteractable) {
-            obj = obj.parent;
-        }
-        if (obj.parent && obj.parent !== player.interactables && obj.userData.isInteractable === undefined) {
-            while (obj.parent && obj.parent !== player.interactables) {
-                obj = obj.parent;
-            }
-        }
-
-        if (obj) {
-            let isPanel = false;
-            let isMiner = false;
-
-            obj.traverse((child) => {
-                if (child.userData) {
-                    if (child.userData.isSolarPanel || child.userData.type === 'Solar Panel' || (child.name && child.name.toLowerCase().includes('solar'))) {
-                        isPanel = true;
-                    }
-                    if (child.userData.isAutoMiner || child.userData.type === 'Auto Miner' || (child.name && child.name.toLowerCase().includes('miner'))) {
-                        isMiner = true;
-                    }
-                }
-            });
-
-            if (isPanel || isMiner) {
-                if (!player.powerLinkingSource) {
-                    player.powerLinkingSource = obj;
-                    console.log("[Power System] Anchor Selected.");
-                } else {
-                    if (player.powerLinkingSource === obj) {
-                        player.powerLinkingSource = null;
-                        return;
-                    }
-                    
-                    createManualPowerLink(player, player.powerLinkingSource, obj);
-                    player.powerLinkingSource = null;
-                }
-                return;
-            }
-        }
-    }
-
-    if (player.powerLinkingSource) {
-        player.powerLinkingSource = null;
-    }
-}
-
 export function tickConveyorDrops(player, deltaTime) {
-    if (!player.dropsGroup || !player.interactables) return;
-
-    const activeBelts = [];
-    player.interactables.traverse((child) => {
-        if (child.userData && child.userData.isConveyor) {
-            activeBelts.push(child);
-        }
-    });
-
+    if (!player.dropsGroup) return;
     for (const drop of player.dropsGroup.children) {
-        if (drop.userData.conveyorCooldown && drop.userData.conveyorCooldown > 0) {
-            drop.userData.conveyorCooldown -= deltaTime;
-        }
-
-        if (drop.userData.onConveyor) {
-            advanceOnConveyor(drop, deltaTime);
-        } else {
-            if (!drop.userData.velocity) {
-                drop.userData.velocity = new THREE.Vector3(0, 0, 0);
-            }
-
-            drop.userData.velocity.y -= 9.8 * deltaTime; 
-            drop.position.addScaledVector(drop.userData.velocity, deltaTime);
-            
-            const currentFloor = getElevation(drop.position.x, drop.position.z);
-            if (drop.position.y < currentFloor + 0.1) {
-                drop.position.y = currentFloor + 0.1;
-                drop.userData.velocity.set(0, 0, 0);
-            }
-
-            if (drop.userData.conveyorCooldown && drop.userData.conveyorCooldown > 0) continue;
-
-            for (const belt of activeBelts) {
-                const horizontalDistance = drop.position.distanceTo(belt.position);
-                if (horizontalDistance < 2.5) { 
-                    let nearestTargetDistance = -1;
-                    let lowestHorizontalDistance = Infinity;
-                    const traceResolution = 10; 
-                    const sampleCoordinateVector = new THREE.Vector3();
-
-                    for (let i = 0; i <= traceResolution; i++) {
-                        const distanceAlongTrack = (i / traceResolution) * belt.userData.length;
-                        belt.userData.getPointAtDistance(distanceAlongTrack, sampleCoordinateVector, null);
-                        
-                        const deltaX = drop.position.x - sampleCoordinateVector.x;
-                        const deltaZ = drop.position.z - sampleCoordinateVector.z;
-                        const computedDistance = Math.sqrt(deltaX * deltaX + deltaZ * deltaZ);
-                        
-                        if (computedDistance < lowestHorizontalDistance) {
-                            lowestHorizontalDistance = computedDistance;
-                            nearestTargetDistance = distanceAlongTrack;
-                        }
-                    }
-
-                    if (lowestHorizontalDistance < 0.65 && Math.abs(drop.position.y - belt.position.y) < 0.8) {
-                        drop.userData.onConveyor = belt;
-                        drop.userData.beltDistance = nearestTargetDistance;
-                        drop.userData.velocity.set(0, 0, 0);
-                        break; 
-                    }
-                }
-            }
-        }
+        if (drop.userData.onConveyor) advanceOnConveyor(drop, deltaTime);
     }
 }
 
@@ -226,25 +102,33 @@ function computeGroundPoint(player, groundMesh, target) {
         const hits = player.raycaster.intersectObject(groundMesh);
         if (hits.length > 0 && hits[0].point.distanceTo(player.position) < 12.0) {
             target.copy(hits[0].point);
-            target.y = getElevation(target.x, target.z);
-            return true;
+            return target;
         }
     }
-    return false;
+    // Fallback (looking at the sky etc): project along the view ray, using
+    // real terrain elevation rather than a flat guess.
+    const dir = player.raycaster.ray.direction;
+    const origin = player.raycaster.ray.origin;
+    let dist = 4;
+    if (Math.abs(dir.y) > 0.05) {
+        const approxGroundY = getElevation(origin.x, origin.z);
+        const planeDist = (approxGroundY - origin.y) / dir.y;
+        if (planeDist > 0.5 && planeDist < 12) dist = planeDist;
+    }
+    target.copy(origin).addScaledVector(dir, dist);
+    target.y = getElevation(target.x, target.z);
+    return target;
 }
 
 function updateAutoMinerGhost(player, hits) {
-    if (hits.length === 0) { player.ghostValid = false; player.ghostMesh.visible = false; return; }
+    if (hits.length === 0) return;
     let obj = hits[0].object;
     while (obj.parent && !obj.userData.isInteractable) obj = obj.parent;
-    if (!obj) { player.ghostValid = false; player.ghostMesh.visible = false; return; }
+    if (!obj) return;
 
     const isResource = obj.userData.type === 'Stone' || obj.userData.type === 'Iron Ore' || obj.userData.type === 'Quartz' || obj.userData.type === 'Sand';
-    if (!isResource || hits[0].point.distanceTo(player.position) > 8.0) {
-        player.ghostValid = false;
-        player.ghostMesh.visible = false;
-        return;
-    }
+    if (!isResource) return;
+    if (hits[0].point.distanceTo(player.position) > 8.0) return;
 
     let alreadyClaimed = false;
     for (const child of player.interactables.children) {
@@ -276,14 +160,9 @@ function updateAutoMinerGhost(player, hits) {
 }
 
 function updateConveyorGhost(player, groundMesh, itemName) {
-    const hasGround = computeGroundPoint(player, groundMesh, _groundPoint);
-    if (!hasGround) {
-        player.ghostValid = false;
-        player.ghostMesh.visible = false;
-        return;
-    }
-
+    computeGroundPoint(player, groundMesh, _groundPoint);
     const variant = CONVEYOR_ITEM_VARIANTS[itemName];
+
     let snapSource = null;
     for (const child of player.interactables.children) {
         const isConv = child.userData.isConveyor;
@@ -299,9 +178,7 @@ function updateConveyorGhost(player, groundMesh, itemName) {
     let finalRotY;
     if (snapSource) {
         finalRotY = Math.atan2(-_snapD.z, _snapD.x);
-        _forwardScratch.set(1, 0, 0).applyAxisAngle(_yAxis, finalRotY);
-        _finalPos.copy(_snapP).addScaledVector(_forwardScratch, CONVEYOR_HALF_LENGTH);
-        _finalPos.y = getElevation(_finalPos.x, _finalPos.z);
+        _finalPos.copy(_snapP);
     } else {
         _finalPos.copy(_groundPoint);
         _finalPos.x = Math.round(_finalPos.x / 0.5) * 0.5;
@@ -326,23 +203,12 @@ function updateConveyorGhost(player, groundMesh, itemName) {
 
     const overlapDist = PLACEMENT_OVERLAP_DISTANCE[itemName] || DEFAULT_OVERLAP_DISTANCE;
     let overlapping = false;
-
-    if (_finalPos.y < -11.5) {
-        overlapping = true;
-    } else {
-        for (const child of player.interactables.children) {
-            if (child === snapSource) continue;
-            const horizDist = Math.sqrt(Math.pow(child.position.x - _finalPos.x, 2) + Math.pow(child.position.z - _finalPos.z, 2));
-            const vertDist = Math.abs(child.position.y - _finalPos.y);
-            
-            if (horizDist < overlapDist && vertDist < 2.0) { 
-                overlapping = true; 
-                break; 
-            }
-        }
+    for (const child of player.interactables.children) {
+        if (child === snapSource) continue;
+        if (child.position.distanceTo(_finalPos) < overlapDist) { overlapping = true; break; }
     }
-    
     player.ghostValid = !overlapping;
+
     const tint = player.ghostValid ? 0x7CFC9A : 0xff6b6b;
     player.ghostMesh.traverse(c => { if (c.isMesh) c.material.color.setHex(tint); });
 
@@ -350,13 +216,7 @@ function updateConveyorGhost(player, groundMesh, itemName) {
 }
 
 function updateGenericGhost(player, groundMesh, itemName) {
-    const hasGround = computeGroundPoint(player, groundMesh, _finalPos);
-    if (!hasGround) {
-        player.ghostValid = false;
-        player.ghostMesh.visible = false;
-        return;
-    }
-
+    computeGroundPoint(player, groundMesh, _finalPos);
     _finalPos.x = Math.round(_finalPos.x / 0.5) * 0.5;
     _finalPos.z = Math.round(_finalPos.z / 0.5) * 0.5;
     _finalPos.y = getElevation(_finalPos.x, _finalPos.z);
@@ -377,21 +237,9 @@ function updateGenericGhost(player, groundMesh, itemName) {
 
     const overlapDist = PLACEMENT_OVERLAP_DISTANCE[itemName] || DEFAULT_OVERLAP_DISTANCE;
     let overlapping = false;
-
-    if (_finalPos.y < -11.5) {
-        overlapping = true;
-    } else {
-        for (const child of player.interactables.children) {
-            const horizDist = Math.sqrt(Math.pow(child.position.x - _finalPos.x, 2) + Math.pow(child.position.z - _finalPos.z, 2));
-            const vertDist = Math.abs(child.position.y - _finalPos.y);
-
-            if (horizDist < overlapDist && vertDist < 2.5) { 
-                overlapping = true; 
-                break; 
-            }
-        }
+    for (const child of player.interactables.children) {
+        if (child.position.distanceTo(_finalPos) < overlapDist) { overlapping = true; break; }
     }
-
     player.ghostValid = !overlapping;
     const tint = player.ghostValid ? 0x7CFC9A : 0xff6b6b;
     player.ghostMesh.traverse(c => { if (c.isMesh) c.material.color.setHex(tint); });
@@ -410,52 +258,25 @@ export function updateHoverUI(player, groundMesh) {
 
     if (hits.length > 0 && hits[0].point.distanceTo(player.position) < 7.0) {
         let obj = hits[0].object;
-        while (obj.parent && obj.parent !== player.interactables && !obj.userData.isInteractable) obj = obj.parent;
-        
-        if (obj) {
+        while (obj.parent && !obj.userData.isInteractable) obj = obj.parent;
+        if (obj && obj.userData.isInteractable) {
             player.hoverTarget = obj;
             player.targetUi.classList.add('show');
 
-            let isPanel = false;
-            let isMiner = false;
-            
-            obj.traverse((c) => {
-                if (c.userData) {
-                    if (c.userData.isSolarPanel || c.userData.type === 'Solar Panel' || (c.name && c.name.toLowerCase().includes('solar'))) isPanel = true;
-                    if (c.userData.isAutoMiner || c.userData.type === 'Auto Miner' || (c.name && c.name.toLowerCase().includes('miner'))) isMiner = true;
-                }
-            });
-
-            let label = obj.userData.type || (isPanel ? 'Solar Panel' : (isMiner ? 'Auto Miner' : 'Structure'));
-            if (isMiner || obj.userData.isConveyor) {
-                const hasOutput = player.activeLinks.some(l => l.source === obj);
-                if (hasOutput) label += ' (Linked)';
+            let label = obj.userData.type;
+            if (player.linkSelection === obj) {
+                label += ' — SELECTED (right-click again to cancel)';
+            } else if (player.linkSelection && (obj.userData.isSolarPanel || obj.userData.isAutoMiner)) {
+                label += ' (right-click to link)';
+            } else if (obj.userData.isAutoMiner || obj.userData.isConveyor) {
+                const hasOutput = player.activeLinks.some(l => !l.isPowerLink && l.source === obj);
+                if (hasOutput) label += ' (linked)';
+            } else if (obj.userData.isSolarPanel) {
+                const poweredCount = player.activeLinks.filter(l => l.isPowerLink && l.source === obj).length;
+                if (poweredCount > 0) label += ` (powering ${poweredCount})`;
             }
-
-            if (player.powerLinkingSource) {
-                if (player.powerLinkingSource === obj) {
-                    label += ' [LINK SOURCE]';
-                } else {
-                    let srcPanel = false;
-                    let srcMiner = false;
-                    
-                    player.powerLinkingSource.traverse((c) => {
-                        if (c.userData) {
-                            if (c.userData.isSolarPanel || c.userData.type === 'Solar Panel' || (c.name && c.name.toLowerCase().includes('solar'))) srcPanel = true;
-                            if (c.userData.isAutoMiner || c.userData.type === 'Auto Miner' || (c.name && c.name.toLowerCase().includes('miner'))) srcMiner = true;
-                        }
-                    });
-                    
-                    if ((srcPanel && isMiner) || (srcMiner && isPanel)) {
-                        label += ' [CLICK TO WIRE]';
-                    }
-                }
-            }
-
             player.targetName.innerText = label;
-            const hp = obj.userData.health !== undefined ? obj.userData.health : 10;
-            const maxHp = obj.userData.maxHealth || 10;
-            player.healthFill.style.width = `${(Math.max(0, hp) / maxHp) * 100}%`;
+            player.healthFill.style.width = `${(Math.max(0, obj.userData.health) / obj.userData.maxHealth) * 100}%`;
         }
     } else {
         player.targetUi.classList.remove('show');
@@ -467,4 +288,61 @@ export function updateHoverUI(player, groundMesh) {
     if (activeItem.name === 'Workbench' || activeItem.name === 'Furnace' || activeItem.name === 'Solar Panel') {
         updateGenericGhost(player, groundMesh, activeItem.name);
     }
+}
+
+// ===== MANUAL POWER LINKING (right-click tool) =====
+// First right-click on a Solar Panel or Auto Miner selects it as the pending
+// link source. Second right-click on the complementary node completes the
+// connection — order doesn't matter, select the panel first or the miner
+// first, both work. Right-clicking the same node again cancels. Right-
+// clicking a Furnace/Workbench always opens its menu and clears any pending
+// selection, regardless of link-mode state.
+export function handleRightClick(player) {
+    const obj = player.hoverTarget;
+
+    if (obj && obj.userData.isFurnace) {
+        player.linkSelection = null;
+        document.exitPointerLock();
+        player.craftState.furnaceRef = obj;
+        player.updateFurnaceButtons();
+        player.furnaceMenu.classList.add('show');
+        return;
+    }
+    if (obj && obj.userData.isStation) {
+        player.linkSelection = null;
+        document.exitPointerLock();
+        player.updateCraftingButtons();
+        player.workbenchMenu.classList.add('show');
+        return;
+    }
+
+    const isLinkable = obj && (obj.userData.isSolarPanel || obj.userData.isAutoMiner);
+    if (!isLinkable) {
+        player.linkSelection = null;
+        return;
+    }
+
+    if (!player.linkSelection) {
+        player.linkSelection = obj;
+        return;
+    }
+
+    if (player.linkSelection === obj) {
+        player.linkSelection = null;
+        return;
+    }
+
+    const success = completeManualPowerLink(player, player.linkSelection, obj);
+    if (success) scheduleBuildingSave(player);
+    else showTooFarNotification();
+    player.linkSelection = null;
+}
+
+function showTooFarNotification() {
+    const el = document.getElementById('notification-hud');
+    if (!el) return;
+    el.textContent = 'Cannot connect — too far or incompatible.';
+    el.classList.add('show');
+    clearTimeout(el._hideTimer);
+    el._hideTimer = setTimeout(() => el.classList.remove('show'), 2200);
 }
