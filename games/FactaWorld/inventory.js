@@ -113,33 +113,67 @@ export class Inventory {
     }
 
     async load() {
-        if (!this.uid) return;
-        try {
-            const docRef = firebase.firestore().doc(`users/${this.uid}/G/FW`);
-            const snap = await docRef.get();
+    if (!this.uid) return;
+    try {
+        const docRef = firebase.firestore().doc(`users/${this.uid}/G/FW`);
+        const snap = await docRef.get();
 
-            if (snap.exists) {
-                const data = snap.data();
+        if (snap.exists) {
+            const data = snap.data();
 
-                // "i" is a flat { "<itemId>": count } map, e.g. {"1": 9} = 9x Oak.
-                if (data.i && typeof data.i === 'object') {
-                    const restored = [];
-                    for (const [idStr, count] of Object.entries(data.i)) {
-                        const name = idToName(Number(idStr));
-                        if (name && count > 0) restored.push({ name, count });
-                    }
-                    while (restored.length < 9) restored.push({ name: null, count: 0 });
-                    this.slots = restored.slice(0, 9);
+            // "i" is a flat { "<itemId>": count } map. Active slot is no
+            // longer saved/restored at all -- every session just starts on
+            // slot 0, same as a fresh game, regardless of what was active
+            // when the player last quit.
+            if (data.i && typeof data.i === 'object') {
+                const restored = [];
+                for (const [idStr, count] of Object.entries(data.i)) {
+                    const name = idToName(Number(idStr));
+                    if (name && count > 0) restored.push({ name, count });
                 }
-
-                if (data.a !== undefined) this.activeSlot = Math.min(data.a, this.slots.length - 1);
-
-                this.updateUI();
+                while (restored.length < 9) restored.push({ name: null, count: 0 });
+                this.slots = restored.slice(0, 9);
             }
-        } catch (e) {
-            console.error("Firebase Inventory Load Error:", e);
+
+            this.updateUI();
         }
+    } catch (e) {
+        console.error("Firebase Inventory Load Error:", e);
     }
+}
+
+save() {
+    if (!this.uid) return;
+    if (this.saveTimer) clearTimeout(this.saveTimer);
+    this.saveTimer = setTimeout(() => this._flush(), 500);
+}
+
+saveNow() {
+    if (this.saveTimer) clearTimeout(this.saveTimer);
+    this._flush();
+}
+
+async _flush() {
+    if (!this.uid) return;
+    try {
+        const idMap = {};
+        for (const slot of this.slots) {
+            if (!slot.name) continue;
+            const id = nameToId(slot.name);
+            if (id === undefined) continue;
+            idMap[id] = slot.count;
+        }
+
+        // Full overwrite (not merge) -- required so a dropped item's count
+        // actually disappears from the saved document instead of a stale
+        // value lingering under a key this write no longer includes. "a"
+        // (active slot) is gone entirely per this request.
+        const docRef = firebase.firestore().doc(`users/${this.uid}/G/FW`);
+        await docRef.set({ i: idMap });
+    } catch (e) {
+        console.error("Firebase Inventory Save Error:", e);
+    }
+}
 
     save() {
         if (!this.uid) return;
@@ -242,7 +276,6 @@ export class Inventory {
             this.activeSlot = index;
             document.getElementById(`slot-${this.activeSlot}`).classList.add('active');
             this.updateUI();
-            this.save();
         }
     }
 

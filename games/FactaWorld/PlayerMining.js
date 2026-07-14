@@ -13,6 +13,7 @@ import { createSolarPanel } from './obj/solarpanel.js';
 import { cleanupLinksForNode, detachDropsFromConveyor } from './linkSystem.js';
 import { cleanupPowerLinksForNode } from './powerSystem.js';
 import { initDropPhysics } from './dropPhysics.js';
+import { deleteOneBuild } from './buildsSync.js';
 
 const CONVEYOR_ITEM_VARIANTS = { 'Conveyor': 'straight', 'Conveyor Left': 'left', 'Conveyor Right': 'right' };
 export function isConveyorItem(name) { return !!CONVEYOR_ITEM_VARIANTS[name]; }
@@ -92,21 +93,29 @@ export function mineOrHitTarget(player) {
         }
     }, 80);
 
-    if (obj.userData.health <= 0) {
-        const dropPos = obj.userData.basePos.clone().add(new THREE.Vector3(0, 1, 0));
-        if (obj.userData.isAutoMiner || obj.userData.isConveyor) cleanupLinksForNode(player, obj);
-        if (obj.userData.isConveyor) detachDropsFromConveyor(player, obj);
-        if (obj.userData.isAutoMiner || obj.userData.isSolarPanel) cleanupPowerLinksForNode(player, obj);
-        obj.parent.remove(obj);
-        player.hoverTarget = null;
+if (obj.userData.health <= 0) {
+    const dropPos = obj.userData.basePos.clone().add(new THREE.Vector3(0, 1, 0));
+    const isStructure = obj.userData.isAutoMiner || obj.userData.isConveyor || obj.userData.isSolarPanel || obj.userData.isStation || obj.userData.isFurnace;
 
-        const isNaturalResource = obj.userData.dropName === 'Oak' || obj.userData.dropName === 'Stone';
-        const dropCount = isNaturalResource ? Math.floor(Math.random() * 3) + 1 : 1;
+    if (obj.userData.isAutoMiner || obj.userData.isConveyor) cleanupLinksForNode(player, obj);
+    if (obj.userData.isConveyor) detachDropsFromConveyor(player, obj);
+    if (obj.userData.isAutoMiner || obj.userData.isSolarPanel) cleanupPowerLinksForNode(player, obj);
 
-        for (let i = 0; i < dropCount; i++) {
-            player.spawnDrop(obj.userData.dropName, dropPos, new THREE.Vector3((Math.random() - 0.5) * 3, 5, (Math.random() - 0.5) * 3));
-        }
+    // Delete exactly this one build's document -- the game's storage never
+    // accumulates dead entries for destroyed structures, and no other
+    // player's or build's data is touched by this call.
+    if (isStructure) deleteOneBuild(player, obj);
+
+    obj.parent.remove(obj);
+    player.hoverTarget = null;
+
+    const isNaturalResource = obj.userData.dropName === 'Oak' || obj.userData.dropName === 'Stone';
+    const dropCount = isNaturalResource ? Math.floor(Math.random() * 3) + 1 : 1;
+
+    for (let i = 0; i < dropCount; i++) {
+        player.spawnDrop(obj.userData.dropName, dropPos, new THREE.Vector3((Math.random() - 0.5) * 3, 5, (Math.random() - 0.5) * 3));
     }
+}
 }
 
 export function spawnDrop(player, name, position, velocity = new THREE.Vector3()) {

@@ -3,6 +3,7 @@ import { Player } from './player.js';
 import { buildWorld } from './world.js';
 import { initCraftPreviews } from './inventory.js';
 import { isTouchDevice, initTouchControls } from './touchControls.js';
+import { loadAllBuilds } from './buildsSync.js';
 
 const scene = new THREE.Scene();
 
@@ -15,8 +16,6 @@ const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerH
 
 const renderer = new THREE.WebGLRenderer({ canvas: mainCanvas, antialias: true, powerPreference: 'high-performance' });
 
-// Scale quality down for weaker devices (touch/mobile, or low core count) so
-// the game stays smooth everywhere instead of assuming desktop-class GPU.
 const lowPower = isTouchDevice() || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4);
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, lowPower ? 1.5 : 2));
@@ -26,16 +25,16 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.15;
 
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.28);
 scene.add(ambientLight);
 
-const hemiLight = new THREE.HemisphereLight(0xffffff, 0x445544, 0.4);
+const hemiLight = new THREE.HemisphereLight(0xbcd9ff, 0x3f4f38, 0.45);
 scene.add(hemiLight);
 
-const dirLight = new THREE.DirectionalLight(0xfff5d6, 1.8);
+const dirLight = new THREE.DirectionalLight(0xfff2d6, 1.9);
 dirLight.position.set(40, 60, -30);
 dirLight.castShadow = true;
-const shadowSize = lowPower ? 768 : 1024;
+const shadowSize = lowPower ? 768 : 1536;
 dirLight.shadow.mapSize.width = shadowSize;
 dirLight.shadow.mapSize.height = shadowSize;
 const d = 60;
@@ -45,8 +44,17 @@ dirLight.shadow.camera.top = d;
 dirLight.shadow.camera.bottom = -d;
 dirLight.shadow.camera.near = 0.5;
 dirLight.shadow.camera.far = 180;
-dirLight.shadow.bias = -0.001;
+dirLight.shadow.bias = -0.0008;
+dirLight.shadow.normalBias = 0.02;
 scene.add(dirLight);
+
+// Cheap secondary fill light from the opposite side -- softens the pure-black
+// shadow side of characters/objects without adding a second shadow-casting
+// light (which would double render cost). Sky-tinted blue for a believable
+// bounce-light feel.
+const fillLight = new THREE.DirectionalLight(0x89b6ff, lowPower ? 0.18 : 0.32);
+fillLight.position.set(-30, 25, 40);
+scene.add(fillLight);
 
 const { grassPlatform, interactablesGroup, dropsGroup, markersGroup, platformWidth, platformLength, tick } = buildWorld(scene);
 const player = new Player(scene, camera, renderer.domElement);
@@ -181,6 +189,12 @@ if (typeof firebase !== 'undefined') {
             return;
         }
         resolved = true;
+
+        if (user) {
+            player.uid = user.uid;
+            loadAllBuilds(player); // one query, reconstructs every saved structure
+        }
+
         markReady(user ? 'Welcome back.' : 'Your world awaits.');
     });
     setTimeout(() => { if (!readyForStart) markReady('Ready to play.'); }, 3000);

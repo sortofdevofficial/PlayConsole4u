@@ -9,6 +9,7 @@ import { scheduleBuildingSave } from './buildingsSync.js';
 import { PLACEMENT_OVERLAP_DISTANCE, DEFAULT_OVERLAP_DISTANCE, CONVEYOR_CHAIN_SNAP_RADIUS } from './placeables.js';
 import { isConveyorItem } from './PlayerMining.js';
 import { getElevation } from './world.js';
+import { saveOneBuild } from './buildsSync.js';
 
 const CONVEYOR_ITEM_VARIANTS = { 'Conveyor': 'straight', 'Conveyor Left': 'left', 'Conveyor Right': 'right' };
 
@@ -44,7 +45,7 @@ function placeAutoMiner(player) {
     player._pendingAutoMinerTarget = null;
 
     rescanAllLinks(player);
-    scheduleBuildingSave(player);
+    saveOneBuild(player, built); // writes exactly one small doc for this build
 }
 
 function placeConveyor(player, itemName) {
@@ -59,7 +60,7 @@ function placeConveyor(player, itemName) {
     player.inventory.consumeItem(itemName, 1);
 
     rescanAllLinks(player);
-    scheduleBuildingSave(player);
+    saveOneBuild(player, built);
 }
 
 function placeGenericStructure(player, itemName) {
@@ -75,7 +76,7 @@ function placeGenericStructure(player, itemName) {
     player.interactables.add(built);
     player.inventory.consumeItem(itemName, 1);
 
-    scheduleBuildingSave(player);
+    saveOneBuild(player, built);
 }
 
 export function tryPlaceActiveItem(player) {
