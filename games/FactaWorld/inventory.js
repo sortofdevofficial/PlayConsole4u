@@ -92,7 +92,6 @@ function renderMeshToImage(mesh) {
 
 export class Inventory {
     constructor() {
-        // Genuinely empty at first load -- no starter items.
         this.slots = Array(9).fill(null).map(() => ({ name: null, count: 0 }));
         this.activeSlot = 0;
 
@@ -122,13 +121,7 @@ export class Inventory {
             if (snap.exists) {
                 const data = snap.data();
 
-                // "i" is now a flat { "<itemId>": count } map, e.g. {"1": 9}
-                // meaning 9x Oak (id 1). Each key becomes one hotbar slot, in
-                // whatever order Object.entries returns them (insertion order
-                // for string-numeric keys in a plain object, which is stable
-                // enough here since slot ORDER isn't meaningfully game-facing
-                // -- only which item is in the currently active slot matters,
-                // and that's restored separately via "a").
+                // "i" is a flat { "<itemId>": count } map, e.g. {"1": 9} = 9x Oak.
                 if (data.i && typeof data.i === 'object') {
                     const restored = [];
                     for (const [idStr, count] of Object.entries(data.i)) {
@@ -148,14 +141,12 @@ export class Inventory {
         }
     }
 
-    // Debounced save -- fires 500ms after the last change.
     save() {
         if (!this.uid) return;
         if (this.saveTimer) clearTimeout(this.saveTimer);
         this.saveTimer = setTimeout(() => this._flush(), 500);
     }
 
-    // Immediate, bypasses the debounce -- used on page unload.
     saveNow() {
         if (this.saveTimer) clearTimeout(this.saveTimer);
         this._flush();
@@ -164,11 +155,6 @@ export class Inventory {
     async _flush() {
         if (!this.uid) return;
         try {
-            // Build the compact { "<itemId>": count } map. Items with no
-            // registered ID (shouldn't happen for anything craftable/minable,
-            // but guards against a future item added to the game without
-            // being added to itemIds.js) are simply skipped rather than
-            // corrupting the save.
             const idMap = {};
             for (const slot of this.slots) {
                 if (!slot.name) continue;
@@ -177,8 +163,18 @@ export class Inventory {
                 idMap[id] = slot.count;
             }
 
+            // FIX (the actual "drop still shows old count" bug): this must be
+            // a FULL overwrite, not `{merge: true}`. Firestore's merge does a
+            // key-by-key merge on nested map fields -- if an item's count
+            // drops to zero and its key simply isn't present in this save's
+            // idMap, a merged write leaves the OLD stale count for that key
+            // sitting untouched in the cloud forever, even though the local
+            // game correctly shows it gone. A full overwrite replaces the
+            // entire "i" map every time, so removed items are actually
+            // removed. This also finally clears out the old "b"/"l" fields
+            // from the now-removed buildings-save feature.
             const docRef = firebase.firestore().doc(`users/${this.uid}/G/FW`);
-            await docRef.set({ i: idMap, a: this.activeSlot }, { merge: true });
+            await docRef.set({ i: idMap, a: this.activeSlot });
         } catch (e) {
             console.error("Firebase Inventory Save Error:", e);
         }

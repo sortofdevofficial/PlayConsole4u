@@ -1,62 +1,75 @@
 import * as THREE from 'three';
 import { PLACEABLE_ITEMS } from './placeables.js';
 import { handleRightClick } from './PlayerPlacement.js';
+import { isTouchDevice } from './touchControls.js';
 
 export function initInputs(player) {
     const { domElement } = player;
 
-    // Explicitly strip out the old secondary breaking mechanics to prevent duplicate execution
     player.handleSecondaryAction = null;
 
-    // Consolidated unified pointer input system
     domElement.addEventListener('pointerdown', (e) => {
+        // Touch devices get their own dedicated look/joystick/action-button
+        // input via touchControls.js -- this canvas-level handler is
+        // desktop-mouse-only, so it doesn't double-fire mining/placing on
+        // every tap that also lands on the canvas underneath the touch UI.
+        if (isTouchDevice()) return;
+
         if (document.pointerLockElement !== domElement) {
             domElement.requestPointerLock();
             return;
         }
 
         if (e.button === 0) {
-            // Left Click: Handled strictly for primary mining, attacking, and structure placement
-            if (player.handlePrimaryAction) {
-                player.handlePrimaryAction();
-            }
+            if (player.handlePrimaryAction) player.handlePrimaryAction();
         } else if (e.button === 2) {
-            // Right Click: Trapped and isolated exclusively for Power Grid cable linking
             e.preventDefault();
             e.stopPropagation();
             handleRightClick(player);
         }
     });
 
-    // Hard-suppress standard browser context popups from breaking canvas focus
     domElement.addEventListener('contextmenu', (e) => {
         e.preventDefault();
         e.stopPropagation();
     });
 
-    // Station UI closer logic
     const closeQc = document.getElementById('close-qc');
     if (closeQc) closeQc.addEventListener('click', () => {
         player.quickMenu.classList.remove('show');
-        domElement.requestPointerLock();
+        if (!isTouchDevice()) domElement.requestPointerLock();
     });
     const closeWb = document.getElementById('close-wb');
     if (closeWb) closeWb.addEventListener('click', () => {
         player.workbenchMenu.classList.remove('show');
-        domElement.requestPointerLock();
+        if (!isTouchDevice()) domElement.requestPointerLock();
     });
     const closeFn = document.getElementById('close-fn');
     if (closeFn) closeFn.addEventListener('click', () => {
         player.furnaceMenu.classList.remove('show');
-        domElement.requestPointerLock();
+        if (!isTouchDevice()) domElement.requestPointerLock();
     });
 
     document.addEventListener('pointerlockchange', () => {
-        if (player.crosshair) player.crosshair.style.display = (document.pointerLockElement === domElement) ? 'block' : 'none';
-        if (document.pointerLockElement === domElement) {
+        const locked = document.pointerLockElement === domElement;
+        if (player.crosshair) player.crosshair.style.display = locked ? 'block' : 'none';
+
+        if (locked) {
             if (player.quickMenu) player.quickMenu.classList.remove('show');
             if (player.workbenchMenu) player.workbenchMenu.classList.remove('show');
             if (player.furnaceMenu) player.furnaceMenu.classList.remove('show');
+        } else {
+            // FIX: force-clear all movement keys the instant lock is lost
+            // (Escape, opening a menu, alt-tab, etc.) so a keyup event that
+            // never fires (e.g. focus loss mid-press) can't leave the
+            // character permanently "stuck" walking in one direction.
+            player.keys.forward = false;
+            player.keys.backward = false;
+            player.keys.left = false;
+            player.keys.right = false;
+            player.keys.jump = false;
+            player.keys.crouch = false;
+            player.keys.shift = false;
         }
     });
 
@@ -78,15 +91,21 @@ export function initInputs(player) {
     }, { passive: true });
 
     document.addEventListener('keydown', (e) => {
+        // Movement/jump/crouch only respond while pointer lock is actually
+        // engaged -- this is what stops the character from wandering off
+        // while the Start Journey screen (or any menu) is still showing,
+        // since pointer lock is only ever requested from an explicit click.
+        const locked = document.pointerLockElement === domElement;
+
         switch (e.code) {
-            case 'KeyW': player.keys.forward = true; break;
-            case 'KeyS': player.keys.backward = true; break;
-            case 'KeyA': player.keys.left = true; break;
-            case 'KeyD': player.keys.right = true; break;
-            case 'Space': player.keys.jump = true; break;
+            case 'KeyW': if (locked) player.keys.forward = true; break;
+            case 'KeyS': if (locked) player.keys.backward = true; break;
+            case 'KeyA': if (locked) player.keys.left = true; break;
+            case 'KeyD': if (locked) player.keys.right = true; break;
+            case 'Space': if (locked) player.keys.jump = true; break;
             case 'KeyC':
-            case 'ControlLeft': player.keys.crouch = true; break;
-            case 'ShiftLeft': player.keys.shift = true; break;
+            case 'ControlLeft': if (locked) player.keys.crouch = true; break;
+            case 'ShiftLeft': if (locked) player.keys.shift = true; break;
 
             case 'KeyV':
                 player.viewMode = player.viewMode === 0 ? 1 : 0;

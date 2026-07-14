@@ -7,6 +7,7 @@ import { updateMovement, updateAnimationAndCamera } from './PlayerMovement.js';
 import * as Combat from './PlayerCombat.js';
 import { createLinkConnector } from './linkVisuals.js';
 import { tickPowerGrid, tickPowerVisuals } from './powerSystem.js';
+import { stepDropPhysics } from './dropPhysics.js';
 
 export class Player {
     constructor(scene, camera, domElement) {
@@ -15,11 +16,6 @@ export class Player {
         this.domElement = domElement;
         this.baseFov = camera.fov;
         this.inventory = new Inventory();
-
-        // No starter items. Firebase auth (wired in main.js) sets this.uid
-        // and triggers loading previously-saved buildings once resolved;
-        // Inventory loads its own saved slots independently.
-        this.uid = null;
 
         this.position = new THREE.Vector3(0, 5, 0);
         this.velocity = new THREE.Vector3();
@@ -61,8 +57,8 @@ export class Player {
         this.currentGhostType = 'Workbench';
         this.craftState = { active: false, timer: 0, duration: 0 };
 
-        this.activeLinks = []; // unified: item-flow links AND power links, see linkSystem.js
-        this.linkSelection = null; // pending manual power-link source, see PlayerPlacement.js's handleRightClick
+        this.activeLinks = [];
+        this.linkSelection = null;
         this.linkAnimTime = 0;
         this.powerTickAccum = 0;
 
@@ -182,24 +178,22 @@ export class Player {
                 const drop = drops[i];
                 if (drop.userData.onConveyor) continue;
 
-                if (drop.userData.velocity && (drop.userData.velocity.lengthSq() > 0.1 || drop.position.y > 0.3)) {
-                    drop.position.addScaledVector(drop.userData.velocity, deltaTime);
-                    drop.userData.velocity.y -= this.gravity * deltaTime;
-                    if (drop.position.y <= 0.3) {
-                        drop.position.y = 0.3;
-                        drop.userData.velocity.y *= -0.3;
-                        drop.userData.velocity.x *= 0.5;
-                        drop.userData.velocity.z *= 0.5;
-                    }
-                } else {
-                    drop.rotation.y += deltaTime * 1.2;
-                }
+                try {
+                    // Real gravity/bounce/roll physics against the actual
+                    // hilly terrain -- see dropPhysics.js. Wrapped per-drop so
+                    // one malformed drop object can never take down the whole
+                    // loop (or the rest of update()) with it.
+                    stepDropPhysics(drop, deltaTime);
 
-                if (drop.userData.cooldown > 0) {
-                    drop.userData.cooldown -= deltaTime;
-                } else if (this.position.distanceToSquared(drop.position) < 4.0) {
-                    this.inventory.addItem(drop.userData.name, 1);
-                    drop.parent.remove(drop);
+                    if (drop.userData.cooldown > 0) {
+                        drop.userData.cooldown -= deltaTime;
+                    } else if (this.position.distanceToSquared(drop.position) < 4.0) {
+                        this.inventory.addItem(drop.userData.name, 1);
+                        drop.parent.remove(drop);
+                    }
+                } catch (err) {
+                    console.error('[Player] broken drop removed:', err);
+                    if (drop.parent) drop.parent.remove(drop);
                 }
             }
         }

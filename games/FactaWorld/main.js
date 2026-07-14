@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { Player } from './player.js';
 import { buildWorld } from './world.js';
 import { initCraftPreviews } from './inventory.js';
-import { saveBuildingsNow, loadBuildingsOnce } from './buildingsSync.js';
+import { isTouchDevice, initTouchControls } from './touchControls.js';
 
 const scene = new THREE.Scene();
 
@@ -14,8 +14,12 @@ const mainCanvas = document.getElementById('main-canvas');
 const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000);
 
 const renderer = new THREE.WebGLRenderer({ canvas: mainCanvas, antialias: true, powerPreference: 'high-performance' });
+
+// Scale quality down for weaker devices (touch/mobile, or low core count) so
+// the game stays smooth everywhere instead of assuming desktop-class GPU.
+const lowPower = isTouchDevice() || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4);
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, lowPower ? 1.5 : 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -31,8 +35,9 @@ scene.add(hemiLight);
 const dirLight = new THREE.DirectionalLight(0xfff5d6, 1.8);
 dirLight.position.set(40, 60, -30);
 dirLight.castShadow = true;
-dirLight.shadow.mapSize.width = 1024;
-dirLight.shadow.mapSize.height = 1024;
+const shadowSize = lowPower ? 768 : 1024;
+dirLight.shadow.mapSize.width = shadowSize;
+dirLight.shadow.mapSize.height = shadowSize;
 const d = 60;
 dirLight.shadow.camera.left = -d;
 dirLight.shadow.camera.right = d;
@@ -46,9 +51,6 @@ scene.add(dirLight);
 const { grassPlatform, interactablesGroup, dropsGroup, markersGroup, platformWidth, platformLength, tick } = buildWorld(scene);
 const player = new Player(scene, camera, renderer.domElement);
 
-// Set these immediately (not just from the first update() call) so a
-// Firebase load — which can resolve before the first frame ever runs — has
-// valid references to build into from the start.
 player.interactables = interactablesGroup;
 player.dropsGroup = dropsGroup;
 player.markersGroup = markersGroup;
@@ -148,34 +150,72 @@ initCraftPreviews([
     { buttonId: 'fn-glass', itemName: 'Glass' }
 ]);
 
-// ===== FIREBASE: AUTH -> LOAD BUILDINGS, PERIODIC SAVE, FLUSH ON EXIT =====
+// ===== START SCREEN =====
+const startScreen = document.getElementById('start-screen');
+const startBtn = document.getElementById('start-journey-btn');
+const signinBtn = document.getElementById('signin-btn');
+const startStatus = document.getElementById('start-status');
+
+let readyForStart = false;
+const startScreenBeginTime = performance.now();
+const MIN_START_SCREEN_MS = 900;
+
+function markReady(text) {
+    if (startStatus) startStatus.textContent = text;
+    const remaining = Math.max(0, MIN_START_SCREEN_MS - (performance.now() - startScreenBeginTime));
+    setTimeout(() => {
+        readyForStart = true;
+        if (startBtn) startBtn.disabled = false;
+        if (startScreen) startScreen.classList.add('is-ready');
+    }, remaining);
+}
+
 if (typeof firebase !== 'undefined') {
+    let resolved = false;
     firebase.auth().onAuthStateChanged(user => {
-        if (user) {
-            player.uid = user.uid;
-            loadBuildingsOnce(player); // inventory loads itself independently inside Inventory's own constructor
+        if (resolved) {
+            if (user && signinBtn) {
+                signinBtn.textContent = 'Signed in ✓';
+                signinBtn.disabled = true;
+            }
+            return;
+        }
+        resolved = true;
+        markReady(user ? 'Welcome back.' : 'Your world awaits.');
+    });
+    setTimeout(() => { if (!readyForStart) markReady('Ready to play.'); }, 3000);
+} else {
+    markReady('Ready to play.');
+}
+
+if (signinBtn) {
+    signinBtn.addEventListener('click', () => {
+        if (typeof window.FB === 'undefined') return;
+        signinBtn.disabled = true;
+        signinBtn.textContent = 'Connecting…';
+        window.FB.signInGoogle().catch(() => {
+            signinBtn.disabled = false;
+            signinBtn.textContent = 'Sign in to save progress';
+        });
+    });
+}
+
+let touchControlsReady = false;
+if (startBtn) {
+    startBtn.addEventListener('click', () => {
+        if (!readyForStart) return;
+        startScreen.classList.add('is-leaving');
+        setTimeout(() => { startScreen.style.display = 'none'; }, 700);
+
+        if (isTouchDevice()) {
+            if (!touchControlsReady) { initTouchControls(player); touchControlsReady = true; }
         } else {
-            player.uid = null;
+            renderer.domElement.requestPointerLock();
         }
     });
 }
 
-// Short periodic safety-net save, on top of the immediate save triggered
-// right after each placement/destruction — catches anything that happened
-// in a brief pre-auth window, and generally keeps saved state fresh without
-// depending on any single trigger firing.
-setInterval(() => {
-    if (player.uid) saveBuildingsNow(player);
-}, 6000);
-
-window.addEventListener('beforeunload', () => {
-    // Best-effort — browsers don't guarantee async work completes during
-    // beforeunload, but this gives it a chance rather than not trying.
-    player.inventory.saveNow();
-    saveBuildingsNow(player);
-});
-
-// ===== COORDINATE HUD =====
+// ===== COORDS HUD =====
 const coordXEl = document.getElementById('coord-x');
 const coordYEl = document.getElementById('coord-y');
 const coordZEl = document.getElementById('coord-z');
@@ -195,13 +235,21 @@ let lastTime = performance.now();
 function animate() {
     requestAnimationFrame(animate);
     const time = performance.now();
-    const dt = (time - lastTime) / 1000;
+    const dt = Math.min((time - lastTime) / 1000, 0.1);
     lastTime = time;
 
-    if (tick) tick(time, 2500);
-
-    player.update(dt, grassPlatform, interactablesGroup, dropsGroup, markersGroup, platformWidth, platformLength);
-    updateCoordsHud();
+    try {
+        if (tick) tick(time, 2500);
+        player.update(dt, grassPlatform, interactablesGroup, dropsGroup, markersGroup, platformWidth, platformLength);
+        updateCoordsHud();
+    } catch (err) {
+        // A single bad frame must never freeze the whole game. rAF above
+        // already re-schedules regardless of what happens here, but without
+        // this guard the SAME error would recur every frame forever -- which
+        // looks identical to a full crash even though the engine is still
+        // technically running. Logging + continuing lets the game recover.
+        console.error('[Factaworld] frame update error (recovered):', err);
+    }
 
     renderer.render(scene, camera);
     player.inventory.render3DSlots();
@@ -211,6 +259,10 @@ window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+window.addEventListener('beforeunload', () => {
+    player.inventory.saveNow();
 });
 
 animate();
