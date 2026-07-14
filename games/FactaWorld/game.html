@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#0d1b2a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>FACTAWORLD</title>
     <script>
         document.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -17,8 +20,8 @@
             --danger: rgba(239, 68, 68, 0.6);
         }
 
-        body, html { margin: 0; padding: 0; overflow: hidden; background-color: #87ceeb; width: 100%; height: 100%; font-family: 'Segoe UI', system-ui, sans-serif; user-select: none; }
-        #main-canvas { display: block; width: 100vw; height: 100vh; position: absolute; top:0; left:0; z-index: 1; }
+        body, html { margin: 0; padding: 0; overflow: hidden; background-color: #87ceeb; width: 100%; height: 100%; font-family: 'Segoe UI', system-ui, sans-serif; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+        #main-canvas { display: block; width: 100vw; height: 100vh; position: absolute; top:0; left:0; z-index: 1; touch-action: none; }
 
         #crosshair { position: absolute; top: 50%; left: 50%; width: 6px; height: 6px; background: rgba(255, 255, 255, 0.7); border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; z-index: 10; display: none; mix-blend-mode: difference; }
 
@@ -37,7 +40,7 @@
         #active-item-title { position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%); text-align: center; color: white; font-weight: 600; font-size: 14px; text-shadow: 0 2px 4px rgba(0,0,0,0.6); pointer-events: none; z-index: 5; letter-spacing: 0.5px; height: 20px; }
 
         #hotbar { position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; background: var(--bg-glass); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); padding: 8px; border-radius: 16px; pointer-events: none; border: 1px solid var(--border-glass); z-index: 5; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
-        .slot { width: 60px; height: 60px; background: rgba(255, 255, 255, 0.03); border: 1px solid transparent; border-radius: 12px; position: relative; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); overflow: hidden; }
+        .slot { width: 60px; height: 60px; background: rgba(255, 255, 255, 0.03); border: 1px solid transparent; border-radius: 12px; position: relative; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); overflow: hidden; pointer-events: auto; }
         .slot.active { border-color: rgba(255,255,255,0.4); background: rgba(255, 255, 255, 0.1); transform: translateY(-4px); }
         .slot-num { position: absolute; top: 4px; left: 6px; font-size: 10px; color: var(--text-muted); font-weight: bold; z-index: 10; }
         .slot-count { position: absolute; bottom: 4px; right: 6px; font-size: 12px; color: white; font-weight: bold; text-shadow: 0 1px 2px rgba(0,0,0,0.8); z-index: 10; }
@@ -63,29 +66,85 @@
         #fn-progress-label { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
 
         #notification-hud {
-            position: absolute;
-            top: 25px;
-            left: 50%;
-            transform: translateX(-50%) translateY(-20px);
-            background: rgba(239, 68, 68, 0.85);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            padding: 12px 24px;
-            border-radius: 12px;
-            color: #ffffff;
-            font-size: 14px;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-            z-index: 1000;
-            pointer-events: none;
-            opacity: 0;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            position: absolute; top: 25px; left: 50%; transform: translateX(-50%) translateY(-20px);
+            background: rgba(239, 68, 68, 0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.2); padding: 12px 24px; border-radius: 12px;
+            color: #ffffff; font-size: 14px; font-weight: 600; letter-spacing: 0.5px; z-index: 1000;
+            pointer-events: none; opacity: 0; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
             transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
-        #notification-hud.show {
-            opacity: 1;
-            transform: translateX(-50%) translateY(0);
+        #notification-hud.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+        /* ===== START JOURNEY SCREEN ===== */
+        #start-screen {
+            position: fixed; inset: 0; z-index: 500;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            background: rgba(8, 14, 24, 0.6);
+            backdrop-filter: blur(10px) saturate(1.1);
+            -webkit-backdrop-filter: blur(10px) saturate(1.1);
+            overflow: hidden;
+            animation: ssFadeIn 0.6s ease both;
+            transition: opacity 0.7s ease, filter 0.7s ease, transform 0.7s ease;
+        }
+        #start-screen.is-leaving { opacity: 0; filter: blur(14px); pointer-events: none; transform: scale(1.03); }
+        @keyframes ssFadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .ss-orb { position: absolute; border-radius: 50%; filter: blur(60px); opacity: 0.45; pointer-events: none; }
+        .ss-orb-a { width: 420px; height: 420px; background: radial-gradient(circle, #3b82f6, transparent 70%); top: -120px; left: -100px; animation: ssDrift1 14s ease-in-out infinite; }
+        .ss-orb-b { width: 360px; height: 360px; background: radial-gradient(circle, #d4a24c, transparent 70%); bottom: -140px; right: -80px; animation: ssDrift2 18s ease-in-out infinite; }
+        .ss-orb-c { width: 260px; height: 260px; background: radial-gradient(circle, #4ade80, transparent 70%); top: 40%; right: 10%; animation: ssDrift1 22s ease-in-out infinite reverse; }
+        @keyframes ssDrift1 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(40px,30px) scale(1.1); } }
+        @keyframes ssDrift2 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-30px,-40px) scale(1.15); } }
+
+        .ss-content { position: relative; z-index: 2; text-align: center; padding: 24px; max-width: 90vw; animation: ssRise 0.8s cubic-bezier(0.16,1,0.3,1) both 0.1s; }
+        @keyframes ssRise { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+
+        .ss-badge { display: inline-block; padding: 6px 14px; border: 1px solid rgba(255,255,255,0.2); border-radius: 999px; font-size: 11px; letter-spacing: 2px; color: #9fd8ff; margin-bottom: 18px; background: rgba(255,255,255,0.05); }
+
+        .ss-title { font-size: clamp(2.4rem, 8vw, 5rem); font-weight: 800; letter-spacing: 2px; margin: 0 0 10px; color: #f8fafc; }
+        .ss-title span { background: linear-gradient(90deg, #ffce6b, #4ade80, #9fd8ff, #ffce6b); background-size: 300% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: ssShimmer 6s linear infinite; }
+        @keyframes ssShimmer { to { background-position: 300% 0; } }
+
+        .ss-subtitle { font-size: clamp(0.9rem, 2.2vw, 1.1rem); color: #94a3b8; margin: 0 0 34px; }
+
+        .ss-start-btn { position: relative; overflow: hidden; padding: 16px 52px; font-size: 1.05rem; font-weight: 700; letter-spacing: 1px; color: #0d1b2a; background: linear-gradient(135deg, #ffce6b, #4ade80); border: none; border-radius: 14px; cursor: pointer; box-shadow: 0 10px 30px rgba(74,222,128,0.25); transition: transform 0.2s ease, box-shadow 0.3s ease, opacity 0.3s ease; }
+        .ss-start-btn:disabled { opacity: 0.4; cursor: wait; filter: grayscale(0.4); }
+        #start-screen.is-ready .ss-start-btn { animation: ssPulseGlow 2.4s ease-in-out infinite; }
+        .ss-start-btn:not(:disabled):hover { transform: translateY(-2px) scale(1.03); box-shadow: 0 14px 38px rgba(74,222,128,0.4); }
+        .ss-start-btn:not(:disabled):active { transform: translateY(0) scale(0.98); }
+        @keyframes ssPulseGlow { 0%,100% { box-shadow: 0 10px 30px rgba(74,222,128,0.25); } 50% { box-shadow: 0 10px 44px rgba(74,222,128,0.55); } }
+        .ss-start-btn::after { content: ''; position: absolute; top: 0; left: -60%; width: 40%; height: 100%; background: linear-gradient(120deg, transparent, rgba(255,255,255,0.55), transparent); transform: skewX(-20deg); animation: ssShine 3.2s ease-in-out infinite; }
+        @keyframes ssShine { 0% { left: -60%; } 40%,100% { left: 130%; } }
+
+        .ss-signin-btn { display: block; margin: 16px auto 0; background: none; border: none; color: #94a3b8; font-size: 0.82rem; text-decoration: underline; cursor: pointer; letter-spacing: 0.3px; }
+        .ss-signin-btn:hover { color: #cbd5e1; }
+        .ss-signin-btn:disabled { color: #4ade80; text-decoration: none; cursor: default; }
+
+        .ss-status-row { margin-top: 26px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+        .ss-status-bar { width: 180px; height: 3px; border-radius: 3px; background: rgba(255,255,255,0.1); overflow: hidden; }
+        .ss-status-fill { width: 40%; height: 100%; background: linear-gradient(90deg, #ffce6b, #4ade80); animation: ssLoadBar 1.1s ease-in-out infinite; }
+        #start-screen.is-ready .ss-status-fill { animation: none; width: 100%; }
+        @keyframes ssLoadBar { 0% { transform: translateX(-120%); } 100% { transform: translateX(280%); } }
+        .ss-status-text { font-size: 0.78rem; color: #64748b; letter-spacing: 0.5px; }
+
+        .ss-footer { position: absolute; bottom: 22px; left: 0; right: 0; text-align: center; font-size: 0.75rem; color: #475569; letter-spacing: 0.5px; z-index: 2; }
+
+        @media (max-width: 640px) {
+            .ss-footer { display: none; }
+            .ss-start-btn { padding: 15px 40px; width: 80%; max-width: 320px; }
+            .ss-signin-btn { font-size: 0.78rem; }
+        }
+
+        /* ===== RESPONSIVE HUD (narrow / mobile screens) ===== */
+        @media (max-width: 700px) {
+            #ui-hints { display: none; }
+            .slot { width: 46px; height: 46px; }
+            .slot-icon { width: 42px; height: 42px; }
+            .slot-num { font-size: 8px; }
+            #hotbar { bottom: 14px; gap: 5px; padding: 6px; }
+            #coords-hud { transform: scale(0.8); transform-origin: top right; }
+            .menu-container { min-width: 88vw; padding: 18px; }
+            #active-item-title { bottom: 84px; font-size: 12px; }
         }
     </style>
     <script type="importmap">{"imports": {"three": "https://unpkg.com/three@0.160.0/build/three.module.js"}}</script>
@@ -165,15 +224,33 @@
 
     <div id="notification-hud">Object too far to connect!</div>
 
+    <div id="start-screen">
+        <div class="ss-orb ss-orb-a"></div>
+        <div class="ss-orb ss-orb-b"></div>
+        <div class="ss-orb ss-orb-c"></div>
+        <div class="ss-content">
+            <div class="ss-badge">SOLARPUNK INDUSTRIALIST SIM</div>
+            <h1 class="ss-title">FACTA<span>WORLD</span></h1>
+            <p class="ss-subtitle">Mine resources. Automate production. Power your world.</p>
+            <button id="start-journey-btn" class="ss-start-btn" disabled>Start Journey</button>
+            <button id="signin-btn" class="ss-signin-btn">Sign in to save progress</button>
+            <div class="ss-status-row">
+                <div class="ss-status-bar"><div class="ss-status-fill"></div></div>
+                <div id="start-status" class="ss-status-text">Preparing world…</div>
+            </div>
+        </div>
+        <div class="ss-footer">WASD to move · Mouse to look · E to craft</div>
+    </div>
+
     <!-- Firebase Core Modules -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-    
+
     <!-- References firebase.js exactly 2 folders up in the root directory -->
     <script src="../../firebase.js"></script>
-    
+
     <!-- Game Initialization Script -->
     <script type="module" src="main.js"></script>
 </body>
